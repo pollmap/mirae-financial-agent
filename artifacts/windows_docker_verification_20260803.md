@@ -59,7 +59,51 @@ runtime 이미지 최소성 확인
   - inputs/(원본 PDF·ZIP·XLSX), etl/, tests/, 개발 의존성 미포함 (runbook 8항 충족)
 ```
 
-## 4. 남은 외부 gate (변경 없음)
+## 4. HCX 모드 전체 파이프라인 검증 (모의 CLOVA Studio)
+
+`deploy/mock_clova_studio.py`(개발 전용)는 CLOVA Studio v3 Chat Completions
+Structured Outputs 계약(경로·Bearer 헤더·status envelope·finishReason·usage)을 재현하고,
+질문 해석은 내부적으로 결정론적 planner를 사용한다. 이를 통해 실제 key 없이
+`PLANNER_MODE=hcx` 전체 스택(HTTP adapter·retry·schema 검증·plan guard·DuckDB·근거·역질문)을
+실서버 형태로 검증했다.
+
+```text
+app(PLANNER_MODE=hcx, HCX_BASE_URL=mock:8099) 기동     PASS
+think_trace planner=HCX-007 확인                        PASS (실제 HCX HTTP adapter 경유)
+e2e_smoke 15/15 (HCX mode)                              PASS
+load_smoke 40req/conc5 (HCX mode, 깨끗한 rate window)   40/40, p95 141.47ms, 0 failure
+장애 시 controlled 503 + fallback_llm=none              기존 계약 테스트로 커버
+```
+
+### ⚠ 운영 발견: 기본 HCX_TPM_BUDGET으로는 분당 4건만 처리 가능
+
+`HcxQueryPlanner`는 요청마다 system prompt(7,059B) + QueryPlan JSON schema(2,924B)
++ 고정 3,072B = **요청당 13,055 토큰 상당을 보수적으로 예약**한다.
+기본 `HCX_TPM_BUDGET=60000`(compose 기본값 동일)에서는 **분당 4건**을 넘는 요청이
+25초 deadline까지 대기하다 controlled 503으로 떨어진다. 로컬 smoke에서 실제 재현됨
+(연속 실행 시 케이스 3건씩 503).
+
+→ 평가 트래픽이 분당 5건만 넘어도 실패하므로, **key 수령 후 provider 실제 quota를
+확인해 `HCX_TPM_BUDGET`(예: 600000)과 `HCX_QPM_LIMIT`를 반드시 상향 조정해야 한다.**
+이번 HCX 모드 검증은 `HCX_TPM_BUDGET=600000 HCX_QPM_LIMIT=60`으로 수행했다.
+
+## 5. 웹 데모 UI (개발 전용)
+
+`web/index.html` + `app/main.py`의 dev-gated `GET /demo` 라우트
+(`environment != "production"`에서만 등록, 제출 runtime 이미지에는 `web/` 미포함).
+브라우저에서 모호한 질문 → 시장 역질문 → 기간 역질문 → 최종 순위 답변의
+전체 다단계 clarification 흐름과 근거·think_trace 표시를 실제로 확인했다.
+
+## 6. 제출 준비물 현황
+
+```text
+git repository            main @ ddf277588645a95928ada85b4c8e534ce5f4bdaf (로컬; org push 대기)
+.env.production           생성 (CLARIFICATION_SIGNING_KEY 실난수, CLOVA key placeholder, git-ignored)
+release manifest          artifacts/release_manifest.generated.json — DRAFT,
+                          실제 git SHA·로컬 image ID 반영 (FINAL은 registry digest 필요)
+```
+
+## 7. 남은 외부 gate (변경 없음)
 
 1. 2026-08-06 설명회: HCX model ID·API contract 확정
 2. 실제 CLOVA_STUDIO_API_KEY로 `deploy/live_hcx_plan_smoke.py` → 네 상품군 live E2E

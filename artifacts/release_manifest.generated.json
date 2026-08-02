@@ -1,10 +1,10 @@
 {
   "release_id": "prebrief-mvp-0.2.0",
   "release_status": "DRAFT",
-  "built_at": "2026-08-03T03:25:02+09:00",
+  "built_at": "2026-08-03T08:57:18+09:00",
   "freeze_at": "2026-09-05T00:00:00+09:00",
-  "git_sha": "0000000000000000000000000000000000000000",
-  "container_image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "git_sha": "ddf277588645a95928ada85b4c8e534ce5f4bdaf",
+  "container_image_digest": "sha256:62cdc151093c2b1979bac182ffdd7bd502beaac5cd8500c2f9f48ec961a32aaa",
   "source_sha256": {
     "official_task_pdf": "3717441e091958b7214db710e0e4b9b8ae15ac6c205cad6e51721214798eb3de",
     "official_data_zip": "c3809aca73396f57242ded0188fa06a3d271bd4ad65010e53d5533efc7c18163"
@@ -18,8 +18,8 @@
   "planner_prompt_sha256": "9b04360aaed258230cf164fd75487fa9eef8c10b7b355f0d3eee0b1feac158f6",
   "hcx_runtime_schema_sha256": "fafedb9398e0f95eef49e3583802e8d73d17fd7f8ea70b476d448f39226e23b6",
   "evidence_bundle_schema_sha256": "58bcce8e23876fcf3bb9a13f802728868971f72f63b00a988059fd1167d80782",
-  "etl_source_sha256": "18ed9a599229ebb18e3f487800061cbc9d09ab79b23f761a50dc90cd5b039117",
-  "application_source_sha256": "c3d3ed8c2c24154e7311e4b3484f0572980cf3997573b5b1b059ecdff43ba81b",
+  "etl_source_sha256": "d80b34981f3cbe60af91b5c13407f56052fded68e4db13b177d5982cd89c55d9",
+  "application_source_sha256": "7ed4dd900fe901043ee47144bbe52e1398be58132b6404e64d9e650b263a9188",
   "runtime_lock_sha256": "e3cda72184d7fdbbb1cdeb8c0007f317bc441d7aff8147cc181982ba15a4111a",
   "build_lock_sha256": "d9412193876a09aba92471a68c924bd7a67f1289545d5977047a03517dd3c7dc",
   "renderer_sha256": "781c1db80ea1fd1430f8028456699f328346f7d8d8aefc986e68b03ce4663086",
