@@ -1,0 +1,23 @@
+sequenceDiagram
+    actor Evaluator
+    participant API as GET Adapter
+    participant Planner as HyperCLOVA X
+    participant Validator as Plan Validator
+    participant DB as DuckDB
+    participant Evidence as Evidence Builder
+    participant Answer as Renderer and Claim Validator
+    Evaluator->>API: question_id + question
+    API->>API: byte budget, redaction, contract check
+    API->>Planner: canonical question + plan schema
+    Planner-->>API: typed QueryPlan
+    API->>Validator: schema + registry policy
+    alt invalid plan
+        Validator-->>Planner: one bounded repair request
+        Planner-->>Validator: repaired QueryPlan
+    end
+    Validator->>DB: parameterized deterministic query
+    DB-->>Evidence: rows + universe + execution metadata
+    Evidence-->>Answer: evidence IDs + limitations
+    Answer->>Answer: every factual claim must cite evidence
+    Answer-->>API: DomainAnswer
+    API-->>Evaluator: provisional 5-string JSON + no-store

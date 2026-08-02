@@ -1,0 +1,4 @@
+source_name,mentioned_by,status,impact,required_action
+네이버 그린팩토리 커넥트홀 오시는길.pdf,OFFICIAL_TEAM_EMAIL,NOT_PROVIDED_IN_WORKSPACE,제품·평가 요구사항에는 영향 없음; 현장 동선 확인에 필요,설명회 참석자가 이메일 원첨부 확보
+설명회 참고 질의 set,OFFICIAL_PDF,NOT_YET_PROVIDED,골드 테스트와 평가 적합성에 직접 영향,현장에서 수령 후 tests/gold_queries_v0.jsonl과 diff
+공모펀드 prfd_attr_cd codebook,OFFICIAL_DATA,NOT_PROVIDED,속성 코드의 사용자 의미 매핑 차단,설명회 질문 후 공식 사전만 사용

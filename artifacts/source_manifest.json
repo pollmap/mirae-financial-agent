@@ -1,0 +1,53 @@
+{
+  "manifest_version": "1.0.1-prebrief",
+  "created_at_kst": "2026-08-02",
+  "path_base": "package_root",
+  "authority_policy": [
+    "organizer_task_pdf",
+    "organizer_data_zip",
+    "later_organizer_briefing_or_notice",
+    "organizer_team_email",
+    "official_homepage_faq",
+    "team_decision"
+  ],
+  "conflict_resolution": "Among organizer sources, retain both records and operationally apply the newer and more specific notice; keep unresolved conflicts open until written confirmation.",
+  "sources": [
+    {
+      "kind": "organizer_task_pdf",
+      "file_name": "(배포용)과제소개자료_금융상품Agent.pdf",
+      "source_path": "inputs/official_task.pdf",
+      "size_bytes": 924413,
+      "sha256": "3717441e091958b7214db710e0e4b9b8ae15ac6c205cad6e51721214798eb3de",
+      "page_count": 8,
+      "note": "Pages 6 and 7 contain important rasterized text that ordinary PDF extraction misses."
+    },
+    {
+      "kind": "organizer_data_zip",
+      "file_name": "1.금융상품.zip",
+      "source_path": "inputs/official_data.zip",
+      "size_bytes": 39960829,
+      "sha256": "c3809aca73396f57242ded0188fa06a3d271bd4ad65010e53d5533efc7c18163",
+      "xlsx_count": 8,
+      "data_row_count": 145393,
+      "note": "Four datarows workbooks and four schema/sample workbooks."
+    },
+    {
+      "kind": "organizer_team_email",
+      "file_name": "team_email_raw.txt",
+      "source_path": "inputs/team_email_raw.txt",
+      "size_bytes": 1253,
+      "sha256": "b1202ebac3210335af11322eb3e5695110783f94628996e1104368421657fb56",
+      "note": "Normalized plain-text preservation of the organizer team email pasted by the user."
+    }
+  ],
+  "official_web": [
+    {
+      "url": "https://miraeassetfesta.com/",
+      "role": "supplemental_current_public_notice"
+    },
+    {
+      "url": "https://miraeassetfesta.com/notice",
+      "role": "supplemental_current_faq"
+    }
+  ]
+}

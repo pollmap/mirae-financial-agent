@@ -1,0 +1,16 @@
+{
+  "status": "ok",
+  "requests": 100,
+  "concurrency": 10,
+  "completed": 100,
+  "failure_count": 0,
+  "elapsed_seconds": 0.785,
+  "throughput_rps": 127.38,
+  "latency_ms": {
+    "p50": 58.28,
+    "p95": 131.75,
+    "p99": 151.82,
+    "max": 161.82
+  },
+  "failures": []
+}

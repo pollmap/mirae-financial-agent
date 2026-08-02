@@ -1,0 +1,9 @@
+metric_id,policy_state,coverage_basis,universe_filter,eligible_count,excluded_zero_count,excluded_quality_count,reason
+bond.risk_grade,BLOCKED_PENDING_ORDER,bond_all,quality_status!=QUARANTINE,42394,58,0,코드 방향 미확정
+bond.credit_rating,BLOCKED_PENDING_ORDER,bond_with_rating,CRD_GRD not null,24750,0,0,등급 정렬표 미확정
+bond.avg_annual_tax_yield,BLOCKED_CONSTANT,bond_with_value,AVG_ANNUAL_TAX_YIELD not null,881,881,0,유효값 전부 0
+domestic_etp.expense_ratio,BLOCKED_PENDING_ZERO_POLICY,domestic_etf_serving,internal_type=ETF and quality_status!=QUARANTINE,217,150,1,"ETF 1,201개 분모와 0 의미 확정 필요"
+overseas_etp.expense_ratio,BLOCKED_PENDING_ZERO_POLICY,overseas_etf_serving,internal_type=ETF and quality_status!=QUARANTINE,5579,304,8,"서빙 ETF 5,579개 중 0값 304건의 의미 확정 필요; 원천 ETF 5,587개 중 격리 8건 제외"
+overseas_etp.discrepancy_rate,BLOCKED_LOW_COVERAGE,overseas_etf_serving,internal_type=ETF and quality_status!=QUARANTINE,3,0,8,"서빙 ETF 5,579개 중 유효값 3건"
+fund.risk_grade,BLOCKED_PENDING_ORDER,fund_product_normal,quality_status!=QUARANTINE,8565,0,2573,"정상 상품 11,138개 중 유효 8,565·결측 2,573; 등급 순서 확인 전 rank 잠금"
+fund.return_1y,INTRA_SCOPE_ONLY,fund_product_normal,quality_status!=QUARANTINE,7017,0,4121,"정상 상품 11,138개 중 유효 7,017·결측 4,121; 국내 ETP와 basis·기준일 확인 전 교차비교 차단"

@@ -1,0 +1,68 @@
+{
+  "report_version": "1.0",
+  "as_of": "2026-08-02T00:00:00+09:00",
+  "status": "LOCAL_PASS_EXTERNAL_GATES_PENDING",
+  "source_verification": {
+    "official_task_pdf_sha256": "3717441e091958b7214db710e0e4b9b8ae15ac6c205cad6e51721214798eb3de",
+    "official_data_zip_sha256": "c3809aca73396f57242ded0188fa06a3d271bd4ad65010e53d5533efc7c18163",
+    "inner_xlsx_verified": 8
+  },
+  "data_build": {
+    "raw_rows": 145393,
+    "logical_products": 60913,
+    "serving_products": 60903,
+    "quarantine_rows": 10,
+    "fund_attributes": 95618,
+    "metric_evidence_rows": 828357,
+    "status": "PASS"
+  },
+  "checks": [
+    {
+      "command": ".venv/bin/python -m pytest -q",
+      "passed": 27,
+      "failed": 0,
+      "duration_seconds": 103.01,
+      "status": "PASS"
+    },
+    {
+      "command": ".venv/bin/python -m ruff check app etl scripts tests",
+      "findings": 0,
+      "status": "PASS"
+    },
+    {
+      "command": ".venv/bin/python scripts/run_gold.py",
+      "fixtures": 50,
+      "failures": 0,
+      "status": "PASS"
+    },
+    {
+      "command": ".venv/bin/python scripts/scan_runtime_compliance.py",
+      "files_scanned": 24,
+      "non_hcx_findings": 0,
+      "status": "PASS"
+    },
+    {
+      "command": ".venv/bin/python scripts/e2e_smoke.py --base-url http://127.0.0.1:8080",
+      "real_http_cases": 6,
+      "failures": 0,
+      "status": "PASS"
+    }
+  ],
+  "external_gates": [
+    {
+      "gate": "Docker fresh build/run/restart",
+      "status": "NOT_RUN",
+      "reason": "Docker or Podman daemon unavailable in the current workspace"
+    },
+    {
+      "gate": "HyperCLOVA X live credential E2E",
+      "status": "NOT_RUN",
+      "reason": "Team CLOVA Studio API key not available in the current workspace"
+    },
+    {
+      "gate": "Public TLS deployment",
+      "status": "NOT_RUN",
+      "reason": "Deployment target, domain, and authority not provided"
+    }
+  ]
+}

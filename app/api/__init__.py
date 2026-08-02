@@ -1,0 +1,1 @@
+"""Organizer-facing compatibility adapters."""

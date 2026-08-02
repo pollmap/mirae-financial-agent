@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://team.local/schemas/query-plan-v1.1.schema.json",
+  "title": "Financial Product Agent QueryPlan v1.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "intent",
+    "scopes",
+    "entities",
+    "filter_groups",
+    "groups_join",
+    "metrics",
+    "aggregations",
+    "sort",
+    "group_by",
+    "limit",
+    "assumptions",
+    "needs_clarification",
+    "clarification_question",
+    "missing_slots",
+    "clarification_options",
+    "preserved_plan"
+  ],
+  "properties": {
+    "version": {"const": "1.1"},
+    "intent": {
+      "enum": ["lookup", "search", "rank", "compare", "aggregate", "explain", "clarify", "unsupported"]
+    },
+    "scopes": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": {"enum": ["bond", "domestic_etp", "overseas_etp", "fund"]}
+    },
+    "entities": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {"$ref": "#/$defs/entity"}
+    },
+    "filter_groups": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {"$ref": "#/$defs/filterGroup"}
+    },
+    "groups_join": {"enum": ["AND", "OR"]},
+    "metrics": {
+      "type": "array",
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 64}
+    },
+    "aggregations": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {"$ref": "#/$defs/aggregation"}
+    },
+    "sort": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {"$ref": "#/$defs/sortItem"}
+    },
+    "group_by": {
+      "type": "array",
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 64}
+    },
+    "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+    "assumptions": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {"type": "string", "maxLength": 300}
+    },
+    "needs_clarification": {"type": "boolean"},
+    "clarification_question": {
+      "type": ["string", "null"],
+      "maxLength": 500
+    },
+    "missing_slots": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 64}
+    },
+    "clarification_options": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {"$ref": "#/$defs/clarificationOption"}
+    },
+    "preserved_plan": {
+      "type": ["object", "null"]
+    }
+  },
+  "$defs": {
+    "scopeOrNull": {
+      "type": ["string", "null"],
+      "enum": ["bond", "domestic_etp", "overseas_etp", "fund", null]
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "code", "scope"],
+      "properties": {
+        "name": {"type": ["string", "null"], "maxLength": 300},
+        "code": {"type": ["string", "null"], "maxLength": 100},
+        "scope": {"$ref": "#/$defs/scopeOrNull"}
+      }
+    },
+    "conditionValue": {
+      "oneOf": [
+        {"type": "string", "maxLength": 500},
+        {"type": "number"},
+        {"type": "boolean"},
+        {"type": "null"},
+        {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "oneOf": [
+              {"type": "string", "maxLength": 300},
+              {"type": "number"},
+              {"type": "boolean"}
+            ]
+          }
+        }
+      ]
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "op", "value", "value2", "unit"],
+      "properties": {
+        "field": {"type": "string", "minLength": 1, "maxLength": 64},
+        "op": {
+          "enum": ["eq", "ne", "gt", "gte", "lt", "lte", "between", "in", "contains", "starts_with", "is_null", "is_not_null"]
+        },
+        "value": {"$ref": "#/$defs/conditionValue"},
+        "value2": {"$ref": "#/$defs/conditionValue"},
+        "unit": {"type": ["string", "null"], "maxLength": 64}
+      }
+    },
+    "filterGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["join", "conditions"],
+      "properties": {
+        "join": {"enum": ["AND"]},
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {"$ref": "#/$defs/condition"}
+        }
+      }
+    },
+    "sortItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "direction", "nulls"],
+      "properties": {
+        "field": {"type": "string", "minLength": 1, "maxLength": 64},
+        "direction": {"enum": ["asc", "desc"]},
+        "nulls": {"const": "last"}
+      }
+    },
+    "aggregation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["function", "field", "alias", "distinct"],
+      "properties": {
+        "function": {"enum": ["count", "sum", "avg", "min", "max"]},
+        "field": {"type": ["string", "null"], "maxLength": 64},
+        "alias": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+        "distinct": {"type": "boolean"}
+      }
+    },
+    "clarificationOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "label", "description"],
+      "properties": {
+        "value": {"type": "string", "minLength": 1, "maxLength": 100},
+        "label": {"type": "string", "minLength": 1, "maxLength": 160},
+        "description": {"type": ["string", "null"], "maxLength": 300}
+      }
+    }
+  }
+}

@@ -1,0 +1,109 @@
+openapi: 3.1.0
+info:
+  title: Mirae Asset Financial Product Agent Evaluation API
+  version: 1.2.0-prebrief
+  description: >-
+    TEAM_DECISION. Organizer PDF example compatible draft. Replace only through the
+    briefing diff process before release freeze.
+paths:
+  /answer:
+    get:
+      operationId: answerQuestion
+      parameters:
+        - in: query
+          name: question_id
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+        - in: query
+          name: question
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 2000
+        - in: query
+          name: clarification_token
+          required: false
+          description: TEAM_DECISION optional extension; signed state from a prior clarification response.
+          schema:
+            type: string
+            maxLength: 10000
+        - in: query
+          name: clarification_response
+          required: false
+          description: TEAM_DECISION optional extension; must be sent together with clarification_token.
+          schema:
+            type: string
+            maxLength: 500
+      responses:
+        "200":
+          description: Answer, clarification, unsupported, or grounded no-answer
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: ./provisional-api-response.schema.json
+        "400":
+          description: Invalid or missing query parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Redacted contract-shaped internal execution failure
+          content:
+            application/json:
+              schema:
+                $ref: ./provisional-api-response.schema.json
+        "503":
+          description: Controlled dependency unavailable response; final behavior pending briefing
+          content:
+            application/json:
+              schema:
+                $ref: ./provisional-api-response.schema.json
+  /health/live:
+    get:
+      operationId: liveness
+      responses:
+        "200":
+          description: Process is alive
+  /health/ready:
+    get:
+      operationId: readiness
+      responses:
+        "200":
+          description: Serving database is ready
+        "503":
+          description: Serving database is missing or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessFailure"
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error, detail]
+      properties:
+        error:
+          type: string
+        detail:
+          type: string
+    ReadinessFailure:
+      type: object
+      additionalProperties: false
+      required: [status, reason]
+      properties:
+        status:
+          type: string
+          const: not_ready
+        reason:
+          type: string

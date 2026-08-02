@@ -1,0 +1,41 @@
+canonical_field,scopes,source_table,source_field,data_type,allowed_ops,filter_state,sort_state,notes
+product.id,bond,PRBD01N001,PD_NO,string,eq|in|starts_with,ALLOWED,ALLOWED,stable key
+product.name,bond,PRBD01N001,PD_NM,string,eq|contains|starts_with,ALLOWED,ALLOWED,ambiguity check
+product.id,domestic_etp,PREF01N001,pd_itm_no|string:pd_itm_no_ma,string,eq|in|starts_with,ALLOWED,ALLOWED,two exact identifiers
+product.name,domestic_etp,PREF01N001,pd_nm,string,eq|contains|starts_with,ALLOWED,ALLOWED,ambiguity check
+product.internal_type,domestic_etp,PREF01N001,pd_grp_no,string,eq|in,ALLOWED,ALLOWED,ETF or ETN
+product.id,overseas_etp,PREF02N001,pd_itm_no|string:pd_itm_no_ma,string,eq|in|starts_with,ALLOWED,ALLOWED,ticker/listing key
+product.isin,overseas_etp,PREF02N001,pd_isin_cd,string,eq|in,ALIAS_ONLY,BLOCKED,blank 9 and duplicate excess 50
+product.name,overseas_etp,PREF02N001,pd_nm,string,eq|contains|starts_with,ALLOWED,ALLOWED,ambiguity check
+product.internal_type,overseas_etp,PREF02N001,cu_etn_yn,string,eq|in,ALLOWED,ALLOWED,derived ETF or ETN
+product.id,fund,PRFD01N001,itm_no,string,eq|in|starts_with,ALLOWED,ALLOWED,normal 12-char items only
+product.name,fund,PRFD01N001,itm_nm|string:itm_abrv_nm,string,eq|contains|starts_with,ALLOWED,ALLOWED,ambiguity check
+product.public_private,fund,PRFD01N001,prvo_pbff_desc,string,eq|in,ALLOWED,ALLOWED,default public universe pending briefing
+product.sale_status,fund,PRFD01N001,sale_yn,string,eq|in,ALLOWED,ALLOWED,판매중/판매완료
+product.attribute_code,fund,PRFD01N001,prfd_attr_cd,string,eq|in,CODE_ONLY,BLOCKED,meaning codebook absent
+bond.exchange,bond,PRBD01N001,PD_EXG_MKT,string,eq|in,ALLOWED,ALLOWED,장내/장외
+bond.class,bond,PRBD01N001,STD_PD_MCLS_NM|string:STD_PD_SCLS_NM,string,eq|in|contains,ALLOWED,ALLOWED,raw category
+bond.currency,bond,PRBD01N001,CURR_CD,string,eq|in,ALLOWED,ALLOWED,invalid code 000 quality flag
+bond.issue_date,bond,PRBD01N001,ISU_DT,date,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,sentinel policy
+bond.maturity_date,bond,PRBD01N001,MAT_DT,date,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,99991231 meaning pending
+bond.coupon_rate,bond,PRBD01N001,SRFC_IRT,decimal,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,unit pending and outlier warning
+bond.credit_rating,bond,PRBD01N001,CRD_GRD,string,eq|in,ALLOWED,BLOCKED_PENDING_ORDER,coverage 24750
+bond.risk_grade,bond,PRBD01N001,PD_RISK_GCD,string,eq|in,ALLOWED,BLOCKED_PENDING_ORDER,code direction pending
+bond.buy_yield,bond,PRBD01N001,BUY_YIELD,decimal,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,881 values
+bond.buyable_quantity,bond,PRBD01N001,BUYABLE_QUANTITY,decimal,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,881 values
+domestic_etp.return_1y,domestic_etp,PREF01N001,du_er_1y,decimal,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,ETF-only coverage 986/1201
+domestic_etp.expense_ratio,domestic_etp,PREF01N001,cu_charge_rt,decimal,eq|gt|gte|lt|lte|between,ALLOWED,BLOCKED_PENDING_ZERO,217 values; 150 zeros
+domestic_etp.aum_last,domestic_etp,PREF01N001,du_last_aum,decimal,eq|gt|gte|lt|lte|between,ALLOWED,TYPE_CONDITIONAL,ETN 409 values all zero
+domestic_etp.base_index,domestic_etp,PREF01N001,cu_base_index,string,eq|contains|starts_with,ALLOWED,BLOCKED,58 values
+overseas_etp.trading_currency,overseas_etp,PREF02N001,pd_trd_ccy,string,eq|in,ALLOWED,ALLOWED,separate from product currency
+overseas_etp.product_currency,overseas_etp,PREF02N001,pd_curr_cd,string,eq|in,ALLOWED,ALLOWED,separate from trading currency
+overseas_etp.expense_ratio,overseas_etp,PREF02N001,cu_charge_rt,decimal,eq|gt|gte|lt|lte|between,ALLOWED,BLOCKED_PENDING_ZERO,363 zeros raw
+overseas_etp.aum_last,overseas_etp,PREF02N001,du_last_aum,decimal,eq|gt|gte|lt|lte|between,ALLOWED,CURRENCY_FILTER_REQUIRED,5459 values
+overseas_etp.nav_last,overseas_etp,PREF02N001,du_last_nav,decimal,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,682 values
+overseas_etp.return_1d,overseas_etp,PREF02N001,du_er_1d,decimal,eq|gt|gte|lt|lte|between,BLOCKED_CONSTANT,BLOCKED_CONSTANT,5388 values all zero
+overseas_etp.discrepancy_rate,overseas_etp,PREF02N001,du_diff_rt,decimal,eq|gt|gte|lt|lte|between,BLOCKED_LOW_COVERAGE,BLOCKED_LOW_COVERAGE,3 values
+fund.net_assets,fund,PRFD01N001,fd_nast_suma,decimal,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,9290/11138
+fund.return_1y,fund,PRFD01N001,fd_yr1_ern_r,decimal,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,7017/11138
+fund.return_3y,fund,PRFD01N001,fd_yr3_ern_r,decimal,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,6102/11138
+fund.risk_grade,fund,PRFD01N001,zrin_fd_ivst_risk_grd_nm,string,eq|in,ALLOWED,BLOCKED_PENDING_ORDER,8565/11138
+fund.expense_ratio,fund,PRFD01N001,,decimal,,UNAVAILABLE,UNAVAILABLE,source field absent

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://team.local/schemas/provisional-api-response.schema.json",
+  "title": "Provisional PDF-example-compatible API response",
+  "description": "TEAM_DECISION. The organizer PDF calls this shape an example; replace after briefing confirmation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["question_id", "question", "retrieved_context", "think_trace", "answer"],
+  "properties": {
+    "question_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "question": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "retrieved_context": {"type": "string", "maxLength": 500000},
+    "think_trace": {"type": "string", "maxLength": 12000},
+    "answer": {"type": "string", "maxLength": 30000}
+  }
+}

@@ -1,0 +1,208 @@
+canonical_field,scope,source_table,source_field,source_role,data_type,unit_status,allowed_ops,filter_policy,sort_policy,quality_policy,as_of_field,notes
+product.id,bond,PRBD01N001,PD_NO,PRIMARY_ID,string,IDENTIFIER,eq|in|starts_with,ALLOWED,ALLOWED,REQUIRED_UNIQUE,NONE,42 394 unique
+product.market,bond,PRBD01N001,PD_EXG_MKT,DIMENSION,string,CATEGORY,eq|in,ALLOWED,ALLOWED,VALID,NONE,
+product.name,bond,PRBD01N001,PD_NM,PRIMARY_NAME,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,AMBIGUITY_CHECK,NONE,name is not an ID
+product.alias.short_name,bond,PRBD01N001,PD_ABRV_NM,ALIAS_NAME,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,TRIM_WHITESPACE,NONE,
+product.alias.english_name,bond,PRBD01N001,PD_ENG_NM,ALIAS_NAME,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,TRIM_WHITESPACE,NONE,
+product.alias.english_short_name,bond,PRBD01N001,PD_ABRV_ENG_NM,ALIAS_NAME,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,TRIM_WHITESPACE,NONE,
+product.country_code,bond,PRBD01N001,PD_CTRY_CD,DIMENSION,string,COUNTRY_CODE,eq|in,ALLOWED,ALLOWED,VALID,NONE,
+product.issuer,bond,PRBD01N001,PD_PBCM,DIMENSION,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,TRIM_WHITESPACE,NONE,
+product.asset_class,bond,PRBD01N001,STD_PD_MCLS_NM,DIMENSION,string,CATEGORY,eq|in|contains,ALLOWED,ALLOWED,VALID,NONE,official raw major class
+product.asset_subclass,bond,PRBD01N001,STD_PD_SCLS_NM,DIMENSION,string,CATEGORY,eq|in|contains,ALLOWED,ALLOWED,MISSING_ALLOWED,NONE,official raw minor class
+bond.kind,bond,PRBD01N001,BD_KND,DIMENSION,string,CATEGORY,eq|in|contains,ALLOWED,ALLOWED,MISSING_ALLOWED,NONE,
+product.currency,bond,PRBD01N001,CURR_CD,DIMENSION,string,CURRENCY_CODE,eq|in,ALLOWED,ALLOWED,INVALID_CODE_FLAG,NONE,000 is invalid or unknown
+bond.issue_amount,bond,PRBD01N001,ISU_BAL_AMT,METRIC,decimal,PENDING_CONFIRMATION,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_POLICY,ZERO_UNKNOWN,NONE,unit and zero semantics OPEN
+bond.issue_date,bond,PRBD01N001,ISU_DT,DIMENSION,date,YYYYMMDD,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,SENTINEL_0,NONE,preserve raw numeric date
+bond.maturity_date,bond,PRBD01N001,MAT_DT,DIMENSION,date,YYYYMMDD,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,SENTINEL_0_99991231_OPEN,NONE,
+bond.coupon_rate,bond,PRBD01N001,SRFC_IRT,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,SUSPECT_OUTLIER,NONE,max 34.277
+bond.evaluator_credit_rating,bond,PRBD01N001,PD_EVCO_CRD_GRD,DIMENSION,string,RATING,eq|in|contains,ALLOWED,BLOCKED_PENDING_ORDER,MISSING_ALLOWED,CRD_GRD_DT,multiple evaluator ratings may be concatenated
+bond.risk_grade,bond,PRBD01N001,PD_RISK_GCD,DIMENSION,string,CODE,eq|in,ALLOWED,BLOCKED_PENDING_ORDER,ZERO_UNKNOWN,NONE,direction OPEN
+bond.product_info_as_of,bond,PRBD01N001,PD_STD_INFO_UPDATE,AS_OF,date,YYYYMMDD,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,MISSING_ALLOWED,NONE,field-level product information date
+bond.buy_yield,bond,PRBD01N001,BUY_YIELD,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,PARTIAL_881,NONE,
+bond.corporate_pretax_yield,bond,PRBD01N001,CORP_PRETAX_YIELD,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,PARTIAL_881,NONE,
+bond.corporate_after_tax_yield,bond,PRBD01N001,CORP_AFTER_TAX_YIELD,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,PARTIAL_881,NONE,
+bond.after_tax_yield,bond,PRBD01N001,AFTER_TAX_YIELD,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,PARTIAL_881,NONE,
+bond.preferential_tax_yield,bond,PRBD01N001,PREF_TAX_YIELD,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,PARTIAL_881,NONE,
+bond.avg_annual_tax_yield,bond,PRBD01N001,AVG_ANNUAL_TAX_YIELD,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,BLOCKED_CONSTANT,BLOCKED_CONSTANT,UNUSABLE_CONSTANT,NONE,881 present values are all zero
+bond.deposit_equivalent_yield_154,bond,PRBD01N001,DEPO_EQUIV_YIELD_154,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,PARTIAL_881,NONE,154 meaning OPEN
+bond.buyable_quantity,bond,PRBD01N001,BUYABLE_QUANTITY,METRIC,decimal,COUNT,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,ZERO_VALID_OR_UNAVAILABLE_OPEN,NONE,881 present and 325 positive
+bond.remaining_days_raw,bond,PRBD01N001,REMAINING_DAYS,METRIC,decimal,DAYS,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,STALE_RISK,PD_STD_INFO_UPDATE,do not present as 2026-07-11 remaining days
+bond.duration,bond,PRBD01N001,DUR,METRIC,decimal,YEARS_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,ZERO_UNKNOWN,PD_STD_INFO_UPDATE,
+bond.convexity,bond,PRBD01N001,COV,METRIC,decimal,UNIT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,ZERO_UNKNOWN,PD_STD_INFO_UPDATE,
+bond.ndy_duration,bond,PRBD01N001,NDY_DUR,METRIC,decimal,YEARS_PENDING,eq|gt|gte|lt|lte|between,PENDING,BLOCKED_PENDING_SEMANTICS,ZERO_UNKNOWN,PD_STD_INFO_UPDATE,NDY semantics OPEN
+bond.ndy_convexity,bond,PRBD01N001,NDY_COV,METRIC,decimal,UNIT_PENDING,eq|gt|gte|lt|lte|between,PENDING,BLOCKED_PENDING_SEMANTICS,ZERO_UNKNOWN,PD_STD_INFO_UPDATE,NDY semantics OPEN
+bond.evaluation_price,bond,PRBD01N001,EVAL_PRICE,METRIC,decimal,PRICE_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,ZERO_UNKNOWN,PD_STD_INFO_UPDATE,not realtime
+bond.applied_yield,bond,PRBD01N001,APPLIED_YIELD,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,SUSPECT_OUTLIER,PD_STD_INFO_UPDATE,max 787.327
+bond.dirty_price,bond,PRBD01N001,DIRTY,METRIC,decimal,PRICE_PENDING,eq|gt|gte|lt|lte|between,PENDING,BLOCKED_PENDING_SEMANTICS,ZERO_UNKNOWN,PD_STD_INFO_UPDATE,
+bond.ndy_evaluation_price,bond,PRBD01N001,NDY_EVAL_PRICE,METRIC,decimal,PRICE_PENDING,eq|gt|gte|lt|lte|between,PENDING,BLOCKED_PENDING_SEMANTICS,ZERO_UNKNOWN,PD_STD_INFO_UPDATE,NDY semantics OPEN
+bond.ndy_applied_yield,bond,PRBD01N001,NDY_APPLIED_YIELD,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,PENDING,BLOCKED_PENDING_SEMANTICS,SUSPECT_OUTLIER,PD_STD_INFO_UPDATE,NDY semantics OPEN
+bond.ndy_dirty_price,bond,PRBD01N001,NDY_DIRTY,METRIC,decimal,PRICE_PENDING,eq|gt|gte|lt|lte|between,PENDING,BLOCKED_PENDING_SEMANTICS,ZERO_UNKNOWN,PD_STD_INFO_UPDATE,NDY semantics OPEN
+bond.credit_rating,bond,PRBD01N001,CRD_GRD,DIMENSION,string,RATING,eq|in,ALLOWED,BLOCKED_PENDING_ORDER,MISSING_ALLOWED,CRD_GRD_DT,coverage 24750
+bond.credit_rating_as_of,bond,PRBD01N001,CRD_GRD_DT,AS_OF,date,YYYYMMDD,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,SENTINEL_0,NONE,
+domestic_etp.benchmark,domestic_etp,PREF01N001,cu_base_index,DIMENSION,string,TEXT,eq|contains|starts_with,ALLOWED,BLOCKED_LOW_COVERAGE,MISSING_ALLOWED,cu_upt_dt,58 present
+domestic_etp.other_expense_ratio,domestic_etp,PREF01N001,cu_charge_etc_rt,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,BLOCKED_CONSTANT,BLOCKED_CONSTANT,UNUSABLE_CONSTANT,cu_upt_dt,1553 present values all zero
+domestic_etp.expense_ratio,domestic_etp,PREF01N001,cu_charge_rt,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,BLOCKED_PENDING_ZERO_POLICY,ZERO_UNKNOWN,cu_upt_dt,source schema declares text
+product.manager,domestic_etp,PREF01N001,cu_fund_mgmt_co,DIMENSION,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,VALID,cu_upt_dt,
+domestic_etp.leverage_factor,domestic_etp,PREF01N001,cu_lev_fector,DIMENSION,decimal,MULTIPLE,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,MISSING_ALLOWED,cu_upt_dt,source schema declares text
+domestic_etp.strategy,domestic_etp,PREF01N001,cu_strtegy,DIMENSION,string,CATEGORY,eq|in|contains,ALLOWED,ALLOWED,MISSING_ALLOWED,cu_upt_dt,C value meaning OPEN
+domestic_etp.control_as_of,domestic_etp,PREF01N001,cu_upt_dt,AS_OF,date,YYYYMMDD,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,MISSING_ALLOWED,NONE,
+domestic_etp.base_price,domestic_etp,PREF01N001,du_bpr,METRIC,decimal,KRW_PRICE_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,ZERO_UNKNOWN,du_upt_dt,
+domestic_etp.tracking_error,domestic_etp,PREF01N001,du_chas_errt,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,BLOCKED_CONSTANT,BLOCKED_CONSTANT,UNUSABLE_CONSTANT,du_upt_dt,
+domestic_etp.close_price,domestic_etp,PREF01N001,du_clpr,METRIC,decimal,KRW_PRICE_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,ZERO_UNKNOWN,du_upt_dt,not realtime
+domestic_etp.discrepancy_rate,domestic_etp,PREF01N001,du_diff_rt,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,BLOCKED_CONSTANT,BLOCKED_CONSTANT,UNUSABLE_CONSTANT,du_upt_dt,
+domestic_etp.return_1d,domestic_etp,PREF01N001,du_er_1d,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,ZERO_VALID_PENDING,du_upt_dt,
+domestic_etp.return_1m,domestic_etp,PREF01N001,du_er_1m,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,SENTINEL_MINUS_100_OPEN,du_upt_dt,
+domestic_etp.return_1y,domestic_etp,PREF01N001,du_er_1y,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,SENTINEL_MINUS_100_OPEN,du_upt_dt,
+domestic_etp.return_3m,domestic_etp,PREF01N001,du_er_3m,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,SENTINEL_MINUS_100_OPEN,du_upt_dt,
+domestic_etp.return_6m,domestic_etp,PREF01N001,du_er_6m,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,SENTINEL_MINUS_100_OPEN,du_upt_dt,
+domestic_etp.return_ytd,domestic_etp,PREF01N001,du_er_ytd,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,SENTINEL_MINUS_100_OPEN,du_upt_dt,same as-of required
+domestic_etp.high_price,domestic_etp,PREF01N001,du_hpr,METRIC,decimal,KRW_PRICE_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,ZERO_UNKNOWN,du_upt_dt,
+domestic_etp.aum_last,domestic_etp,PREF01N001,du_last_aum,METRIC,decimal,KRW_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,TYPE_CONDITIONAL,ZERO_UNKNOWN,du_upt_dt,ETN present values all zero
+domestic_etp.nav_last,domestic_etp,PREF01N001,du_last_nav,METRIC,decimal,KRW_PRICE_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,VALID,du_upt_dt,
+domestic_etp.low_or_open_price,domestic_etp,PREF01N001,du_lpr,METRIC,decimal,KRW_PRICE_PENDING,eq|gt|gte|lt|lte|between,PENDING,BLOCKED_PENDING_SEMANTICS,ZERO_UNKNOWN,du_upt_dt,source Korean label says open price but field name suggests low price
+domestic_etp.nav_change_amount,domestic_etp,PREF01N001,du_nav_rnf_amt,METRIC,decimal,KRW_PRICE_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,VALID,du_upt_dt,
+domestic_etp.nav_previous,domestic_etp,PREF01N001,du_nav_yday,METRIC,decimal,KRW_PRICE_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,VALID,du_upt_dt,
+domestic_etp.daily_as_of,domestic_etp,PREF01N001,du_upt_dt,AS_OF,timestamp,TIMESTAMP,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,VALID,NONE,
+domestic_etp.trading_value_1d,domestic_etp,PREF01N001,du_val_1d,METRIC,decimal,KRW_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,ZERO_VALID_PENDING,du_upt_dt,
+domestic_etp.trading_value_avg_1m,domestic_etp,PREF01N001,du_val_1m,METRIC,decimal,KRW_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,ZERO_VALID_PENDING,du_upt_dt,
+domestic_etp.trading_value_avg_5d,domestic_etp,PREF01N001,du_val_5d,METRIC,decimal,KRW_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,ZERO_VALID_PENDING,du_upt_dt,
+domestic_etp.volume_1d,domestic_etp,PREF01N001,du_vol_1d,METRIC,decimal,COUNT,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,ZERO_VALID_PENDING,du_upt_dt,
+domestic_etp.volume_avg_1m,domestic_etp,PREF01N001,du_vol_avg_1m,METRIC,decimal,COUNT,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,ZERO_VALID_PENDING,du_upt_dt,
+domestic_etp.volume_avg_5d,domestic_etp,PREF01N001,du_vol_avg_5d,METRIC,decimal,COUNT,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,ZERO_VALID_PENDING,du_upt_dt,
+domestic_etp.realtime_discrepancy_rate,domestic_etp,PREF01N001,nru_mkt_diff_rt,UNAVAILABLE,decimal,PERCENTAGE_POINT_PENDING,NONE,UNAVAILABLE,UNAVAILABLE,MISSING_ALL,NONE,100 percent blank
+domestic_etp.realtime_inav,domestic_etp,PREF01N001,nru_mkt_inav,UNAVAILABLE,decimal,KRW_PRICE_PENDING,NONE,UNAVAILABLE,UNAVAILABLE,MISSING_ALL,NONE,100 percent blank
+product.alias.short_name,domestic_etp,PREF01N001,pd_abrv_nm,ALIAS_NAME,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,AMBIGUITY_CHECK,NONE,
+domestic_etp.circulating_net_assets,domestic_etp,PREF01N001,pd_circ_net_tamt,METRIC,decimal,KRW_PENDING,eq|gt|gte|lt|lte|between,PENDING,BLOCKED_PENDING_SEMANTICS,ZERO_UNKNOWN,wu_upt_dt,
+domestic_etp.circulating_share_count,domestic_etp,PREF01N001,pd_circ_stk_cnt,METRIC,decimal,COUNT,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,ZERO_UNKNOWN,wu_upt_dt,
+product.currency_code_raw,domestic_etp,PREF01N001,pd_curr_cd,DIMENSION,string,CURRENCY_CODE_RAW,eq|in,ALLOWED,ALLOWED,INVALID_CODE_FLAG,NONE,CURR_CD_000 is not a currency
+product.currency_name,domestic_etp,PREF01N001,pd_curr_nm,DIMENSION,string,TEXT,eq|in,ALLOWED,ALLOWED,INVALID_CODE_FLAG,NONE,
+domestic_etp.dividend_per_share,domestic_etp,PREF01N001,pd_divd_amt_pshr,METRIC,decimal,KRW_PENDING,eq|gt|gte|lt|lte|between,BLOCKED_CONSTANT,BLOCKED_CONSTANT,UNUSABLE_CONSTANT,wu_upt_dt,
+domestic_etp.dividend_cycle,domestic_etp,PREF01N001,pd_dvid_cycl,DIMENSION,string,CATEGORY,NONE,UNAVAILABLE,UNAVAILABLE,MISSING_ALL,NONE,source label typo OPEN
+domestic_etp.dividend_yield,domestic_etp,PREF01N001,pd_dvid_yield,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,BLOCKED_CONSTANT,BLOCKED_CONSTANT,UNUSABLE_CONSTANT,wu_upt_dt,1551 present values all zero
+product.exchange_code,domestic_etp,PREF01N001,pd_exg_mkt_cd,DIMENSION,string,CODE,eq|in,ALLOWED,ALLOWED,MISSING_ON_QUARANTINE,NONE,
+product.exchange_name,domestic_etp,PREF01N001,pd_exg_mkt_nm,DIMENSION,string,TEXT,eq|in|contains,ALLOWED,ALLOWED,TRIM_WHITESPACE,NONE,
+product.internal_type,domestic_etp,PREF01N001,pd_grp_no,DIMENSION,string,CATEGORY,eq|in,ALLOWED,ALLOWED,VALID,NONE,ETF or ETN
+product.id,domestic_etp,PREF01N001,pd_itm_no,PRIMARY_ID,string,IDENTIFIER,eq|in|starts_with,ALLOWED,ALLOWED,REQUIRED_UNIQUE,NONE,
+product.alias.mirae_id,domestic_etp,PREF01N001,pd_itm_no_ma,ALIAS_ID,string,IDENTIFIER,eq|in|starts_with,ALLOWED,ALLOWED,REQUIRED_UNIQUE,NONE,
+domestic_etp.face_value,domestic_etp,PREF01N001,pd_lst_price,METRIC,decimal,KRW_PENDING,eq|gt|gte|lt|lte|between,BLOCKED_CONSTANT,BLOCKED_CONSTANT,UNUSABLE_CONSTANT,NONE,all zero
+domestic_etp.listed_share_count,domestic_etp,PREF01N001,pd_lst_stk_cnt,METRIC,decimal,COUNT,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,ZERO_UNKNOWN,NONE,
+product.trading_end_date,domestic_etp,PREF01N001,pd_lste_dt,DIMENSION,date,YYYYMMDD,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,SENTINEL_99991231_OPEN,NONE,
+product.listing_date,domestic_etp,PREF01N001,pd_lstg_dt,DIMENSION,date,YYYYMMDD,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,SUSPECT_10001231,NONE,
+product.market_code,domestic_etp,PREF01N001,pd_mkt_id,DIMENSION,string,CODE,eq|in,ALLOWED,ALLOWED,MISSING_ON_QUARANTINE,NONE,
+product.market_name,domestic_etp,PREF01N001,pd_mkt_nm,DIMENSION,string,TEXT,eq|in|contains,ALLOWED,ALLOWED,MISSING_ON_QUARANTINE,NONE,
+domestic_etp.nav_per_share,domestic_etp,PREF01N001,pd_nav_pshr,METRIC,decimal,KRW_PRICE_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,VALID,wu_upt_dt,
+domestic_etp.net_asset_per_share,domestic_etp,PREF01N001,pd_net_ast_pshr,METRIC,decimal,KRW_PENDING,eq|gt|gte|lt|lte|between,BLOCKED_CONSTANT,BLOCKED_CONSTANT,UNUSABLE_CONSTANT,wu_upt_dt,
+domestic_etp.net_profit_per_share,domestic_etp,PREF01N001,pd_net_prft_pshr,METRIC,decimal,KRW_PENDING,eq|gt|gte|lt|lte|between,BLOCKED_CONSTANT,BLOCKED_CONSTANT,UNUSABLE_CONSTANT,wu_upt_dt,
+domestic_etp.net_asset_ratio_per_share,domestic_etp,PREF01N001,pd_net_rt_ast_pshr,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,BLOCKED_CONSTANT,BLOCKED_CONSTANT,UNUSABLE_CONSTANT,wu_upt_dt,
+domestic_etp.net_assets,domestic_etp,PREF01N001,pd_net_tamt,METRIC,decimal,KRW_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,VALID,wu_upt_dt,AUM canonical priority OPEN
+product.name,domestic_etp,PREF01N001,pd_nm,PRIMARY_NAME,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,AMBIGUITY_CHECK,NONE,
+product.pension_risk_class,domestic_etp,PREF01N001,pd_pen_risk_nm,DIMENSION,string,CATEGORY,eq|in,ALLOWED,ALLOWED,VALUE_N_MEANING_OPEN,NONE,
+product.pension_trade_eligible,domestic_etp,PREF01N001,pd_pen_tr_yn,DIMENSION,string,BOOLEAN_CODE,eq|in,ALLOWED,ALLOWED,VALID,NONE,
+product.risk_grade_code,domestic_etp,PREF01N001,pd_risk_cd,DIMENSION,string,CODE,eq|in,ALLOWED,ALLOWED_WITH_DEFINED_LABEL,VALID,NONE,
+product.risk_grade_name,domestic_etp,PREF01N001,pd_risk_nm,DIMENSION,string,RISK_SCALE,eq|in,ALLOWED,ALLOWED_WITH_DEFINED_LABEL,VALID,NONE,do not compare across product groups
+product.sale_status,domestic_etp,PREF01N001,pd_sale_yn,STATUS,string,BOOLEAN_CODE,eq|in,ALLOWED,ALLOWED,VALID,NONE,0 or 1
+product.sector_code,domestic_etp,PREF01N001,pd_sect_cd,DIMENSION,string,CODE,eq|in,PENDING,BLOCKED_CODEBOOK_MISSING,MISSING_ALLOWED,NONE,
+product.sector_name,domestic_etp,PREF01N001,pd_sect_nm,UNAVAILABLE,string,TEXT,NONE,UNAVAILABLE,UNAVAILABLE,MISSING_ALL,NONE,
+product.spac_flag,domestic_etp,PREF01N001,pd_spac_yn,DIMENSION,string,BOOLEAN_CODE,eq|in,ALLOWED,ALLOWED,MISSING_ALLOWED,NONE,
+domestic_etp.share_count,domestic_etp,PREF01N001,pd_stk_cnt,METRIC,decimal,COUNT,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,VALID,wu_upt_dt,
+product.trading_halt_status,domestic_etp,PREF01N001,pd_tr_yn,STATUS,string,BOOLEAN_CODE,eq|in,PENDING,BLOCKED_PENDING_DIRECTION,MISSING_ON_QUARANTINE,NONE,meaning of 1 OPEN
+domestic_etp.realtime_price,domestic_etp,PREF01N001,ru_mkt_price,UNAVAILABLE,decimal,KRW_PRICE_PENDING,NONE,UNAVAILABLE,UNAVAILABLE,MISSING_ALL,NONE,
+domestic_etp.realtime_volume,domestic_etp,PREF01N001,ru_mkt_volume,UNAVAILABLE,decimal,COUNT,NONE,UNAVAILABLE,UNAVAILABLE,MISSING_ALL,NONE,
+product.core_flag,domestic_etp,PREF01N001,wu_core_yn,DIMENSION,string,BOOLEAN_CODE,eq|in,ALLOWED,ALLOWED,VALID,wu_upt_dt,
+product.asset_class,domestic_etp,PREF01N001,wu_inv_ast_type,DIMENSION,string,CATEGORY,eq|in|contains,ALLOWED,ALLOWED,VALID,wu_upt_dt,
+product.investment_region,domestic_etp,PREF01N001,wu_inv_rgn,DIMENSION,string,CATEGORY,eq|in|contains,ALLOWED,ALLOWED,VALID,wu_upt_dt,
+domestic_etp.weekly_as_of,domestic_etp,PREF01N001,wu_upt_dt,AS_OF,date,YYYYMMDD,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,MISSING_ALLOWED,NONE,
+overseas_etp.benchmark,overseas_etp,PREF02N001,cu_base_index,DIMENSION,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,MISSING_ALLOWED,cu_upt_dt,sentinel prose may mean unavailable
+overseas_etp.expense_ratio,overseas_etp,PREF02N001,cu_charge_rt,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,BLOCKED_PENDING_ZERO_POLICY,ZERO_UNKNOWN,cu_upt_dt,
+product.type_validation_flag,overseas_etp,PREF02N001,cu_etn_yn,VALIDATION,string,BOOLEAN_CODE,eq|in,CODE_ONLY,BLOCKED,BLANK_MEANS_ETF_VALIDATED,NONE,59 Y and otherwise blank
+product.manager,overseas_etp,PREF02N001,cu_fund_mgmt_co,DIMENSION,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,MISSING_ON_QUARANTINE,cu_upt_dt,
+overseas_etp.index_replication_method,overseas_etp,PREF02N001,cu_index_repl_mthd,DIMENSION,string,CATEGORY,eq|in,ALLOWED,ALLOWED_WITH_COVERAGE,MISSING_ALLOWED,cu_upt_dt,
+overseas_etp.index_tracking_flag,overseas_etp,PREF02N001,cu_index_tracking_yn,DIMENSION,string,BOOLEAN_CODE,eq|in,ALLOWED,ALLOWED_WITH_COVERAGE,MISSING_ALLOWED,cu_upt_dt,
+overseas_etp.inverse_short_flag,overseas_etp,PREF02N001,cu_inverse_short_yn,DIMENSION,string,BOOLEAN_CODE,eq|in,ALLOWED,ALLOWED_WITH_COVERAGE,MISSING_ALLOWED,cu_upt_dt,do not infer leverage
+overseas_etp.leverage_factor,overseas_etp,PREF02N001,cu_lev_fector,UNAVAILABLE,decimal,MULTIPLE,NONE,UNAVAILABLE,UNAVAILABLE,MISSING_ALL,cu_upt_dt,
+overseas_etp.strategy,overseas_etp,PREF02N001,cu_strtegy,DIMENSION,string,TEXT,contains|semantic,ALLOWED,BLOCKED,TRIM_WHITESPACE,cu_upt_dt,semantic retrieval only
+overseas_etp.control_as_of,overseas_etp,PREF02N001,cu_upt_dt,AS_OF,date,YYYYMMDD,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,VALID,NONE,
+overseas_etp.base_date_match_flag,overseas_etp,PREF02N001,du_base_dt_match_yn,QUALITY,string,BOOLEAN_CODE,eq|in,CODE_ONLY,BLOCKED,MISSING_ON_PARTIAL,du_upt_dt,
+overseas_etp.base_price,overseas_etp,PREF02N001,du_bpr,METRIC,decimal,TRADING_CURRENCY,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,MISSING_ON_PARTIAL,du_upt_dt,
+overseas_etp.close_price,overseas_etp,PREF02N001,du_clpr,METRIC,decimal,TRADING_CURRENCY,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,MISSING_ON_PARTIAL,du_clpr_base_dt,not realtime; source scale/decimal rule requires briefing confirmation because extreme values are preserved
+overseas_etp.close_price_as_of,overseas_etp,PREF02N001,du_clpr_base_dt,AS_OF,date,YYYYMMDD,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,MISSING_ON_PARTIAL,NONE,
+overseas_etp.close_price_source,overseas_etp,PREF02N001,du_clpr_src,DIMENSION,string,CODE,eq|in,CODE_ONLY,BLOCKED,MISSING_ON_PARTIAL,du_clpr_base_dt,
+overseas_etp.discrepancy_rate,overseas_etp,PREF02N001,du_diff_rt,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,BLOCKED_LOW_COVERAGE,BLOCKED_LOW_COVERAGE,SEVERELY_PARTIAL,du_upt_dt,3 present
+overseas_etp.return_1d,overseas_etp,PREF02N001,du_er_1d,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,BLOCKED_CONSTANT,BLOCKED_CONSTANT,UNUSABLE_CONSTANT,du_upt_dt,5388 present all zero
+overseas_etp.high_price,overseas_etp,PREF02N001,du_hpr,METRIC,decimal,TRADING_CURRENCY,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,MISSING_ON_PARTIAL,du_upt_dt,
+overseas_etp.aum_last,overseas_etp,PREF02N001,du_last_aum,METRIC,decimal,CURRENCY_CONTEXT_REQUIRED,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_CURRENCY,ZERO_UNKNOWN,du_nav_base_dt,no cross currency ranking
+overseas_etp.nav_last,overseas_etp,PREF02N001,du_last_nav,METRIC,decimal,PRODUCT_CURRENCY_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,MISSING_ALLOWED,du_nav_base_dt,
+overseas_etp.low_price,overseas_etp,PREF02N001,du_lpr,METRIC,decimal,TRADING_CURRENCY,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,MISSING_ON_PARTIAL,du_upt_dt,
+overseas_etp.nav_as_of,overseas_etp,PREF02N001,du_nav_base_dt,AS_OF,timestamp,TIMESTAMP,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,VALID,NONE,
+overseas_etp.open_price,overseas_etp,PREF02N001,du_opr,METRIC,decimal,TRADING_CURRENCY,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,MISSING_ON_PARTIAL,du_upt_dt,
+overseas_etp.daily_as_of,overseas_etp,PREF02N001,du_upt_dt,AS_OF,date,YYYYMMDD,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,MISSING_ON_PARTIAL,NONE,
+overseas_etp.trading_value_1d,overseas_etp,PREF02N001,du_val_1d,METRIC,decimal,TRADING_CURRENCY,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,ZERO_VALID_PENDING,du_upt_dt,
+overseas_etp.volume_1d,overseas_etp,PREF02N001,du_vol_1d,METRIC,decimal,COUNT,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,ZERO_VALID_PENDING,du_upt_dt,
+product.alias.short_name,overseas_etp,PREF02N001,pd_abrv_nm,ALIAS_NAME,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,AMBIGUITY_CHECK,NONE,
+product.currency,overseas_etp,PREF02N001,pd_curr_cd,DIMENSION,string,CURRENCY_CODE,eq|in,ALLOWED,ALLOWED,MISSING_ON_QUARANTINE,NONE,USD5637 and INR1
+product.exchange_code,overseas_etp,PREF02N001,pd_exg_mkt_cd,DIMENSION,string,CODE,eq|in,ALLOWED,ALLOWED,VALID,NONE,
+product.internal_type,overseas_etp,PREF02N001,pd_grp_no,DIMENSION,string,CATEGORY,eq|in,ALLOWED,ALLOWED,VALID,NONE,primary ETF or ETN type
+product.alias.isin,overseas_etp,PREF02N001,pd_isin_cd,ALIAS_ID,string,IDENTIFIER,eq|in,ALIAS_ONLY,BLOCKED,MISSING_AND_NONUNIQUE,NONE,not a PK
+product.id,overseas_etp,PREF02N001,pd_itm_no,PRIMARY_ID,string,IDENTIFIER,eq|in|starts_with,ALLOWED,ALLOWED,REQUIRED_UNIQUE,NONE,
+product.alias.mirae_id,overseas_etp,PREF02N001,pd_itm_no_ma,ALIAS_ID,string,IDENTIFIER,eq|in|starts_with,ALLOWED,ALLOWED,REQUIRED_UNIQUE,NONE,
+product.alias.lipper_id,overseas_etp,PREF02N001,pd_lipper_id,ALIAS_ID,string,IDENTIFIER,eq|in,ALIAS_ONLY,BLOCKED,MISSING_ON_QUARANTINE,NONE,
+product.listing_date,overseas_etp,PREF02N001,pd_lstg_dt,DIMENSION,date,YYYYMMDD,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,SENTINEL_00000000,NONE,
+overseas_etp.face_value,overseas_etp,PREF02N001,pd_lst_price,METRIC,decimal,PRODUCT_CURRENCY_PENDING,eq|gt|gte|lt|lte|between,BLOCKED_CONSTANT,BLOCKED_CONSTANT,UNUSABLE_NEAR_CONSTANT,NONE,5635 of 5636 present are zero
+overseas_etp.listed_share_count,overseas_etp,PREF02N001,pd_lst_stk_cnt,METRIC,decimal,COUNT,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,ZERO_UNKNOWN,NONE,
+product.market_code,overseas_etp,PREF02N001,pd_mkt_id,DIMENSION,string,CODE,eq|in,ALLOWED,ALLOWED,VALID,NONE,
+product.name,overseas_etp,PREF02N001,pd_nm,PRIMARY_NAME,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,AMBIGUITY_CHECK,NONE,
+product.sale_status,overseas_etp,PREF02N001,pd_sale_yn,STATUS,string,BOOLEAN_CODE,eq|in,ALLOWED,ALLOWED,MISSING_ON_PARTIAL,NONE,
+product.trading_currency,overseas_etp,PREF02N001,pd_trd_ccy,DIMENSION,string,CURRENCY_CODE,eq|in,ALLOWED,ALLOWED,VALID,NONE,all USD
+product.trading_halt_status,overseas_etp,PREF02N001,pd_tr_yn,STATUS,string,BOOLEAN_CODE,eq|in,PENDING,BLOCKED_PENDING_DIRECTION,MISSING_ON_PARTIAL,NONE,
+product.alias.us_cik,overseas_etp,PREF02N001,pd_us_cik,ALIAS_ID,string,IDENTIFIER,eq|in,ALIAS_ONLY,BLOCKED,MISSING_ALLOWED,NONE,
+overseas_etp.reference_market_price,overseas_etp,PREF02N001,ru_mkt_price,METRIC,decimal,TRADING_CURRENCY,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,MISSING_ON_PARTIAL,du_upt_dt,not guaranteed realtime
+overseas_etp.reference_market_volume,overseas_etp,PREF02N001,ru_mkt_volume,METRIC,decimal,COUNT,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_DATE,ZERO_VALID_PENDING,du_upt_dt,not guaranteed realtime
+product.core_flag,overseas_etp,PREF02N001,wu_core_yn,DIMENSION,string,BOOLEAN_CODE,eq|in,ALLOWED,BLOCKED_LOW_COVERAGE,MISSING_ALLOWED,wu_upt_dt,
+product.asset_class,overseas_etp,PREF02N001,wu_inv_ast_type,DIMENSION,string,CATEGORY,eq|in|contains,ALLOWED,ALLOWED,MISSING_ON_QUARANTINE,wu_upt_dt,
+product.investment_region,overseas_etp,PREF02N001,wu_inv_rgn,DIMENSION,string,CATEGORY,eq|in|contains,ALLOWED,ALLOWED,MISSING_ON_QUARANTINE,wu_upt_dt,
+overseas_etp.weekly_as_of,overseas_etp,PREF02N001,wu_upt_dt,AS_OF,date,YYYYMMDD,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED,VALID,NONE,
+fund.benchmark_english,fund,PRFD01N001,bmrk_eng_nm,DIMENSION,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,PLACEHOLDER_REVIEW,NONE,
+fund.benchmark,fund,PRFD01N001,bmrk_nm,DIMENSION,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,PLACEHOLDER_REVIEW,NONE,
+product.currency,fund,PRFD01N001,curr_cd,DIMENSION,string,CURRENCY_CODE,eq|in,ALLOWED,ALLOWED,DAMAGED_ROW_FLAG,NONE,
+fund.currency_hedge_flag,fund,PRFD01N001,exchdg_yn,DIMENSION,string,BOOLEAN_CODE,eq|in,ALLOWED,ALLOWED_WITH_COVERAGE,MISSING_ALLOWED,NONE,68.88 percent raw coverage
+fund.establishment_country_code,fund,PRFD01N001,fd_estb_ctry_cd,DIMENSION,string,COUNTRY_CODE_RAW,eq|in,PENDING,BLOCKED_CODEBOOK_MISSING,ZERO_UNKNOWN,NONE,preserve leading zeros
+product.investment_region,fund,PRFD01N001,fd_ivst_rgn_desc,DIMENSION,string,CATEGORY,eq|in|contains,ALLOWED,ALLOWED,MISSING_ALLOWED,NONE,
+fund.return_18m,fund,PRFD01N001,fd_mm18_ern_r,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,SUSPECT_OUTLIER,NONE,product-level dedupe required
+fund.return_1m,fund,PRFD01N001,fd_mm1_ern_r,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,ZERO_VALID_PENDING,NONE,product-level dedupe required
+fund.return_3m,fund,PRFD01N001,fd_mm3_ern_r,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,ZERO_VALID_PENDING,NONE,product-level dedupe required
+fund.return_6m,fund,PRFD01N001,fd_mm6_ern_r,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,ZERO_VALID_PENDING,NONE,product-level dedupe required
+fund.net_assets,fund,PRFD01N001,fd_nast_suma,METRIC,decimal,KRW_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,ZERO_UNKNOWN,NONE,product-level dedupe required
+fund.setup_type_code,fund,PRFD01N001,fd_set_pcd,DIMENSION,string,CODE,eq|in,PENDING,BLOCKED_CODEBOOK_MISSING,ZERO_UNKNOWN,NONE,
+fund.return_1w,fund,PRFD01N001,fd_wk1_ern_r,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_COVERAGE,ZERO_VALID_PENDING,NONE,product-level dedupe required
+fund.return_1y,fund,PRFD01N001,fd_yr1_ern_r,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,SUSPECT_OUTLIER,NONE,intra-scope only
+fund.return_2y,fund,PRFD01N001,fd_yr2_ern_r,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,SUSPECT_OUTLIER,NONE,
+fund.return_3y,fund,PRFD01N001,fd_yr3_ern_r,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,SUSPECT_OUTLIER,NONE,
+fund.return_5y,fund,PRFD01N001,fd_yr5_ern_r,METRIC,decimal,PERCENTAGE_POINT_PENDING,eq|gt|gte|lt|lte|between,ALLOWED,ALLOWED_WITH_OUTLIER_REVIEW,SUSPECT_OUTLIER,NONE,
+fund.foreign_base_price_flag,fund,PRFD01N001,frc_bpr_itm_yn,DIMENSION,string,BOOLEAN_CODE,eq|in,ALLOWED,ALLOWED,VALID,NONE,
+product.alias.fss_id,fund,PRFD01N001,fss_itm_no,ALIAS_ID,string,IDENTIFIER,eq|in,ALIAS_ONLY,BLOCKED,PLACEHOLDER_ZERO,NONE,
+fund.hedge_fund_flag,fund,PRFD01N001,hdge_fd_yn,DIMENSION,string,BOOLEAN_CODE,eq|in,BLOCKED_CONSTANT,BLOCKED_CONSTANT,UNUSABLE_CONSTANT,NONE,normal rows all zero
+fund.interest_dividend_class,fund,PRFD01N001,int_dvd_desc,DIMENSION,string,CATEGORY,eq|in,ALLOWED,ALLOWED,MISSING_ALLOWED,NONE,
+product.alias.short_name,fund,PRFD01N001,itm_abrv_nm,ALIAS_NAME,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,AMBIGUITY_CHECK,NONE,
+product.alias.english_short_name,fund,PRFD01N001,itm_eabrv_nm,ALIAS_NAME,string,TEXT,eq|contains|starts_with,ALLOWED,BLOCKED_LOW_COVERAGE,MISSING_ALLOWED,NONE,
+product.alias.english_name,fund,PRFD01N001,itm_eng_nm,ALIAS_NAME,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,PLACEHOLDER_ZERO,NONE,
+product.name,fund,PRFD01N001,itm_nm,PRIMARY_NAME,string,TEXT,eq|contains|starts_with,ALLOWED,ALLOWED,AMBIGUITY_CHECK,NONE,
+product.id,fund,PRFD01N001,itm_no,PRIMARY_ID,string,IDENTIFIER,eq|in|starts_with,ALLOWED,ALLOWED,REQUIRED_NORMAL_12,NONE,damaged quote ID quarantined
+fund.kofia_classification_code,fund,PRFD01N001,kofia_fd_ccd,DIMENSION,string,CODE,eq|in,PENDING,BLOCKED_CODEBOOK_MISSING,PLACEHOLDER_ZERO,NONE,
+product.alias.ksd_id,fund,PRFD01N001,ksd_itm_no,ALIAS_ID,string,IDENTIFIER,eq|in,ALIAS_ONLY,BLOCKED,MISSING_AND_NONUNIQUE,NONE,
+product.alias.manager_item_id,fund,PRFD01N001,mtco_itm_no,ALIAS_ID,string,IDENTIFIER,eq|in,ALIAS_ONLY,BLOCKED,PLACEHOLDER_ZERO,NONE,
+fund.offshore_flag,fund,PRFD01N001,ofsfd_yn,DIMENSION,string,BOOLEAN_CODE,eq|in,BLOCKED_CONSTANT,BLOCKED_CONSTANT,UNUSABLE_CONSTANT,NONE,normal rows all zero
+product.asset_class,fund,PRFD01N001,or_attr_desc,DIMENSION,string,CATEGORY,eq|in|contains,ALLOWED,ALLOWED,VALUE_06_OPEN,NONE,
+product.manager_code,fund,PRFD01N001,or_co_xtn_itt_cd,DIMENSION,string,INSTITUTION_CODE,eq|in,CODE_ONLY,BLOCKED,DAMAGED_ROW_FLAG,NONE,manager name unavailable
+fund.domestic_overseas_class,fund,PRFD01N001,ovrs_fd_desc,DIMENSION,string,CATEGORY,eq|in,ALLOWED,ALLOWED,MISSING_ALLOWED,NONE,
+fund.person_corporate_class,fund,PRFD01N001,pers_corp_desc,DIMENSION,string,CATEGORY,eq|in,ALLOWED,ALLOWED,MISSING_ALLOWED,NONE,
+fund.professional_investor_sale_control_code,fund,PRFD01N001,pfiv_sale_cntl_tcd,DIMENSION,string,CODE,eq|in,PENDING,BLOCKED_CODEBOOK_MISSING,ZERO_UNKNOWN,NONE,
+fund.attribute_code,fund,PRFD01N001,prfd_attr_cd,BRIDGE_KEY,string,CODE,eq|in,CODE_ONLY,BLOCKED_CODEBOOK_MISSING,VALID,NONE,228 codes and bridge EXISTS only
+fund.private_fund_class,fund,PRFD01N001,prvo_fd_desc,DIMENSION,string,CATEGORY,eq|in,ALLOWED,ALLOWED,MISSING_ALLOWED,NONE,
+product.public_private,fund,PRFD01N001,prvo_pbff_desc,DIMENSION,string,CATEGORY,eq|in,ALLOWED,ALLOWED,MISSING_ALLOWED,NONE,public default universe
+fund.family_candidate_id,fund,PRFD01N001,rptt_ksd_itm_no,ALIAS_ID,string,IDENTIFIER,eq|in,PENDING,BLOCKED_PENDING_SEMANTICS,PLACEHOLDER_GROUP_IDS,NONE,not a confirmed family key
+product.sale_status,fund,PRFD01N001,sale_yn,STATUS,string,CATEGORY,eq|in,ALLOWED,ALLOWED,DAMAGED_ROW_FLAG,NONE,
+product.alias.standard_id,fund,PRFD01N001,std_itm_no,ALIAS_ID,string,IDENTIFIER,eq|in,ALIAS_ONLY,BLOCKED,MISSING_AND_NONUNIQUE,NONE,
+product.mirae_sale_flag,fund,PRFD01N001,thco_sale_yn,STATUS,string,BOOLEAN_CODE,eq|in,ALLOWED,ALLOWED_WITH_COVERAGE,DAMAGED_ROW_FLAG,NONE,
+fund.trustee_code,fund,PRFD01N001,trusc_xtn_itt_cd,DIMENSION,string,INSTITUTION_CODE,eq|in,CODE_ONLY,BLOCKED,DAMAGED_ROW_FLAG,NONE,
+fund.risk_grade_code,fund,PRFD01N001,zrin_fd_ivst_risk_gcd,DIMENSION,string,CODE,eq|in,ALLOWED,BLOCKED_PENDING_ORDER,LITERAL_NULL_AND_DAMAGED,NONE,literal NULL is missing
+fund.risk_grade_name,fund,PRFD01N001,zrin_fd_ivst_risk_grd_nm,DIMENSION,string,RISK_SCALE,eq|in,ALLOWED,BLOCKED_PENDING_ORDER,NORMALIZE_SPACING_AND_DAMAGED,NONE,do not compare across product groups

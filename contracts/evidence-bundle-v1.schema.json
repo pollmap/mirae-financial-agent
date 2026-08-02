@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://team.local/schemas/evidence-bundle-v1.1.schema.json",
+  "title": "Financial Product Agent Evidence Bundle v1.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "execution_id",
+    "data_snapshot_date",
+    "answerability",
+    "reason_code",
+    "result_count",
+    "universe",
+    "coverage",
+    "calculation",
+    "aggregates",
+    "items",
+    "limitations"
+  ],
+  "properties": {
+    "version": {"const": "1.1"},
+    "execution_id": {"type": "string", "minLength": 1, "maxLength": 100},
+    "data_snapshot_date": {"type": "string", "format": "date"},
+    "answerability": {
+      "enum": [
+        "FULL",
+        "PARTIAL_WITH_COVERAGE",
+        "NEEDS_CLARIFICATION",
+        "NO_RESULT",
+        "UNAVAILABLE",
+        "INCOMPARABLE",
+        "SAFETY_LIMITED",
+        "DATA_QUALITY_BLOCKED"
+      ]
+    },
+    "reason_code": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Z][A-Z0-9_]{0,99}$"
+    },
+    "result_count": {"type": "integer", "minimum": 0},
+    "universe": {"$ref": "#/$defs/universe"},
+    "coverage": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/coverage"}
+      ]
+    },
+    "clarification": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/clarification"}
+      ]
+    },
+    "calculation": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["operation", "formula", "formula_version", "rounding", "tie_breakers"],
+          "properties": {
+            "operation": {"enum": ["lookup", "filter", "sort", "compare", "aggregate"]},
+            "formula": {"type": "string", "maxLength": 4000},
+            "formula_version": {"type": "string", "maxLength": 100},
+            "rounding": {"type": ["string", "null"], "maxLength": 300},
+            "tie_breakers": {
+              "type": "array",
+              "maxItems": 10,
+              "items": {"type": "string", "maxLength": 100}
+            }
+          }
+        }
+      ]
+    },
+    "aggregates": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {"$ref": "#/$defs/aggregateEvidence"}
+    },
+    "items": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {"$ref": "#/$defs/productEvidence"}
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {"type": "string", "maxLength": 1000}
+    }
+  },
+  "$defs": {
+    "scalar": {
+      "type": ["string", "number", "boolean", "null"]
+    },
+    "universe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "raw_count", "serving_count", "eligible_count", "excluded_count", "filter_summary"],
+      "properties": {
+        "scope": {"enum": ["bond", "domestic_etp", "overseas_etp", "fund", "multi"]},
+        "raw_count": {"type": "integer", "minimum": 0},
+        "serving_count": {"type": "integer", "minimum": 0},
+        "eligible_count": {"type": "integer", "minimum": 0},
+        "excluded_count": {"type": "integer", "minimum": 0},
+        "filter_summary": {"type": "string", "maxLength": 2000}
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metric_id", "raw_count", "serving_count", "present_count", "valid_count", "rankable_count", "numerator", "denominator", "basis"],
+      "properties": {
+        "metric_id": {"type": ["string", "null"], "maxLength": 100},
+        "raw_count": {"type": "integer", "minimum": 0},
+        "serving_count": {"type": "integer", "minimum": 0},
+        "present_count": {"type": "integer", "minimum": 0},
+        "valid_count": {"type": "integer", "minimum": 0},
+        "rankable_count": {"type": "integer", "minimum": 0},
+        "numerator": {"type": "integer", "minimum": 0},
+        "denominator": {"type": "integer", "minimum": 0},
+        "basis": {"type": "string", "minLength": 1, "maxLength": 1000}
+      }
+    },
+    "clarificationOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "label", "description"],
+      "properties": {
+        "value": {"type": "string", "minLength": 1, "maxLength": 100},
+        "label": {"type": "string", "minLength": 1, "maxLength": 160},
+        "description": {"type": ["string", "null"], "maxLength": 300}
+      }
+    },
+    "clarification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["question", "missing_slots", "options", "preserved_plan", "clarification_token"],
+      "properties": {
+        "question": {"type": "string", "minLength": 1, "maxLength": 500},
+        "missing_slots": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {"type": "string", "minLength": 1, "maxLength": 64}
+        },
+        "options": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {"$ref": "#/$defs/clarificationOption"}
+        },
+        "preserved_plan": {"type": "object"},
+        "clarification_token": {"type": ["string", "null"], "maxLength": 10000}
+      }
+    },
+    "aggregateEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "aggregate_id",
+        "group_key",
+        "value",
+        "unit",
+        "source_table_ids",
+        "source_fields",
+        "source_row_count",
+        "query_hash",
+        "as_of_date"
+      ],
+      "properties": {
+        "aggregate_id": {"type": "string", "minLength": 1, "maxLength": 100},
+        "group_key": {"$ref": "#/$defs/scalar"},
+        "value": {"$ref": "#/$defs/scalar"},
+        "unit": {"type": ["string", "null"], "maxLength": 100},
+        "source_table_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {"enum": ["PRBD01N001", "PREF01N001", "PREF02N001", "PRFD01N001"]}
+        },
+        "source_fields": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 100}
+        },
+        "source_row_count": {"type": "integer", "minimum": 0},
+        "query_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "as_of_date": {"type": ["string", "null"], "format": "date"}
+      }
+    },
+    "fieldEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "metric_id",
+        "source_table_id",
+        "source_file",
+        "source_sheet",
+        "source_excel_row",
+        "source_field",
+        "raw_value",
+        "normalized_value",
+        "unit",
+        "as_of_date",
+        "as_of_status",
+        "source_row_hash",
+        "quality_flags"
+      ],
+      "properties": {
+        "evidence_id": {"type": "string", "minLength": 1, "maxLength": 120},
+        "metric_id": {"type": "string", "minLength": 1, "maxLength": 100},
+        "source_table_id": {"enum": ["PRBD01N001", "PREF01N001", "PREF02N001", "PRFD01N001"]},
+        "source_file": {"type": "string", "minLength": 1, "maxLength": 500},
+        "source_sheet": {"type": "string", "minLength": 1, "maxLength": 100},
+        "source_excel_row": {"type": "integer", "minimum": 2},
+        "source_field": {"type": "string", "minLength": 1, "maxLength": 100},
+        "raw_value": {"$ref": "#/$defs/scalar"},
+        "normalized_value": {"$ref": "#/$defs/scalar"},
+        "unit": {"type": ["string", "null"], "maxLength": 100},
+        "as_of_date": {"type": ["string", "null"], "format": "date"},
+        "as_of_status": {"enum": ["AVAILABLE", "DATASET_SNAPSHOT_ONLY", "UNAVAILABLE"]},
+        "source_row_hash": {"type": "string", "pattern": "^[a-f0-9]{32,64}$"},
+        "quality_flags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "maxLength": 100}
+        }
+      }
+    },
+    "productEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product_uid", "name", "rank", "fields"],
+      "properties": {
+        "product_uid": {"type": "string", "minLength": 1, "maxLength": 300},
+        "name": {"type": "string", "minLength": 1, "maxLength": 500},
+        "rank": {"type": ["integer", "null"], "minimum": 1},
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {"$ref": "#/$defs/fieldEvidence"}
+        }
+      }
+    }
+  }
+}

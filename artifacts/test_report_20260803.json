@@ -1,0 +1,164 @@
+{
+  "report_version": "3.0",
+  "as_of": "2026-08-03T03:22:55+09:00",
+  "status": "LOCAL_PASS_EXTERNAL_GATES_PENDING",
+  "release_scope": "prebrief local release candidate",
+  "pytest_summary": {
+    "passed": 158,
+    "failed": 0,
+    "skipped": 0,
+    "duration_seconds": 104.57
+  },
+  "source_verification": {
+    "verified_source_files": 3,
+    "verified_inner_xlsx": 8,
+    "official_task_pdf_sha256": "3717441e091958b7214db710e0e4b9b8ae15ac6c205cad6e51721214798eb3de",
+    "official_data_zip_sha256": "c3809aca73396f57242ded0188fa06a3d271bd4ad65010e53d5533efc7c18163",
+    "team_email_sha256": "b1202ebac3210335af11322eb3e5695110783f94628996e1104368421657fb56"
+  },
+  "data_build": {
+    "database_sha256": "4daab85638b6d6fa1c0f1ebd4070d4050dca57fbfd9aed7e39a8aef2399a1450",
+    "raw_rows": 145393,
+    "logical_products": 60913,
+    "serving_products": 60903,
+    "quarantine_rows": 10,
+    "fund_attributes": 95618,
+    "metric_policy_rows": 59,
+    "metric_evidence_rows": 1156332,
+    "status": "PASS"
+  },
+  "serving_semantics": {
+    "scope_counts": {
+      "bond": 42394,
+      "domestic_etp": 1733,
+      "overseas_etp": 5638,
+      "fund": 11138
+    },
+    "fund_full_serving": 11138,
+    "fund_default_public": 11115,
+    "fund_public_sales_active": 8445,
+    "fund_public_sales_complete": 2670,
+    "fund_public_risk_valid": 8564,
+    "fund_public_risk_missing": 2551,
+    "domestic_etf_return_1y": {
+      "denominator": 1201,
+      "source_present": 986,
+      "quality_valid": 951,
+      "common_latest_date": "2026-06-15",
+      "common_latest_rankable": 940
+    }
+  },
+  "checks": [
+    {
+      "command": "PYTHONPATH=. .venv/bin/python scripts/verify_sources.py",
+      "verified_source_files": 3,
+      "verified_inner_xlsx": 8,
+      "status": "PASS"
+    },
+    {
+      "command": "PYTHONPATH=. .venv/bin/ruff check app deploy etl scripts tests",
+      "findings": 0,
+      "status": "PASS"
+    },
+    {
+      "command": "PYTHONPATH=. .venv/bin/pytest -q tests/unit tests/contract tests/integration tests/test_hcx.py",
+      "passed": 153,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 14.90,
+      "status": "PASS"
+    },
+    {
+      "command": "PYTHONPATH=. .venv/bin/pytest -q",
+      "passed": 158,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 104.57,
+      "includes_full_source_etl": true,
+      "status": "PASS"
+    },
+    {
+      "command": "PYTHONPATH=. .venv/bin/python scripts/run_gold.py",
+      "fixtures": 50,
+      "plan_subset_checks": 40,
+      "declared_assertions": 103,
+      "failures": 0,
+      "status": "PASS"
+    },
+    {
+      "command": "PYTHONPATH=. .venv/bin/python scripts/scan_runtime_compliance.py",
+      "files_scanned": 28,
+      "non_hcx_findings": 0,
+      "interpretation": "current bounded blacklist scan; not a proof of absence",
+      "status": "PASS"
+    },
+    {
+      "command": "real TCP HCX structured-output mock contract",
+      "coverage": "transport, retries, deadline, QPM/TPM reservation, schema validation",
+      "included_in_pytest": true,
+      "status": "PASS"
+    },
+    {
+      "command": "PYTHONPATH=. .venv/bin/python scripts/e2e_smoke.py --base-url http://127.0.0.1:8080",
+      "real_http_cases": 15,
+      "failures": 0,
+      "status": "PASS"
+    },
+    {
+      "command": "PYTHONPATH=. .venv/bin/python scripts/load_smoke.py --requests 100 --concurrency 10",
+      "requests": 100,
+      "completed": 100,
+      "concurrency": 10,
+      "failures": 0,
+      "throughput_rps": 127.38,
+      "latency_p95_ms": 131.75,
+      "artifact_sha256": "f573553c47683c79ce31e872b01938d11dd3387545b493a19e0bc5df6ef863d0",
+      "status": "PASS"
+    },
+    {
+      "command": "scripts/production_preflight.py with synthetic non-secret production-shaped values",
+      "scope": "configuration and actual serving DB only; no live HCX or public HTTP",
+      "status": "PASS"
+    }
+  ],
+  "implemented_scenarios": [
+    "four-scope lookup/search/filter/rank/compare/aggregate",
+    "safe cross-scope distinct product counts without metric mixing",
+    "public-fund default with explicit private and raw-audit opt-in",
+    "scope-specific asset, region, risk, pension, and sales-status filters",
+    "source-backed product explanation with exact target clarification",
+    "signed multi-turn clarification with preserved-plan conflict detection",
+    "common-latest-date ranking and aggregation with stale-value exclusion",
+    "source-present versus quality-valid count distinction",
+    "same-date and same-currency comparison guards",
+    "field-level evidence, source dates, source row hashes, and bounded responses",
+    "forecast, realtime, definitive recommendation, and unsupported-unit safety limits"
+  ],
+  "external_gates": [
+    {
+      "gate": "Docker fresh multi-stage build, run, restart, and same-result check",
+      "status": "NOT_RUN",
+      "reason": "Docker and Podman are unavailable in the current workspace"
+    },
+    {
+      "gate": "HyperCLOVA X live credential plan-only and full endpoint E2E",
+      "status": "NOT_RUN",
+      "reason": "Team CLOVA Studio API key and organizer-confirmed final runtime model requirement are unavailable"
+    },
+    {
+      "gate": "Public TLS deployment and external-network smoke",
+      "status": "NOT_RUN",
+      "reason": "Deployment target, domain, TLS endpoint, and deployment authority were not provided"
+    },
+    {
+      "gate": "Organizer final API contract, evaluation load, and reference-query incorporation",
+      "status": "WAITING_FOR_BRIEFING",
+      "reason": "Financial Product Agent briefing is scheduled for 2026-08-06 13:00-14:30"
+    },
+    {
+      "gate": "Final Git SHA, immutable registry image digest, and image-extracted DB manifest",
+      "status": "NOT_RUN",
+      "reason": "This handoff has no Git repository metadata or built immutable image"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+flowchart LR
+    E[Organizer evaluator] -->|GET /answer| A[Contract adapter]
+    A --> G[Input guard and log redaction]
+    G --> H[HyperCLOVA X planner]
+    H --> J[QueryPlan JSON Schema]
+    J --> S[Registry semantic validator]
+    S --> C[Allow-listed compiler]
+    C --> D[(DuckDB and Parquet)]
+    D --> B[Evidence Bundle builder]
+    B --> R[Template or grounded renderer]
+    R --> V[Claim and safety validator]
+    V --> A
+    M[Metric Registry] --> S
+    M --> B
+    L[Source locator] --> B
+    F[Immutable release manifest] --> A

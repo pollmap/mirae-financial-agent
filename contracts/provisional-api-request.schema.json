@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://team.local/schemas/provisional-api-request.schema.json",
+  "title": "Provisional PDF-example-compatible GET query",
+  "description": "TEAM_DECISION. PDF example parameters plus optional signed clarification follow-up extension; freeze after briefing.",
+  "type": "object",
+  "additionalProperties": false,
+  "dependentRequired": {
+    "clarification_token": ["clarification_response"],
+    "clarification_response": ["clarification_token"]
+  },
+  "required": ["question_id", "question"],
+  "properties": {
+    "question_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": ".*\\S.*"
+    },
+    "question": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": ".*\\S.*"
+    },
+    "clarification_token": {
+      "type": ["string", "null"],
+      "maxLength": 10000
+    },
+    "clarification_response": {
+      "type": ["string", "null"],
+      "maxLength": 500
+    }
+  }
+}

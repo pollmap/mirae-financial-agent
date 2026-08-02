@@ -1,0 +1,969 @@
+{
+  "source_zip": "official_data.zip",
+  "source_sha256": "c3809aca73396f57242ded0188fa06a3d271bd4ad65010e53d5533efc7c18163",
+  "total_rows": 145393,
+  "datasets": [
+    {
+      "dataset_id": "PRBD01N001",
+      "product_group": "국내채권",
+      "source_file": "PRBD01N001_국내채권마스터_20260711_datarows.xlsx",
+      "row_count": 42394,
+      "column_count": 40,
+      "official_row_count": 42394,
+      "official_count_matches": true,
+      "exact_duplicate_rows": 0,
+      "schema_columns": 40,
+      "header_schema_set_match": true
+    },
+    {
+      "dataset_id": "PREF01N001",
+      "product_group": "국내 ETF",
+      "source_file": "PREF01N001_국내ETF마스터_20260711_datarows.xlsx",
+      "row_count": 1734,
+      "column_count": 73,
+      "official_row_count": 1734,
+      "official_count_matches": true,
+      "exact_duplicate_rows": 0,
+      "schema_columns": 73,
+      "header_schema_set_match": true
+    },
+    {
+      "dataset_id": "PREF02N001",
+      "product_group": "해외 ETF",
+      "source_file": "PREF02N001_해외ETF마스터_20260711_datarows.xlsx",
+      "row_count": 5646,
+      "column_count": 49,
+      "official_row_count": 5646,
+      "official_count_matches": true,
+      "exact_duplicate_rows": 0,
+      "schema_columns": 49,
+      "header_schema_set_match": true
+    },
+    {
+      "dataset_id": "PRFD01N001",
+      "product_group": "공모펀드",
+      "source_file": "PRFD01N001_공모펀드마스터_20260711_datarows.xlsx",
+      "row_count": 95619,
+      "column_count": 45,
+      "official_row_count": 95619,
+      "official_count_matches": true,
+      "exact_duplicate_rows": 0,
+      "schema_columns": 45,
+      "header_schema_set_match": true
+    }
+  ],
+  "keys": [
+    {
+      "dataset_id": "PRBD01N001",
+      "key_columns": "PD_NO",
+      "row_count": 42394,
+      "nonblank_key_count": 42394,
+      "missing_key_count": 0,
+      "distinct_key_count": 42394,
+      "duplicate_key_rows": 0,
+      "is_unique_when_present": true
+    },
+    {
+      "dataset_id": "PREF01N001",
+      "key_columns": "pd_itm_no",
+      "row_count": 1734,
+      "nonblank_key_count": 1734,
+      "missing_key_count": 0,
+      "distinct_key_count": 1734,
+      "duplicate_key_rows": 0,
+      "is_unique_when_present": true
+    },
+    {
+      "dataset_id": "PREF01N001",
+      "key_columns": "pd_itm_no_ma",
+      "row_count": 1734,
+      "nonblank_key_count": 1734,
+      "missing_key_count": 0,
+      "distinct_key_count": 1734,
+      "duplicate_key_rows": 0,
+      "is_unique_when_present": true
+    },
+    {
+      "dataset_id": "PREF01N001",
+      "key_columns": "pd_exg_mkt_cd+pd_itm_no+pd_itm_no_ma",
+      "row_count": 1734,
+      "nonblank_key_count": 1733,
+      "missing_key_count": 1,
+      "distinct_key_count": 1733,
+      "duplicate_key_rows": 0,
+      "is_unique_when_present": true
+    },
+    {
+      "dataset_id": "PREF02N001",
+      "key_columns": "pd_itm_no",
+      "row_count": 5646,
+      "nonblank_key_count": 5646,
+      "missing_key_count": 0,
+      "distinct_key_count": 5646,
+      "duplicate_key_rows": 0,
+      "is_unique_when_present": true
+    },
+    {
+      "dataset_id": "PREF02N001",
+      "key_columns": "pd_itm_no_ma",
+      "row_count": 5646,
+      "nonblank_key_count": 5646,
+      "missing_key_count": 0,
+      "distinct_key_count": 5646,
+      "duplicate_key_rows": 0,
+      "is_unique_when_present": true
+    },
+    {
+      "dataset_id": "PREF02N001",
+      "key_columns": "pd_isin_cd",
+      "row_count": 5646,
+      "nonblank_key_count": 5637,
+      "missing_key_count": 9,
+      "distinct_key_count": 5587,
+      "duplicate_key_rows": 50,
+      "is_unique_when_present": false
+    },
+    {
+      "dataset_id": "PRFD01N001",
+      "key_columns": "itm_no",
+      "row_count": 95619,
+      "nonblank_key_count": 95619,
+      "missing_key_count": 0,
+      "distinct_key_count": 11139,
+      "duplicate_key_rows": 84480,
+      "is_unique_when_present": false
+    },
+    {
+      "dataset_id": "PRFD01N001",
+      "key_columns": "itm_no+prfd_attr_cd",
+      "row_count": 95619,
+      "nonblank_key_count": 95619,
+      "missing_key_count": 0,
+      "distinct_key_count": 95619,
+      "duplicate_key_rows": 0,
+      "is_unique_when_present": true
+    },
+    {
+      "dataset_id": "PRFD01N001",
+      "key_columns": "std_itm_no",
+      "row_count": 95619,
+      "nonblank_key_count": 95553,
+      "missing_key_count": 66,
+      "distinct_key_count": 11127,
+      "duplicate_key_rows": 84426,
+      "is_unique_when_present": false
+    },
+    {
+      "dataset_id": "PRFD01N001",
+      "key_columns": "ksd_itm_no",
+      "row_count": 95619,
+      "nonblank_key_count": 95353,
+      "missing_key_count": 266,
+      "distinct_key_count": 11092,
+      "duplicate_key_rows": 84261,
+      "is_unique_when_present": false
+    }
+  ],
+  "domain_counts": [
+    {
+      "dataset_id": "PRBD01N001",
+      "categorical_counts": {
+        "PD_EXG_MKT": [
+          [
+            "장내",
+            24749
+          ],
+          [
+            "장외",
+            17645
+          ]
+        ],
+        "STD_PD_MCLS_NM": [
+          [
+            "회사채",
+            31447
+          ],
+          [
+            "특수채",
+            8755
+          ],
+          [
+            "국공채",
+            2137
+          ],
+          [
+            "개인투자용국채",
+            49
+          ],
+          [
+            "외화채권-회사채",
+            5
+          ],
+          [
+            "외화채권-금융채",
+            1
+          ]
+        ],
+        "STD_PD_SCLS_NM": [
+          [
+            "일반사채",
+            30958
+          ],
+          [
+            "공사채",
+            5386
+          ],
+          [
+            "특수은행채",
+            2436
+          ],
+          [
+            "지역개발",
+            1266
+          ],
+          [
+            "은행채",
+            1247
+          ],
+          [
+            "국고채",
+            312
+          ],
+          [
+            "도시철도",
+            240
+          ],
+          [
+            "국민주택",
+            147
+          ],
+          [
+            "공모지방채",
+            125
+          ],
+          [
+            "중앙은행채",
+            101
+          ],
+          [
+            "기타사채",
+            67
+          ],
+          [
+            "기타국채",
+            41
+          ],
+          [
+            "개인투자용국채10년물",
+            19
+          ],
+          [
+            "개인투자용국채20년물",
+            19
+          ],
+          [
+            "<BLANK>",
+            13
+          ],
+          [
+            "개인투자용국채5년물",
+            11
+          ],
+          [
+            "물가채",
+            6
+          ]
+        ],
+        "CURR_CD": [
+          [
+            "KRW",
+            42372
+          ],
+          [
+            "USD",
+            19
+          ],
+          [
+            "EUR",
+            1
+          ],
+          [
+            "JPY",
+            1
+          ],
+          [
+            "000",
+            1
+          ]
+        ],
+        "PD_RISK_GCD": [
+          [
+            "1",
+            15950
+          ],
+          [
+            "5",
+            13696
+          ],
+          [
+            "6",
+            10408
+          ],
+          [
+            "4",
+            1938
+          ],
+          [
+            "3",
+            282
+          ],
+          [
+            "2",
+            62
+          ],
+          [
+            "0",
+            58
+          ]
+        ]
+      }
+    },
+    {
+      "dataset_id": "PREF01N001",
+      "categorical_counts": {
+        "pd_grp_no": [
+          [
+            "ETF",
+            1202
+          ],
+          [
+            "ETN",
+            532
+          ]
+        ],
+        "pd_sale_yn": [
+          [
+            "1",
+            1520
+          ],
+          [
+            "0",
+            214
+          ]
+        ],
+        "pd_tr_yn": [
+          [
+            "0",
+            1661
+          ],
+          [
+            "1",
+            72
+          ],
+          [
+            "<BLANK>",
+            1
+          ]
+        ],
+        "pd_risk_nm": [
+          [
+            "매우높은위험(1등급)",
+            761
+          ],
+          [
+            "높은위험(2등급)",
+            667
+          ],
+          [
+            "낮은위험(5등급)",
+            115
+          ],
+          [
+            "보통위험(4등급)",
+            86
+          ],
+          [
+            "다소높은위험(3등급)",
+            84
+          ],
+          [
+            "매우낮은위험(6등급)",
+            21
+          ]
+        ],
+        "wu_inv_ast_type": [
+          [
+            "주식",
+            1069
+          ],
+          [
+            "채권",
+            261
+          ],
+          [
+            "원자재",
+            207
+          ],
+          [
+            "혼합자산",
+            78
+          ],
+          [
+            "단기자금",
+            42
+          ],
+          [
+            "통화",
+            41
+          ],
+          [
+            "부동산",
+            18
+          ],
+          [
+            "기타",
+            18
+          ]
+        ],
+        "wu_inv_rgn": [
+          [
+            "국내",
+            1036
+          ],
+          [
+            "미국",
+            453
+          ],
+          [
+            "글로벌",
+            76
+          ],
+          [
+            "중국",
+            63
+          ],
+          [
+            "아시아",
+            33
+          ],
+          [
+            "일본",
+            25
+          ],
+          [
+            "인도",
+            19
+          ],
+          [
+            "남미/북미",
+            12
+          ],
+          [
+            "유럽",
+            7
+          ],
+          [
+            "베트남",
+            5
+          ],
+          [
+            "이머징/브릭스",
+            5
+          ]
+        ]
+      }
+    },
+    {
+      "dataset_id": "PREF02N001",
+      "categorical_counts": {
+        "pd_grp_no": [
+          [
+            "ETF",
+            5587
+          ],
+          [
+            "ETN",
+            59
+          ]
+        ],
+        "cu_etn_yn": [
+          [
+            "<BLANK>",
+            5587
+          ],
+          [
+            "Y",
+            59
+          ]
+        ],
+        "pd_curr_cd": [
+          [
+            "USD",
+            5637
+          ],
+          [
+            "<BLANK>",
+            8
+          ],
+          [
+            "INR",
+            1
+          ]
+        ],
+        "pd_exg_mkt_cd": [
+          [
+            "AMX",
+            4241
+          ],
+          [
+            "NAS",
+            1296
+          ],
+          [
+            "NYS",
+            78
+          ],
+          [
+            "102",
+            22
+          ],
+          [
+            "101",
+            9
+          ]
+        ],
+        "wu_inv_ast_type": [
+          [
+            "Equity",
+            2500
+          ],
+          [
+            "Alternatives",
+            1800
+          ],
+          [
+            "Bond",
+            1084
+          ],
+          [
+            "Mixed Assets",
+            138
+          ],
+          [
+            "Commodity",
+            107
+          ],
+          [
+            "Money Market",
+            9
+          ],
+          [
+            "<BLANK>",
+            8
+          ]
+        ],
+        "wu_inv_rgn": [
+          [
+            "United States of America",
+            4196
+          ],
+          [
+            "Global",
+            718
+          ],
+          [
+            "Global Ex US",
+            303
+          ],
+          [
+            "Global Emerging Markets",
+            175
+          ],
+          [
+            "China",
+            46
+          ],
+          [
+            "Europe",
+            41
+          ],
+          [
+            "Japan",
+            25
+          ],
+          [
+            "India",
+            24
+          ],
+          [
+            "Brazil",
+            9
+          ],
+          [
+            "Asia Pacific ex Japan",
+            8
+          ],
+          [
+            "<BLANK>",
+            8
+          ],
+          [
+            "Korea",
+            7
+          ],
+          [
+            "Asia Pacific",
+            7
+          ],
+          [
+            "United Kingdom",
+            5
+          ],
+          [
+            "Switzerland",
+            4
+          ],
+          [
+            "Canada",
+            4
+          ],
+          [
+            "Israel",
+            4
+          ],
+          [
+            "Germany",
+            4
+          ],
+          [
+            "Latin America",
+            4
+          ],
+          [
+            "Australia",
+            3
+          ],
+          [
+            "Taiwan",
+            3
+          ],
+          [
+            "Mexico",
+            3
+          ],
+          [
+            "Vietnam",
+            3
+          ],
+          [
+            "Indonesia",
+            2
+          ],
+          [
+            "Saudi Arabia",
+            2
+          ],
+          [
+            "Norway",
+            2
+          ],
+          [
+            "Greater China",
+            2
+          ],
+          [
+            "EuroZone",
+            2
+          ],
+          [
+            "Greece",
+            1
+          ],
+          [
+            "Qatar",
+            1
+          ],
+          [
+            "Peru",
+            1
+          ],
+          [
+            "Austria",
+            1
+          ],
+          [
+            "Italy",
+            1
+          ],
+          [
+            "Malaysia",
+            1
+          ],
+          [
+            "Poland",
+            1
+          ],
+          [
+            "Finland",
+            1
+          ],
+          [
+            "United Arab Emirates",
+            1
+          ],
+          [
+            "Argentina",
+            1
+          ],
+          [
+            "Hong Kong",
+            1
+          ],
+          [
+            "Colombia",
+            1
+          ],
+          [
+            "Turkey",
+            1
+          ],
+          [
+            "Africa",
+            1
+          ],
+          [
+            "Ireland",
+            1
+          ],
+          [
+            "Chile",
+            1
+          ],
+          [
+            "Belgium",
+            1
+          ],
+          [
+            "Philippines",
+            1
+          ],
+          [
+            "BRIC",
+            1
+          ],
+          [
+            "Iceland",
+            1
+          ],
+          [
+            "North America",
+            1
+          ],
+          [
+            "Singapore",
+            1
+          ],
+          [
+            "Denmark",
+            1
+          ],
+          [
+            "ASEAN",
+            1
+          ],
+          [
+            "Spain",
+            1
+          ],
+          [
+            "France",
+            1
+          ],
+          [
+            "Netherlands",
+            1
+          ],
+          [
+            "Thailand",
+            1
+          ],
+          [
+            "Kuwait",
+            1
+          ],
+          [
+            "South Africa",
+            1
+          ],
+          [
+            "New Zealand",
+            1
+          ],
+          [
+            "Sweden",
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "dataset_id": "PRFD01N001",
+      "categorical_counts": {
+        "or_attr_desc": [
+          [
+            "주식형",
+            36338
+          ],
+          [
+            "재간접",
+            30243
+          ],
+          [
+            "채권혼합",
+            8964
+          ],
+          [
+            "채권형",
+            8344
+          ],
+          [
+            "06",
+            5436
+          ],
+          [
+            "주식혼합",
+            2782
+          ],
+          [
+            "MMF",
+            1532
+          ],
+          [
+            "혼합자산",
+            1424
+          ],
+          [
+            "특별자산",
+            412
+          ],
+          [
+            "임대형",
+            69
+          ],
+          [
+            "<BLANK>",
+            66
+          ],
+          [
+            "대출형",
+            9
+          ]
+        ],
+        "prvo_pbff_desc": [
+          [
+            "공모",
+            95451
+          ],
+          [
+            "사모",
+            102
+          ],
+          [
+            "<BLANK>",
+            66
+          ]
+        ],
+        "sale_yn": [
+          [
+            "판매중",
+            76318
+          ],
+          [
+            "판매완료",
+            19300
+          ],
+          [
+            "<BLANK>",
+            1
+          ]
+        ],
+        "zrin_fd_ivst_risk_grd_nm": [
+          [
+            "높은 위험",
+            29088
+          ],
+          [
+            "<BLANK>",
+            18416
+          ],
+          [
+            "다소 높은 위험",
+            16892
+          ],
+          [
+            "보통 위험",
+            13028
+          ],
+          [
+            "낮은 위험",
+            9788
+          ],
+          [
+            "매우 높은 위험",
+            5771
+          ],
+          [
+            "매우 낮은 위험",
+            2397
+          ],
+          [
+            "높은위험",
+            163
+          ],
+          [
+            "보통위험",
+            75
+          ],
+          [
+            "06",
+            1
+          ]
+        ],
+        "fd_ivst_rgn_desc": [
+          [
+            "글로벌",
+            42875
+          ],
+          [
+            "국내",
+            33223
+          ],
+          [
+            "아시아",
+            10265
+          ],
+          [
+            "남미/북미",
+            4984
+          ],
+          [
+            "이머징/브릭스",
+            2261
+          ],
+          [
+            "유럽",
+            1846
+          ],
+          [
+            "중동/아프리카",
+            99
+          ],
+          [
+            "<BLANK>",
+            66
+          ]
+        ]
+      }
+    }
+  ]
+}

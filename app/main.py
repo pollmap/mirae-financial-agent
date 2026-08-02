@@ -1,0 +1,191 @@
+"""FastAPI public compatibility endpoint for organizer evaluation."""
+
+from __future__ import annotations
+
+import json
+import logging
+import time
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI, Query, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+
+from app.clarification import ClarificationTokenError
+from app.config import Settings
+from app.execution.engine import DuckDBEngine
+from app.planner.service import build_planner
+from app.service import AgentService, PlannerUnavailable
+
+REQUEST_LOGGER = logging.getLogger("mirae.request")
+
+
+def create_app(settings: Settings | None = None) -> FastAPI:
+    resolved = settings or Settings.from_env()
+    resolved.validate()
+    planner = build_planner(resolved)
+    engine = DuckDBEngine(resolved.database_path)
+    service = AgentService(resolved, planner, engine)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        yield
+        await service.aclose()
+
+    app = FastAPI(
+        title="Mirae Asset Financial Product Agent",
+        version="1.2.0-prebrief",
+        docs_url=None if resolved.environment == "production" else "/docs",
+        redoc_url=None,
+        lifespan=lifespan,
+    )
+    app.state.settings = resolved
+    app.state.service = service
+    app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
+
+    @app.middleware("http")
+    async def privacy_safe_request_metrics(request: Request, call_next):
+        started = time.perf_counter()
+        status_code = 500
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            return response
+        finally:
+            if request.url.path == "/answer":
+                question = request.query_params.get("question", "")
+                question_id = request.query_params.get("question_id", "")
+                REQUEST_LOGGER.info(
+                    json.dumps(
+                        {
+                            "event": "answer_request",
+                            # Never log query contents or deterministic hashes:
+                            # a small evaluation-question dictionary can be
+                            # reversed by offline guessing. Lengths are enough
+                            # for basic abuse/latency diagnostics.
+                            "question_chars": len(question),
+                            "question_id_chars": len(question_id),
+                            "status_code": status_code,
+                            "latency_ms": round((time.perf_counter() - started) * 1000, 2),
+                        },
+                        separators=(",", ":"),
+                    )
+                )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error(_: Request, exc: RequestValidationError):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "INVALID_REQUEST",
+                "detail": "필수 parameter와 길이를 확인해 주세요.",
+            },
+        )
+
+    @app.exception_handler(Exception)
+    async def unexpected_error(request: Request, _: Exception):
+        """Return a redacted contract-shaped failure without leaking internals."""
+
+        question_id = request.query_params.get("question_id", "unknown")[:200] or "unknown"
+        question = request.query_params.get("question", "처리 중 오류가 발생했습니다.")[:2000]
+        payload = {
+            "question_id": question_id,
+            "question": question,
+            "retrieved_context": json.dumps(
+                {
+                    "answerability": "UNAVAILABLE",
+                    "reason_code": "INTERNAL_EXECUTION_ERROR",
+                },
+                ensure_ascii=False,
+            ),
+            "think_trace": "status=controlled_internal_error; details=redacted",
+            "answer": "요청을 안전하게 처리하지 못했습니다. 동일 요청을 다시 시도해 주세요.",
+        }
+        return JSONResponse(status_code=500, content=payload)
+
+    @app.get("/health/live")
+    async def live() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.get("/health/ready")
+    async def ready() -> JSONResponse:
+        readiness_error = engine.readiness_error()
+        if readiness_error:
+            return JSONResponse(
+                status_code=503,
+                content={"status": "not_ready", "reason": readiness_error},
+            )
+        return JSONResponse(content={"status": "ready", "data_snapshot_date": "2026-07-11"})
+
+    @app.get("/answer")
+    async def answer(
+        question_id: str = Query(min_length=1, max_length=200, pattern=r".*\S.*"),
+        question: str = Query(
+            min_length=1,
+            max_length=resolved.question_max_chars,
+            pattern=r".*\S.*",
+        ),
+        clarification_token: str | None = Query(default=None, max_length=10000),
+        clarification_response: str | None = Query(default=None, max_length=500),
+    ) -> JSONResponse:
+        if not question.strip():
+            return JSONResponse(
+                status_code=400,
+                content={"error": "INVALID_QUESTION", "detail": "question은 공백일 수 없습니다."},
+            )
+        try:
+            result = await service.answer(
+                question_id=question_id,
+                question=question,
+                clarification_token=clarification_token,
+                clarification_response=clarification_response,
+            )
+        except PlannerUnavailable:
+            payload = {
+                "question_id": question_id,
+                "question": question,
+                "retrieved_context": json.dumps(
+                    {
+                        "answerability": "UNAVAILABLE",
+                        "reason_code": "HCX_TEMPORARILY_UNAVAILABLE",
+                    },
+                    ensure_ascii=False,
+                ),
+                "think_trace": "planner=HCX-007; status=controlled_unavailable; fallback_llm=none",
+                "answer": "현재 HyperCLOVA X 질의 해석을 일시적으로 사용할 수 없습니다. 다른 언어모델로 대체하지 않았습니다.",
+            }
+            return JSONResponse(status_code=503, content=payload)
+        except ClarificationTokenError:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "INVALID_CLARIFICATION",
+                    "detail": "역질문 후속 parameter 또는 토큰을 확인해 주세요.",
+                },
+            )
+        return JSONResponse(content=result.model_dump(mode="json"))
+
+    if resolved.environment != "production":
+        # Development-only demo page. The contest submission runtime is the
+        # GET /answer API; production images never expose this route and the
+        # runtime image does not include the web/ directory.
+        demo_page = Path(__file__).resolve().parents[1] / "web" / "index.html"
+
+        @app.get("/demo", include_in_schema=False)
+        async def demo() -> FileResponse:
+            return FileResponse(demo_page, media_type="text/html; charset=utf-8")
+
+    return app
+
+
+app = create_app()

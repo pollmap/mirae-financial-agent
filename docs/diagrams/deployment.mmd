@@ -1,0 +1,12 @@
+flowchart TB
+    Internet[Public evaluator network] --> TLS[TLS and reverse proxy]
+    TLS --> API1[FastAPI container pinned by digest]
+    API1 --> HCX[HyperCLOVA X endpoint]
+    API1 --> Data[(Read-only Parquet and DuckDB)]
+    API1 --> Policy[Read-only registry, schemas, prompts]
+    API1 --> Health[Health and metrics without query text]
+    Manifest[Release manifest] --> API1
+    Source[Organizer ZIP hash gate] --> Build[Pre-freeze ETL and image build]
+    Build --> Data
+    Build --> API1
+    Secret[Runtime secret store] --> API1

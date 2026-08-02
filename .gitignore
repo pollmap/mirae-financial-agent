@@ -1,0 +1,38 @@
+# Secrets and local runtime configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.crt
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Generated data and build outputs (rebuild from immutable inputs/)
+data/serving/*.duckdb
+data/serving/.*duckdb*
+data/parquet/
+build/
+dist/
+*.egg-info/
+
+# Local logs and temporary files
+*.log
+*.tmp
+*.wal
+*.inspect.ndjson
+*.bak
+.DS_Store
+
+# Final release manifest is generated externally after commit and image push.
+artifacts/release_manifest.final.json

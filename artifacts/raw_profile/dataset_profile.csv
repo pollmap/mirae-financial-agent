@@ -1,0 +1,5 @@
+﻿dataset_id,product_group,source_file,row_count,column_count,official_row_count,official_count_matches,exact_duplicate_rows,schema_columns,header_schema_set_match
+PRBD01N001,국내채권,PRBD01N001_국내채권마스터_20260711_datarows.xlsx,42394,40,42394,True,0,40,True
+PREF01N001,국내 ETF,PREF01N001_국내ETF마스터_20260711_datarows.xlsx,1734,73,1734,True,0,73,True
+PREF02N001,해외 ETF,PREF02N001_해외ETF마스터_20260711_datarows.xlsx,5646,49,5646,True,0,49,True
+PRFD01N001,공모펀드,PRFD01N001_공모펀드마스터_20260711_datarows.xlsx,95619,45,95619,True,0,45,True

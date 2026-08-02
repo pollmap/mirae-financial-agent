@@ -1,0 +1,39 @@
+{
+  "release_id": "prebrief-mvp-0.2.0",
+  "release_status": "DRAFT",
+  "built_at": "2026-08-03T03:25:02+09:00",
+  "freeze_at": "2026-09-05T00:00:00+09:00",
+  "git_sha": "0000000000000000000000000000000000000000",
+  "container_image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "source_sha256": {
+    "official_task_pdf": "3717441e091958b7214db710e0e4b9b8ae15ac6c205cad6e51721214798eb3de",
+    "official_data_zip": "c3809aca73396f57242ded0188fa06a3d271bd4ad65010e53d5533efc7c18163"
+  },
+  "data_model_version": "canonical-v1",
+  "etl_version": "etl-v1",
+  "serving_database_sha256": "4daab85638b6d6fa1c0f1ebd4070d4050dca57fbfd9aed7e39a8aef2399a1450",
+  "metric_registry_sha256": "f4f68cfaf5d464476475de5f8fab839c7c25b2fe344b86f8417e3adaf3ce0fe0",
+  "canonical_registry_sha256": "a97ebd0914698f2bb82921c3d8bcbea83cde5a9323552132619168261770fce5",
+  "query_plan_schema_sha256": "a3a77b0eded7326bad2d763a65eb60ba9488191e85a163f3ee3e5860ec03fb39",
+  "planner_prompt_sha256": "9b04360aaed258230cf164fd75487fa9eef8c10b7b355f0d3eee0b1feac158f6",
+  "hcx_runtime_schema_sha256": "fafedb9398e0f95eef49e3583802e8d73d17fd7f8ea70b476d448f39226e23b6",
+  "evidence_bundle_schema_sha256": "58bcce8e23876fcf3bb9a13f802728868971f72f63b00a988059fd1167d80782",
+  "etl_source_sha256": "18ed9a599229ebb18e3f487800061cbc9d09ab79b23f761a50dc90cd5b039117",
+  "application_source_sha256": "c3d3ed8c2c24154e7311e4b3484f0572980cf3997573b5b1b059ecdff43ba81b",
+  "runtime_lock_sha256": "e3cda72184d7fdbbb1cdeb8c0007f317bc441d7aff8147cc181982ba15a4111a",
+  "build_lock_sha256": "d9412193876a09aba92471a68c924bd7a67f1289545d5977047a03517dd3c7dc",
+  "renderer_sha256": "781c1db80ea1fd1430f8028456699f328346f7d8d8aefc986e68b03ce4663086",
+  "safety_policy_sha256": "282940df56da422db22b0831ca55143007262dea6e72eb3e91acbe7c09703940",
+  "prompt_version": "hcx-query-planner-v1.2",
+  "renderer_version": "evidence-renderer-v1.2",
+  "safety_policy_version": "financial-safety-v1.2",
+  "hcx_model_id": "HCX-007",
+  "config_digest": "sha256:64f923d541de4b6c619c0b0f69104d28537eab7277ed279a9a4c0947349ab680",
+  "test_summary": {
+    "passed": 158,
+    "failed": 0,
+    "skipped": 0,
+    "report_sha256": "39dd02643566a0557ef82efde3daa41a67240cad3fdc5f6f86b4ee45264a233b"
+  },
+  "post_freeze_policy": "NO_COMMIT_PUSH_DEPLOY_OR_ARTIFACT_CHANGES"
+}

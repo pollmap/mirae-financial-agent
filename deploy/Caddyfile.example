@@ -1,0 +1,19 @@
+{
+	admin off
+}
+
+{$PUBLIC_HOSTNAME} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+
+	reverse_proxy agent:8080 {
+		health_uri /health/ready
+		health_interval 30s
+		health_timeout 3s
+	}
+}

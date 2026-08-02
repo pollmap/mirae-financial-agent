@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://team.local/schemas/release-manifest.schema.json",
+  "title": "Immutable evaluation release manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "release_id",
+    "release_status",
+    "built_at",
+    "freeze_at",
+    "git_sha",
+    "container_image_digest",
+    "source_sha256",
+    "data_model_version",
+    "etl_version",
+    "serving_database_sha256",
+    "metric_registry_sha256",
+    "canonical_registry_sha256",
+    "query_plan_schema_sha256",
+    "planner_prompt_sha256",
+    "hcx_runtime_schema_sha256",
+    "evidence_bundle_schema_sha256",
+    "etl_source_sha256",
+    "application_source_sha256",
+    "runtime_lock_sha256",
+    "build_lock_sha256",
+    "renderer_sha256",
+    "safety_policy_sha256",
+    "prompt_version",
+    "renderer_version",
+    "safety_policy_version",
+    "hcx_model_id",
+    "config_digest",
+    "test_summary",
+    "post_freeze_policy"
+  ],
+  "properties": {
+    "release_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,100}$"},
+    "release_status": {"enum": ["DRAFT", "FINAL"]},
+    "built_at": {"type": "string", "format": "date-time"},
+    "freeze_at": {"type": "string", "format": "date-time"},
+    "git_sha": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "container_image_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "source_sha256": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["official_task_pdf", "official_data_zip"],
+      "properties": {
+        "official_task_pdf": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "official_data_zip": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "data_model_version": {"type": "string", "minLength": 1, "maxLength": 100},
+    "etl_version": {"type": "string", "minLength": 1, "maxLength": 100},
+    "serving_database_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "metric_registry_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "canonical_registry_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "query_plan_schema_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "planner_prompt_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "hcx_runtime_schema_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "evidence_bundle_schema_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "etl_source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "application_source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "runtime_lock_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "build_lock_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "renderer_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "safety_policy_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "prompt_version": {"type": "string", "minLength": 1, "maxLength": 100},
+    "renderer_version": {"type": "string", "minLength": 1, "maxLength": 100},
+    "safety_policy_version": {"type": "string", "minLength": 1, "maxLength": 100},
+    "hcx_model_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "config_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "test_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed", "failed", "skipped", "report_sha256"],
+      "properties": {
+        "passed": {"type": "integer", "minimum": 0},
+        "failed": {"const": 0},
+        "skipped": {"type": "integer", "minimum": 0},
+        "report_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "post_freeze_policy": {"const": "NO_COMMIT_PUSH_DEPLOY_OR_ARTIFACT_CHANGES"}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"release_status": {"const": "FINAL"}},
+        "required": ["release_status"]
+      },
+      "then": {
+        "properties": {
+          "git_sha": {
+            "not": {"const": "0000000000000000000000000000000000000000"}
+          },
+          "container_image_digest": {
+            "not": {
+              "const": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          },
+          "serving_database_sha256": {
+            "not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}
+          },
+          "test_summary": {
+            "properties": {
+              "passed": {"minimum": 1},
+              "report_sha256": {
+                "not": {"const": "0000000000000000000000000000000000000000000000000000000000000000"}
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

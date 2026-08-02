@@ -1,0 +1,12 @@
+﻿dataset_id,key_columns,row_count,nonblank_key_count,missing_key_count,distinct_key_count,duplicate_key_rows,is_unique_when_present
+PRBD01N001,PD_NO,42394,42394,0,42394,0,True
+PREF01N001,pd_itm_no,1734,1734,0,1734,0,True
+PREF01N001,pd_itm_no_ma,1734,1734,0,1734,0,True
+PREF01N001,pd_exg_mkt_cd+pd_itm_no+pd_itm_no_ma,1734,1733,1,1733,0,True
+PREF02N001,pd_itm_no,5646,5646,0,5646,0,True
+PREF02N001,pd_itm_no_ma,5646,5646,0,5646,0,True
+PREF02N001,pd_isin_cd,5646,5637,9,5587,50,False
+PRFD01N001,itm_no,95619,95619,0,11139,84480,False
+PRFD01N001,itm_no+prfd_attr_cd,95619,95619,0,95619,0,True
+PRFD01N001,std_itm_no,95619,95553,66,11127,84426,False
+PRFD01N001,ksd_itm_no,95619,95353,266,11092,84261,False
