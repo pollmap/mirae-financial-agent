@@ -36,3 +36,6 @@ dist/
 
 # Final release manifest is generated externally after commit and image push.
 artifacts/release_manifest.final.json
+
+# Dev-only real-LLM bridge; must never enter the submission repository
+devtools/
