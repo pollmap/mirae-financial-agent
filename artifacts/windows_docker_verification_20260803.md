@@ -103,7 +103,43 @@ release manifest          artifacts/release_manifest.generated.json — DRAFT,
                           실제 git SHA·로컬 image ID 반영 (FINAL은 registry digest 필요)
 ```
 
-## 7. 남은 외부 gate (변경 없음)
+## 7. 실제 LLM(로컬 qwen3:8b) 연결 검증 — 2026-08-03 추가
+
+mock(결정론적 planner 재포장)과 달리, **진짜 언어모델이 한국어 질문을 읽고 schema를
+지켜 QueryPlan을 생성하는지** 확인하기 위해 Ollama + qwen3:8b(5.2GB, CPU 추론)를
+CLOVA facade(`devtools/real_llm_clova_facade.py`, git 미포함) 뒤에 연결했다.
+제출 코드는 무수정이며, production HCX adapter가 그대로 사용됐다.
+
+### 발견 1 — schema 이식성 결함 (수정 완료)
+
+`clarification_options`가 `anyOf`(빈 배열 | 2..4 객체 배열)로 정의되어 있었고,
+실 모델의 constrained decoding이 이를 강제하지 못해 문자열 배열을 반환
+→ 로컬 검증 실패. `anyOf`는 provider별 Structured Outputs에서 이식성이 가장 나쁜
+구조이며 HCX의 지원 여부도 미확정(OPEN_QUESTION)이었다.
+
+→ **수정**: 평탄한 배열(maxItems 4, 객체 items)로 변경. 정확한 0-or-2..4 규칙은
+`QueryPlan.semantic_shape`(Pydantic)가 계속 강제하므로 엄격함 손실 없음.
+수정 후 실 LLM plan 8건 전부 로컬 검증 통과(schema 실패 0건).
+
+### 발견 2 — 10문항 실 LLM 평가 결과
+
+```text
+HTTP 200                    9/10 (1건은 CPU 추론이 280s deadline 초과 → controlled 503)
+schema/검증 실패            0건
+환각 답변(데이터 밖 값)     0건
+안전 차단                   미래예측 추천 → SAFETY_LIMITED, 실시간 요청 → UNAVAILABLE (정상)
+사전 gate                   모호 ETF·구어체 질문이 LLM 호출 전 0.1s에 역질문 처리 (계층 방어 동작)
+경향                        8B급 소형 모델은 명확한 질문에도 과잉 역질문(6/10)
+                            → plan 품질은 모델 역량 의존; 파이프라인은 나쁜 plan에도 fail-closed
+사소한 관찰                 LLM이 동일 label 선택지 2개 생성 가능
+                            ("1Y 수익률 우선 / 1Y 수익률 우선") — 렌더러 label dedupe 여지
+```
+
+결론: **adapter·검증·실행·안전 계층은 실제 LLM의 불완전한 출력에도 안전하게
+동작한다.** plan 품질 자체는 HCX-007(대형·한국어 네이티브)에서 재평가해야 하며,
+이 로컬 결과는 하한선 성격이다.
+
+## 8. 남은 외부 gate (변경 없음)
 
 1. 2026-08-06 설명회: HCX model ID·API contract 확정
 2. 실제 CLOVA_STUDIO_API_KEY로 `deploy/live_hcx_plan_smoke.py` → 네 상품군 live E2E

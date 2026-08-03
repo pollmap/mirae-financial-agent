@@ -341,7 +341,9 @@ def test_full_production_schema_round_trips_a_valid_aggregate_plan() -> None:
 
 
 def test_hcx_clarification_options_are_provider_bounded_to_four() -> None:
+    # Flat array (no anyOf) so provider-side constrained decoding stays
+    # portable; the exact 0-or-2..4 rule is enforced locally by QueryPlan.
     option_schema = HCX_QUERY_PLAN_SCHEMA["properties"]["clarification_options"]
-    bounded = option_schema["anyOf"][1]
-    assert bounded["minItems"] == 2
-    assert bounded["maxItems"] == 4
+    assert option_schema["type"] == "array"
+    assert option_schema["maxItems"] == 4
+    assert option_schema["items"]["required"] == ["value", "label", "description"]

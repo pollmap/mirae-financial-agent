@@ -143,24 +143,23 @@ HCX_QUERY_PLAN_SCHEMA: dict[str, Any] = {
         "needs_clarification": {"type": "boolean"},
         "clarification_question": {"type": "string"},
         "missing_slots": {"type": "array", "items": {"type": "string"}, "maxItems": 8},
+        # Flat array instead of an empty-or-2..4 anyOf: anyOf over array shapes
+        # is the least portable construct for provider-side constrained
+        # decoding, and QueryPlan.semantic_shape already enforces exactly 0 or
+        # 2..4 typed options locally before any plan is executed.
         "clarification_options": {
-            "anyOf": [
-                {"type": "array", "maxItems": 0},
-                {
-                    "type": "array",
-                    "minItems": 2,
-                    "maxItems": 4,
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "value": {"type": "string"},
-                            "label": {"type": "string"},
-                            "description": {"type": "string"},
-                        },
-                        "required": ["value", "label", "description"],
-                    },
+            "type": "array",
+            "minItems": 0,
+            "maxItems": 4,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "value": {"type": "string"},
+                    "label": {"type": "string"},
+                    "description": {"type": "string"},
                 },
-            ]
+                "required": ["value", "label", "description"],
+            },
         },
     },
     "required": [
