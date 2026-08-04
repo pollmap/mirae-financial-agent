@@ -1,5 +1,11 @@
 # 미래에셋증권 금융상품 Agent
 
+> **다른 AI 에이전트/세션이 이어받는 경우**: 가장 먼저
+> [`HANDOFF_CURRENT_STATUS.md`](HANDOFF_CURRENT_STATUS.md)를 읽으세요.
+> 지금 뭐가 완료됐고, 뭐가 안 됐고, 다음에 뭘 해야 하는지 빠짐없이 정리돼
+> 있습니다. 아래 이 README와 `docs/`는 2026-08-03 아침 기준 설계 배경
+> 문서이며 이후 진행 상황은 반영돼 있지 않습니다.
+
 제10회 2026 미래에셋증권 AI Festival `금융상품 Agent`용 실행 가능한 MVP입니다.
 
 이 시스템은 국내채권·국내 ETF/ETN·해외 ETF/ETN·공모펀드 질문을 typed
