@@ -1,0 +1,140 @@
+{
+  "report_version": "5.0",
+  "as_of": "2026-08-08T16:45:00+09:00",
+  "status": "LOCAL_PASS_REBASELINE_PLUS_FINAL_SWEEP",
+  "release_scope": "briefing-rebaseline-v2 (federated semantic rebaseline + adversarial review + final sweep)",
+  "git_sha": "e577107",
+  "pytest_summary": {
+    "passed": 238,
+    "failed": 0,
+    "skipped": 0
+  },
+  "eval_summary": {
+    "question_total": 640,
+    "accuracy": 1.0,
+    "cross_scope_refusal_rate": 0.0,
+    "disclosure_rate": 0.9855,
+    "rank_position_match_mean": 1.0
+  },
+  "metamorphic_summary": {
+    "groups_evaluated": 137,
+    "groups_invariant": 137,
+    "invariance_rate": 1.0
+  },
+  "kg_lexical_summary": {
+    "kg_nodes": 71671,
+    "kg_edges": 206274,
+    "kg_aliases": 249857,
+    "lex_docs": 80670,
+    "lex_terms": 1288698,
+    "lex_vocab": 43935,
+    "vec_embeddings": 0
+  },
+  "two_stage_planner_summary": {
+    "stage_one_tpm_reservation_bytes": 13013,
+    "stage_two_tpm_reservation_bytes": 5383,
+    "reduction_pct": 58.6
+  },
+  "checks": [
+    {
+      "command": ".venv/Scripts/python.exe scripts/verify_sources.py",
+      "status": "PASS"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m ruff check app deploy etl scripts tests eval",
+      "findings": 0,
+      "status": "PASS"
+    },
+    {
+      "command": ".venv/Scripts/python.exe scripts/scan_runtime_compliance.py",
+      "files_scanned": 84,
+      "non_hcx_findings": 0,
+      "status": "PASS",
+      "note": "scan scope widened this round to include scripts/tests/eval/deploy and requirements-dev.txt (previously app/etl + core manifests only); prior figure was 44 files"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q",
+      "passed": 238,
+      "failed": 0,
+      "skipped": 0,
+      "status": "PASS"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m eval.run_eval",
+      "question_total": 640,
+      "failures": 0,
+      "status": "PASS"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m eval.metamorphic",
+      "groups_evaluated": 137,
+      "violations": 0,
+      "status": "PASS"
+    },
+    {
+      "command": "docker build --no-cache -t mirae-financial-agent:review-verify .",
+      "status": "PASS",
+      "note": "containerized data-builder stage reproduced verify_sources + full ETL (incl. KG/lexical build stages) + compliance scan (44/0 at that point in the build, before this round's scope widening) inside the image; counts matched kg_lexical_summary exactly"
+    },
+    {
+      "command": "docker run (APP_ENV=production, PLANNER_MODE=hcx -- image defaults, no key)",
+      "status": "PASS",
+      "note": "confirmed fail-closed: exits immediately with 'CLOVA_STUDIO_API_KEY is required for HCX planning', by design"
+    },
+    {
+      "command": "docker run (APP_ENV=development, PLANNER_MODE=deterministic override) + e2e_smoke.py",
+      "cases": 15,
+      "failures": 0,
+      "status": "PASS"
+    },
+    {
+      "command": "docker restart + e2e_smoke.py",
+      "cases": 15,
+      "failures": 0,
+      "status": "PASS",
+      "note": "identical to pre-restart run -- restart parity confirmed"
+    },
+    {
+      "command": "tests/contract/test_hcx_two_stage_e2e.py (mock HCX, Stage-1/2 parity)",
+      "status": "PASS"
+    }
+  ],
+  "this_round_summary": "User asked for a full sweep after the prior adversarial-review commit (5c85af5/4c23dda): what's done, what's left, what's weak. Ran Docker fresh-build/restart parity for real (previously blocked by a Windows daemon issue, now resolved) and four parallel audits (submission-collateral accuracy, API security/robustness, previously-deferred items, deployment/config readiness). Fixed: stale/false claims in docs/12 (technical proposal), README, docs/04, and both architecture diagrams (all previously described or implied that cross-scope queries are refused, which is false and contradicts the project's core mandate); requirements_traceability.csv's SEM-002/SEM-003 rows overstated what's live (graph traversal and router/fusion have zero callers anywhere including tests -- independently re-verified via grep); added uvicorn --limit-concurrency (contest rules: NCP overrun not reimbursed); added a redacted exception-type log line; wired the lexical entity-resolution fallback through reciprocal_rank_fusion (verified mathematically as a no-op on ordering with today's single channel, so it changes no answer but makes the RRF claim live instead of aspirational); fixed the compliance scanner's own scope gap and, in doing so, fixed the scanner flagging its own source once that gap was closed; added the 3 env vars .env.example was missing. Full suite re-verified fresh after every change, not reused from before this round.",
+  "external_gates": [
+    {
+      "gate": "HyperCLOVA X live credential E2E",
+      "status": "NOT_RUN",
+      "reason": "Team CLOVA Studio API key unavailable"
+    },
+    {
+      "gate": "Vector embeddings cache generation",
+      "status": "NOT_RUN",
+      "reason": "Requires live CLOVA_STUDIO_API_KEY"
+    },
+    {
+      "gate": "PLANNER_STAGE=two full 640-question A/B",
+      "status": "NOT_RUN",
+      "reason": "eval harness calls DeterministicPlanner directly; flagship-query parity proven via mock-HCX contract test instead"
+    },
+    {
+      "gate": "Public TLS deployment",
+      "status": "NOT_RUN",
+      "reason": "No deployment target provided"
+    },
+    {
+      "gate": "Organizer final API contract and briefing incorporation",
+      "status": "WAITING_FOR_BRIEFING",
+      "reason": "2026-08-06 briefing outcome not yet incorporated into this package"
+    },
+    {
+      "gate": "etl/kg.py dedicated unit tests for role/merge/alias-kind logic",
+      "status": "DEFERRED",
+      "reason": "Currently covered only by coarse structural invariants (product-node count, zero orphan edges), not merge/role correctness itself. Zero live callers today (see SEM-002 in traceability CSV), so blast radius of an undetected bug is zero; worth doing before any live wiring of graph traversal/party functions, not before 9/6 freeze."
+    },
+    {
+      "gate": "normalize_party scope-aware grouping",
+      "status": "DEFERRED",
+      "reason": "Party-name merge groups by normalized name only, not (scope, normalized) -- a bond issuer and an ETF manager sharing a normalized name would merge into one KG node. Zero live callers of the affected graph functions today, so zero behavioral risk; real fix touches node_id construction, edge dst references, and requires a rebuild + count updates, so treated as a scoped follow-up rather than a rushed patch."
+    }
+  ]
+}

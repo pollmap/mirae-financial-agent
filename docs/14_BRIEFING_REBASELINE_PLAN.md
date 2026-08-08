@@ -114,6 +114,26 @@ federated retrieval 코드, 데이터정책+eval 신뢰성)를 별도로 수행�
   vector 경로는 아직 실 호출자 없는 향후용 scaffold(현재 실제 요청 경로는
   exact-alias 조회 + lexical fallback만 사용).
 
+## 최종 종합 점검 완료 내역 (e577107, 2026-08-08 — "다 체크해서 개발해" 지시 반영)
+
+`5c85af5` 이후 한 번 더 전체 점검 지시. Docker Desktop이 이 시점에 복구돼
+fresh build/restart를 실제로 검증(KG/lexical 스테이지 포함, 카운트 일치,
+restart 전후 smoke 15/15 동일). 이전 리뷰가 다루지 않은 4개 영역을 병렬
+에이전트로 감사한 결과, 가장 심각했던 발견은 코드가 아니라 **제출 문서**였다:
+`docs/12`(기술제안서)가 재설계 이전 아키텍처와 "교차 rank/compare는 fail-closed
+유지"라는 명시적으로 틀린 문장을 담고 있었고, README·docs/04·아키텍처
+다이어그램 2종도 같은 계열의 낡은 서술이었다 — 전부 수정. `requirements_
+traceability.csv`의 SEM-002/SEM-003도 재확인 결과 과장돼 있어(graph 순회·
+party 함수·router.route_theme_query는 실 요청 경로는 물론 테스트에서도
+호출자 0건) 문구를 실제 상태대로 재작성했다. 그 외: uvicorn
+`--limit-concurrency` 추가(NCP 비용 리스크), 예외 타입명만 남기는 안전 로그
+추가, `.env.example` 누락 변수 3개 추가, 3커밋 뒤처진 release manifest 재생성,
+compliance 스캐너 범위 확장(44→84 files, 확장 직후 발견된 자기-오탐지 버그도
+같이 수정), lexical fallback을 RRF 경유로 전환(federated retrieval 주장을
+실제로 참이게 함). 상세: `docs/15_REBASELINE_VALIDATION_REPORT.md` §0-2.
+최종 재검증: pytest 238/238, eval 640/640(100%), metamorphic 137/137, ruff
+clean, compliance 84 files/0 findings.
+
 ## 리스크
 
 1. 완화의 fail-closed 침식 → comparability 단일 진실원 + 공시 hard-assert +

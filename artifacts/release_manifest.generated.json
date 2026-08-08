@@ -1,10 +1,10 @@
 {
   "release_id": "prebrief-mvp-0.2.0",
   "release_status": "DRAFT",
-  "built_at": "2026-08-08T14:12:42+09:00",
+  "built_at": "2026-08-08T19:52:58+09:00",
   "freeze_at": "2026-09-05T00:00:00+09:00",
-  "git_sha": "4afc169cfac94f94a64b3f256945e4875911708a",
-  "container_image_digest": "sha256:62cdc151093c2b1979bac182ffdd7bd502beaac5cd8500c2f9f48ec961a32aaa",
+  "git_sha": "e57710774b61a3591671d21a9217ea68dc3c4caa",
+  "container_image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
   "source_sha256": {
     "official_task_pdf": "3717441e091958b7214db710e0e4b9b8ae15ac6c205cad6e51721214798eb3de",
     "official_data_zip": "c3809aca73396f57242ded0188fa06a3d271bd4ad65010e53d5533efc7c18163"
@@ -19,7 +19,7 @@
   "hcx_runtime_schema_sha256": "98c04a4e7e024c92a29bafe58de00415dc163cb45177fd560fc5b514fd1cbeda",
   "evidence_bundle_schema_sha256": "58bcce8e23876fcf3bb9a13f802728868971f72f63b00a988059fd1167d80782",
   "etl_source_sha256": "f97d7c465fb107f3d440314251b0faa8a1d8a66d72189fead07e0efae12ae155",
-  "application_source_sha256": "ed583cf6890c38f35a4cd3f5282b7c7acb3ca6e4330146092665a7d03bc3c0a2",
+  "application_source_sha256": "db2cb3f3a1875dc36dbe7955b3d8ab6397686e0180b3f96971a55f4d7faa02cb",
   "semantic_registry_sha256": "dcaa4e40726e34e574f8bac1ec1a96a754506df10bf762347690ae09a6134eb6",
   "hcx_semantic_schema_sha256": "c485112487eb9deed4436a744ee4950ea49186517278350a827e00b1f74f09bd",
   "semantic_planner_prompt_sha256": "a9a0994349d40214f5dfcb54da300534060939cff0d4e673c7eb69d48bcef327",
@@ -36,7 +36,7 @@
     "passed": 238,
     "failed": 0,
     "skipped": 0,
-    "report_sha256": "3a990546b415eeda9cb73feba4a5e9193dd9adfc8eb2728943dc7168fd3e9d31"
+    "report_sha256": "ec6a6888c0d3ed384bc8598eaf016a959dfe7ba8faa0b50d15f9cecb3b381cb2"
   },
   "post_freeze_policy": "NO_COMMIT_PUSH_DEPLOY_OR_ARTIFACT_CHANGES"
 }

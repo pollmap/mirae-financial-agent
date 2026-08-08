@@ -22,8 +22,12 @@ typed QueryPlan(또는 2단계 모드에서는 개념 plan → 서버 grounding)
 전면 재설계(federated semantic rebaseline)를 완료했고, 이어서 3-agent 적대적
 코드 리뷰로 실제 크래시/무공시 오답 버그 2건과 eval 하네스 자체의 채점 결함을
 찾아 전부 고쳤다(§2-5). 640문항 자체 평가에서 100% 정답·교차상품군 거절률
-0%를 실측했다 — 이번엔 채점 로직도 같이 검증된 상태다. 남은 것은 여전히
-"진짜 HCX API 키·설명회 확정사항·배포 인프라가 있어야만 되는" 외부 gate뿐이다.**
+0%를 실측했다 — 이번엔 채점 로직도 같이 검증된 상태다. 그 뒤 한 번 더
+"남은 것·미흡한 것" 종합 점검을 거쳐 Docker fresh build/restart를 실제로
+검증했고(§2-6), 제출 기술제안서가 낡은/거짓 아키텍처 서술을 담고 있던 것과
+requirements traceability의 Federated Retrieval 과장 등을 찾아 고쳤다(§2-7).
+남은 것은 여전히 "진짜 HCX API 키·설명회 확정사항·배포 인프라가 있어야만
+되는" 외부 gate뿐이다.**
 
 ## 1. 왜 재설계가 있었는가 (8/3 → 8/8 사이 일어난 일)
 
@@ -118,49 +122,95 @@ py -3.12 -m venv .venv
 전부 eval 하네스(640문항, 독립 SQL oracle)와 3-agent 리뷰가 잡아냈고 근본
 원인을 고쳤다 — 하네스나 리뷰를 답에 맞춘 게 아니다. 커밋 `5c85af5`.
 
-### 2-6. Docker / HCX mock / 실 LLM 검증 (8/3 시점, 아직 유효하지만 W2-W4
-신규 스테이지로 재검증 필요 — §4 참고)
-- `deploy/mock_clova_studio.py`(dev 전용): CLOVA Studio v3 계약 재현.
-- `devtools/`(실 LLM 브릿지, **저장소 미포함·gitignore**): Ollama+qwen3:8b로
-  실제 LLM 연결 검증한 기록. 재현하려면 이 파일 대신
-  `artifacts/windows_docker_verification_20260803.md` §5,7 참고.
-- GitHub: `pollmap` 개인 private repo. `.env.production`/`devtools/`는
-  git-ignore로 미포함 확인됨.
+### 2-6. Docker 검증 (2026-08-08 재확인 완료, W1-W4 신규 스테이지 포함)
+`5c85af5` 직후 Docker Desktop 데몬이 이 PC에서 살아났고, W2-W4 신규 ETL
+스테이지(KG·lexical build)를 포함한 fresh `--no-cache` 빌드/실행/재시작
+검증을 실제로 완료했다: 컨테이너 내부 ETL이 §2-3과 동일한 카운트를 재현
+(71,671 node/206,274 edge/249,857 alias, 80,670 lexical doc), production
+기본값(`APP_ENV=production`+`PLANNER_MODE=hcx`)은 실 키 없이 fail-closed로
+즉시 종료(의도된 동작), deterministic 모드로 재실행 시 smoke 15/15가
+`docker restart` 전후 동일. 상세: `docs/15` §0, 커밋 `e577107`.
+
+### 2-7. 최종 종합 점검 (2026-08-08, "다 체크해서 개발해" 지시, 커밋 `e577107`)
+`5c85af5` 이후 사용자가 한 번 더 "남은 것·미흡한 것·개선할 것"을 전부
+점검하라고 지시. Docker 재검증(2-6)에 더해 4개 병렬 에이전트로 이전
+리뷰가 안 다룬 영역을 감사:
+
+- **제출 문서 정확성(가장 중요)**: `docs/12_TECHNICAL_PROPOSAL_DRAFT.md`(실제
+  기술제안서)가 재설계 이전 아키텍처를 그대로 서술하고 있었고, 심지어
+  "통화·기간·단위가 필요한 교차 rank·compare는 기존 fail-closed 정책을 유지"라고
+  명시 — 이 프로젝트의 핵심 지시(교차 질의 무조건 답변)와 정반대. README·
+  docs/04·아키텍처 다이어그램 2종도 같은 계열의 낡은/거짓 서술. 전부 수정.
+- **`artifacts/requirements_traceability.csv`의 SEM-002/SEM-003 과장**: Knowledge
+  Graph의 `WITH RECURSIVE` 순회 함수와 party 조회 함수, Federated Retrieval의
+  `router.route_theme_query`가 실 요청 경로는 물론 **테스트에서도 호출자 0건**임을
+  grep으로 직접 재확인(이전 리뷰보다 더 엄격하게 확인됨) — CSV 문구를 실제
+  live/scaffold 구분이 드러나게 수정.
+- **API 보안/견고성**: 라이브 요청 경로는 대체로 깨끗함(SQL은 전부
+  parameterized, limit/top_n은 Pydantic 모델 레벨에서 이미 강제, 클라이언트로
+  내부정보 유출 없음). 다만 uvicorn에 연결 동시성 상한이 없어 NCP 크레딧
+  초과(주최 미보전) 리스크가 있었음 → `--limit-concurrency 64` 추가. 서버
+  예외가 uvicorn 자체 로거로는 트레이스백까지 남는 것을 확인 → 앱 자체
+  로거에 예외 타입명만(원문·트레이스백 제외) 남기는 안전한 신호 추가.
+- **배포/설정**: `.env.example`에 `PLANNER_STAGE`/`VECTOR_ENABLED`/
+  `HCX_TPM_BUDGET` 누락 → 추가. **release manifest가 3커밋 전 SHA(`4afc169`)를
+  참조 중이라 crash/오답 버그 수정 이후 상태를 반영 못 하고 있었음** → 재생성
+  (현재 `e577107` 기준, 여전히 `DRAFT`). `scan_runtime_compliance.py`가
+  `requirements-dev.txt`와 `scripts/tests/eval/deploy`를 스캔 범위 밖에 두고
+  있었음 → 확장(44→84 files). **확장 직후 스캐너가 자기 자신을 오탐지**
+  (`ANTHROPIC_API_KEY` 등 3개 패턴이 문자열 분할 처리가 안 돼 있었음) → 같은
+  분할 기법 적용해 수정, 재스캔 0 findings로 검증.
+- 이 라운드에서 `_lexical_entity_fallback`을 `reciprocal_rank_fusion` 경유로
+  바꿈(단일 채널이라 순서엔 수학적으로 no-op임을 증명 후 적용) — "Federated
+  Retrieval" 주장을 열망이 아니라 실제로 참이게 만듦.
+
+낮은 우선순위로 확인만 하고 보류한 것(이유 포함, `docs/15` §0에 상세):
+`etl/kg.py`의 role/merge 로직 자체를 검증하는 전용 단위테스트 부재(구조적
+invariant만 검증 중); `normalize_party`가 scope 구분 없이 정규화명만으로
+병합(현재 그래프 party 함수 호출자가 0이라 실 위험은 0, 라이브 배선 전
+scope-aware groupby로 고치는 게 맞음).
+
+최종 재검증(이 세션에서 직접 재실행): pytest 238/238, eval 640/640(100%,
+거절률 0%, 공시율 98.55%), metamorphic 137/137, ruff clean, compliance
+84 files/0 findings.
 
 ## 3. 아직 안 된 것
 
 | 항목 | 상태 | 비고 |
 |---|---|---|
-| **Docker fresh build/restart, W2-W4 스테이지 포함 재검증** | ⏳ 진행중 | 8/3 검증은 KG/lexical/vector 빌드 스테이지 이전 버전 기준. 이 세션에서 재검증 시도했으나 Docker Desktop 데몬 기동 지연으로 완료 못 함(다음 에이전트가 이어서 `docker build --no-cache` 실행) |
 | 실제 `CLOVA_STUDIO_API_KEY`로 live E2E | ❌ | 키 없음. `deploy/live_hcx_plan_smoke.py` 준비됨 |
 | 임베딩 캐시(`artifacts/embeddings/embeddings_cache.parquet`) | ❌ | 실키 필요. `scripts/build_embeddings.py` 완성돼 있음. 생성 후 `VECTOR_ENABLED=true`로 재빌드 |
 | `PLANNER_STAGE=two` 640문항 전체 A/B | ❌ | flagship 1건 동등성만 실증(§2-3). eval 하네스가 DeterministicPlanner를 직접 호출해 두 단계 전체 재현엔 별도 mock-semantic 서버 배선 필요 |
 | 공식 HCX model ID·API 계약 확정 | ❌ | `HCX-007`은 팀 baseline. 8/6 설명회 확정 대기 |
 | Public HTTPS 배포 | ❌ | `deploy/compose.yaml` 준비됨, 실제 서버 없음 |
 | GitHub **Organization** push | ⚠️ | 개인 private repo에만 있음 |
-| FINAL release manifest | ❌ | 여전히 `DRAFT` |
+| FINAL release manifest | ❌ | 여전히 `DRAFT`(2-7에서 최신 SHA로 재생성은 완료, FINAL 전환엔 image digest·public 배포 등 다른 외부 gate 필요) |
 | one-shot 기본값(모호시 추측 응답) | 🔵 의도적 보류 | 공식 요구사항이 역질문을 명시적으로 요구해서 재검토 후 보류. `docs/14` §W3 참고 |
+| `etl/kg.py` role/merge 전용 단위테스트 | 🔵 의도적 보류 | 2-7 참고. 실 호출자 0건이라 리스크 0, 그래프 기능 라이브 배선 전에 하면 됨 |
+| `normalize_party` scope-aware 병합 | 🔵 의도적 보류 | 2-7 참고. 같은 이유로 리스크 0 |
 
 ## 4. 다음 AI 에이전트가 할 일 우선순위
 
-1. **Docker 재검증부터**: `docker build --no-cache -t mirae-financial-agent:rc .`
-   → 빌드 로그에서 `build_kg`/`build_lexical` 성공 확인(카운트가 §2-3과
-   비슷해야 함) → `docker run` → `scripts/e2e_smoke.py` → `docker restart` →
-   동일 결과 확인. (이 세션에서 Docker Desktop 데몬이 안 떠서 못 끝냄.)
-2. **키가 생기면**: `deploy/live_hcx_plan_smoke.py` 실행 → 성공하면
+1. **키가 생기면**: `deploy/live_hcx_plan_smoke.py` 실행 → 성공하면
    `scripts/build_embeddings.py`로 임베딩 캐시 생성 → `VECTOR_ENABLED=true`로
    재빌드 → `PLANNER_STAGE=two` 실 HCX로 A/B.
-3. **설명회(8/6) 이후**: `docs/08_BRIEFING_QUESTIONS_AND_DIFF_PROCESS.md`
+2. **설명회(8/6) 이후**: `docs/08_BRIEFING_QUESTIONS_AND_DIFF_PROCESS.md`
    절차대로 반영. one-shot 기본값 여부도 이때 재결정.
-4. **배포·제출**: `docs/10_RELEASE_FREEZE_RUNBOOK.md` 순서.
+3. **배포·제출**: `docs/10_RELEASE_FREEZE_RUNBOOK.md` 순서. FINAL manifest는
+   freeze 직전 최종 커밋 기준으로 다시 한번 재생성할 것(매 커밋마다 자동
+   갱신되지 않음 — 2-7에서 이걸 놓쳤던 사례 참고).
+4. **여유가 있다면**: `etl/kg.py` role/merge 단위테스트, `normalize_party`
+   scope-aware groupby(§3의 두 보류 항목) — 그래프 기능을 실제로 라이브
+   배선하기 전 선행 조건.
 
 ## 5. 이 문서를 쓰는 법 (다른 에이전트에게)
 
 - 이 파일 → `docs/15_REBASELINE_VALIDATION_REPORT.md`(실측 수치) →
   `docs/14_BRIEFING_REBASELINE_PLAN.md`(설계 원안+진행상황) 순으로 읽어라.
-- `git log --oneline briefing-rebaseline-v2` 상위 7개 커밋이 이번 재설계의
-  전체 diff다(각 커밋 메시지가 상세 변경 근거를 담고 있음). 맨 위
-  `5c85af5`가 최종 적대적 리뷰 수정분.
+- `git log --oneline briefing-rebaseline-v2` 상위 9개 커밋이 이번 재설계의
+  전체 diff다(각 커밋 메시지가 상세 변경 근거를 담고 있음). `5c85af5`가
+  최종 적대적 리뷰 수정분, `e577107`이 그 다음 종합 점검(Docker 실검증+
+  제출문서 정확성+보안/배포 하드닝) 수정분.
 - `eval/`은 runtime 이미지에 안 들어가지만 저장소에는 포함돼 있다(오라클이
   `app/`을 import하지 않는 독립 검증 도구이기 때문). `eval/README.md` 참고.
 - `devtools/`는 여전히 로컬에만 있고 저장소에는 없다.

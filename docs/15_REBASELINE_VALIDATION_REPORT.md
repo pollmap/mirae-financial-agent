@@ -1,13 +1,17 @@
-# 재기준화 검증 리포트 (W1-W4 실측)
+# 재기준화 검증 리포트 (W1-W4 실측 + 2회의 사후 리뷰)
 
 기준: 2026-08-08, branch `briefing-rebaseline-v2`, HEAD는 이 문서 커밋 시점 `git log -1`.
 `docs/14_BRIEFING_REBASELINE_PLAN.md`에서 정의한 게이트의 실측 결과다. 측정하지 않은
 항목은 "미측정"으로 명시하고 추정치를 대신 적지 않는다.
 
-**중요 — §0을 먼저 읽을 것.** 이 문서의 최초 버전(W1-W3 시점)이 보고한 "640/640 100%,
-cross_scope 69/69 정답"은 사후 적대적 리뷰에서 **채점 로직 자체의 결함**으로 밝혀졌다.
-거절률 0% 측정치는 그때도 지금도 유효하지만, "순위·값이 정확하다"는 부분은 당시
-검증되지 않은 채로 통과 처리되고 있었다. §0에 전체 경위를 기록한다.
+**중요 — §0, §0-2를 먼저 읽을 것.** 이 문서의 최초 버전(W1-W3 시점)이 보고한
+"640/640 100%, cross_scope 69/69 정답"은 사후 적대적 리뷰(§0)에서 **채점 로직
+자체의 결함**으로 밝혀졌다. 거절률 0% 측정치는 그때도 지금도 유효하지만,
+"순위·값이 정확하다"는 부분은 당시 검증되지 않은 채로 통과 처리되고 있었다.
+그 리뷰로 앱 코드를 고친 뒤, 사용자가 한 번 더 종합 점검을 지시했고(§0-2),
+이번엔 제출 문서(기술제안서·README·다이어그램)가 재설계 이전 내용을 그대로
+담고 있었던 것과 requirements traceability의 과장을 발견·수정했다. §0·§0-2에
+전체 경위를 기록한다.
 
 ## 0. 사후 적대적 리뷰에서 발견·수정한 것 (2026-08-08, W1-W3 완료 직후)
 
@@ -85,6 +89,101 @@ W1-W4 코드가 전부 green으로 나온 뒤, 별도의 독립 리뷰 라운드
 - `bond.credit_rating` 등급 순서, compare의 `COMPARISON_VALUE_UNUSABLE` 분기는
   실제로는 `quality_flags`가 엔진 전체에서 항상 빈 배열로 생성되어 도달
   불가능한 것으로 드러났다(별개의 사전 존재 이슈, 이번 범위 밖).
+
+## 0-2. 최종 종합 점검에서 추가로 발견·수정한 것 (2026-08-08, 커밋 `e577107`)
+
+`5c85af5` 커밋 직후 사용자가 "남은 것·미흡한 것·개선할 것을 전부 체크해서
+개발하라"고 재지시했다. Docker Desktop 데몬이 이 시점에 살아나 있어 이전에
+못 했던 fresh build/restart 검증을 실제로 완료했고, 이전 3-agent 리뷰가
+다루지 않은 4개 영역(제출 문서 정확성, API 보안/견고성, 이전 리뷰의 보류
+항목 재검토, 배포/설정 준비도)을 병렬 에이전트로 감사했다.
+
+**Docker (실제로 빌드·실행·재시작해서 검증, §6의 "실측 못함" 목록에서 제거)**:
+`docker build --no-cache`가 컨테이너 안에서 source verify→전체 ETL(KG·lexical
+빌드 스테이지 포함)→compliance scan을 재현했고, 카운트가 §5와 정확히 일치했다
+(kg_nodes 71,671/kg_edges 206,274/kg_aliases 249,857, lex_docs 80,670). 이미지
+기본값(`APP_ENV=production`+`PLANNER_MODE=hcx`)은 실 키 없이 fail-closed로 즉시
+종료함을 확인했다(의도된 설계). `PLANNER_MODE=deterministic` override로 재실행한
+컨테이너는 `docker restart` 전후 15-case smoke가 동일했다.
+
+**제출 문서 정확성 — 가장 심각한 발견**: `docs/12_TECHNICAL_PROPOSAL_DRAFT.md`
+(주최 요구 기술제안서 본문)가 재설계 이전 단일단계 아키텍처를 그대로 서술하고
+있었고, §7은 "통화·기간·단위·위험척도가 필요한 교차 rank·compare는 기존
+fail-closed 정책을 유지합니다"라고 **명시적으로 틀린 주장**을 하고 있었다 —
+이 프로젝트 전체를 재설계하게 만든 사용자의 핵심 지시("교차 질의는 어떠한
+제한이나 한계가 있어도 안 됨")와 정면으로 배치되고, 실측(교차 거절률 0%)과도
+모순됐다. `README.md`와 `docs/04_PRODUCT_ARCHITECTURE_SPEC.md`도 각각 같은
+계열의 낡은/거짓 문장("호환되지 않는 지표의 교차 순위는 계속 차단", "14.5만
+행은 GraphDB가 필요한 규모가 아님" — 뒤 문장은 이후 실제로 KG를 만들면서
+모순됨)을 담고 있었다. `docs/diagrams/architecture.mmd`·`request-sequence.mmd`
+(저장소의 유일한 아키텍처 다이어그램, 제안서에 들어갈 가능성이 가장 높은
+자료)도 KG/federated retrieval/grounder 노드가 전혀 없는 구버전이었다. 전부
+현재 아키텍처와 실측 수치로 재작성했다.
+
+**`artifacts/requirements_traceability.csv`의 SEM-002/SEM-003 과장**: 이전
+리뷰(§0)가 "federated retrieval 모듈 대부분이 실 호출자 없음"을 발견했는데,
+이번 라운드는 이를 grep으로 독립 재확인해 더 엄격한 사실을 확인했다 —
+`graph_retriever.traverse()`(WITH RECURSIVE 순회)와 party 조회 함수들
+(`resolve_party_nodes`/`products_for_party`), `router.route_theme_query`는
+실 요청 경로뿐 아니라 **자체 단위테스트에서도 호출자가 0건**이다. 그런데
+traceability CSV는 이 함수들을 SEM-002("Knowledge Graph")·SEM-003
+("Federated Retrieval")의 구현 근거로 인용하고 있었다. 문구를 실제 상태가
+드러나게 다시 썼다: 무엇이 live인지(SQL exact/alias/LIKE + BM25 fallback,
+이제 RRF 경유), 무엇이 격리 단위테스트만 있는지(router/fusion), 무엇이
+테스트조차 없는지(graph traversal/party 함수)를 구분했고, 640문항 eval이
+lexical fallback을 단 한 번도 트리거하지 않는다는 사실(§1의 disclosure_rate
+산정 근거 데이터에서 확인됨)도 명시해 "eval 640/640"을 federated retrieval의
+증거로 오인하지 않도록 했다.
+
+**API 보안/견고성 감사**: 라이브 요청 경로 대부분이 깨끗했다 — SQL은 전부
+parameterized(f-string은 서버측 allow-list 필드명에만 사용), `limit`/`top_n`은
+Pydantic `QueryPlan` 모델 레벨(`Field(ge=1, le=50)`)에서 모든 생성 경로에
+강제되고 있어 grounder.py의 clamp는 중복 방어였음이 확인됐다, 클라이언트 500
+응답은 절대 내부 정보를 노출하지 않는다. 다만 두 가지는 고쳤다: (1) uvicorn에
+연결 동시성 상한이 없어 재시도 폭주가 NCP 크레딧(주최 미보전)을 무한정 소진할
+수 있었다 — `--limit-concurrency 64`를 Dockerfile과 compose.yaml 양쪽에 추가.
+(2) Starlette가 예외 핸들러 실행 후 재발생시켜 uvicorn 자체 로거가 전체
+트레이스백을 컨테이너 stderr에 남기는 것을 확인했다 — 클라이언트에는 유출되지
+않지만, 앱 자체 로거에 예외 **타입명만**(원문·트레이스백 제외) 남기는 안전한
+신호를 추가해 향후 코드가 실수로 예외 메시지에 사용자 텍스트를 넣더라도
+운영진이 로그에서 상황을 알 수 있게 했다.
+
+**배포/설정 감사**: `.env.example`에 W2/W3에서 추가된 `PLANNER_STAGE`·
+`VECTOR_ENABLED`·`HCX_TPM_BUDGET`이 누락돼 있어 추가했다. **`artifacts/
+release_manifest.generated.json`이 `4afc169`(W3 완료 시점, crash 버그·무공시
+오답 버그 수정 3커밋 전)를 참조하고 있어 이후 상태를 전혀 반영하지 못하고
+있었다** — freeze 직전이 아니라 지금 재생성해 `e577107` 기준으로 갱신했다
+(여전히 `DRAFT`). `scan_runtime_compliance.py`가 `requirements-dev.txt`와
+`scripts/`·`tests/`·`eval/`·`deploy/`를 스캔 범위 밖에 두고 있어(44 files만
+스캔) 확장했다(84 files) — 확장 직후 스캐너가 **자기 자신을 오탐지**하는
+버그를 발견했다: `non_hcx_secret` 규칙의 `ANTHROPIC_API_KEY`/`GEMINI_API_KEY`/
+`COHERE_API_KEY` 세 패턴이 (이미 `"open"+"ai"`처럼 분할 처리된 다른 패턴들과
+달리) 문자열 분할 없이 그대로 박혀 있어서, `scripts/`가 스캔 대상에 들어가자
+스캐너 자신의 소스 코드(패턴 정의 그 자체)가 자기 규칙에 걸렸다. 같은 분할
+기법을 적용해 수정하고 재스캔으로 0 findings를 확인했다.
+
+**추가 개선**: `_lexical_entity_fallback`(entity 해석 3단 폴백)이 `lexical_
+retriever.search` 결과를 그대로 반환하던 것을 `reciprocal_rank_fusion` 경유로
+바꿨다. RRF 점수 `1/(k+rank)`는 단일 채널 내에서 rank에 대해 항상 단조감소이므로
+채널이 하나뿐인 현재는 순서에 수학적으로 no-op임을 증명한 뒤 적용했다 — 즉
+이 변경은 어떤 답변도 바꾸지 않지만, "federated retrieval"이 fusion.py를 실제로
+호출하지 않는 열망적 주장에서 실제로 호출하는 참인 주장으로 바뀐다.
+
+**낮은 우선순위로 재확인만 하고 보류한 것** (§0의 목록과 동일한 것들을 이번엔
+더 구체적인 조치안까지 검토): `etl/kg.py`의 role/merge 로직 자체를 검증하는
+전용 단위테스트는 여전히 없음(구조적 invariant만 검증) — 60-90분 정도의 합성
+데이터 테스트로 가능하다고 판단했지만, 그래프 함수 실 호출자가 0건이라
+리스크도 0이라 그래프 기능을 실제로 라이브 배선하기 전으로 미뤘다.
+`normalize_party`는 여전히 scope 구분 없이 정규화명만으로 병합한다(예:
+"Value Partners Ltd"와 "Value Partners LLC"가 실제로는 다른 회사여도 병합될 수
+있음) — 수정 자체는 `kg.py`의 groupby에 `scope`를 추가하는 한 줄이지만,
+node_id 구성과 edge의 dst_node_id 참조도 함께 바꿔야 하고 재빌드로 카운트가
+바뀌므로, 호출자가 없어 리스크가 0인 지금 서둘러 절반만 고치기보다 그래프
+기능을 라이브로 연결하는 시점에 함께 하기로 했다.
+
+**재검증**: 이 라운드의 모든 코드 변경 후 전체 스위트를 다시 실행했다(이전
+실행값 재사용 아님) — pytest 238/238, eval 640/640(100%, 거절률 0%, 공시율
+98.55%), metamorphic 137/137, ruff clean, compliance 84 files/0 findings.
 
 ## 1. 핵심 지표 (eval/run_eval.py, 640문항, 독립 SQL oracle, 채점 로직 수정 후 재측정)
 
