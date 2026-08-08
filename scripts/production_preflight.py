@@ -24,6 +24,7 @@ OFFICIAL_HCX_BASE_URL = "https://clovastudio.stream.ntruss.com"
 APPROVED_HCX_MODEL_ID = "HCX-007"
 EXPECTED_SNAPSHOT_DATE = "2026-07-11"
 EXPECTED_LIVE_HCX_GATE = "HCX_20_QUESTION_ONE_VS_TWO_STAGE"
+EXPECTED_LIVE_HCX_E2E_GATE = "HCX_100_QUESTION_TWO_STAGE_E2E"
 IMAGE_PATTERN = re.compile(r"^[^\s@]+@sha256:[a-f0-9]{64}$")
 PLACEHOLDER_SECRET_MARKERS = (
     "at-least-",
@@ -206,6 +207,71 @@ def _validate_live_hcx_gate(report_path: Path, errors: list[str]) -> None:
         errors.append("LIVE_HCX_GATE_REPORT is missing its UTC completion time")
 
 
+def _validate_live_hcx_e2e_gate(report_path: Path, errors: list[str]) -> None:
+    """Require sanitized 100-case live planner-to-evidence verification."""
+
+    if not report_path.is_file() or report_path.stat().st_size == 0:
+        errors.append("LIVE_HCX_E2E_GATE_REPORT must reference a non-empty JSON file")
+        return
+    try:
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        errors.append("LIVE_HCX_E2E_GATE_REPORT must be valid UTF-8 JSON")
+        return
+    if not isinstance(payload, dict):
+        errors.append("LIVE_HCX_E2E_GATE_REPORT must contain a JSON object")
+        return
+
+    required_matches = {
+        "status": "PASS",
+        "gate": EXPECTED_LIVE_HCX_E2E_GATE,
+        "model_id": APPROVED_HCX_MODEL_ID,
+        "approved_planner_stage": "two",
+        "case_count": 100,
+        "minimum_accuracy": 0.98,
+        "hcx_planned_case_count": 100,
+        "evidence_linked_case_count": 100,
+        "cross_scope_refusal_count": 0,
+        "secret_values_recorded": False,
+        "questions_recorded": False,
+        "prompts_recorded": False,
+        "plans_recorded": False,
+        "answers_recorded": False,
+        "product_identifiers_recorded": False,
+    }
+    if any(payload.get(key) != value for key, value in required_matches.items()):
+        errors.append("LIVE_HCX_E2E_GATE_REPORT did not pass the required 100-question E2E gate")
+    passed_count = payload.get("passed_count")
+    accuracy = payload.get("accuracy")
+    if (
+        not isinstance(passed_count, int)
+        or passed_count < 98
+        or not isinstance(accuracy, int | float)
+        or float(accuracy) < 0.98
+    ):
+        errors.append("LIVE_HCX_E2E_GATE_REPORT did not meet the 98% accuracy threshold")
+    suite_hash = payload.get("question_suite_sha256")
+    if not isinstance(suite_hash, str) or not re.fullmatch(r"[a-f0-9]{64}", suite_hash):
+        errors.append("LIVE_HCX_E2E_GATE_REPORT is missing a valid question-suite hash")
+    completed_at = payload.get("completed_at_utc")
+    if not isinstance(completed_at, str) or not completed_at.endswith(("Z", "+00:00")):
+        errors.append("LIVE_HCX_E2E_GATE_REPORT is missing its UTC completion time")
+    by_kind = payload.get("by_kind")
+    expected_mix = {
+        "rank_single": 35,
+        "filter_search": 25,
+        "count_aggregate": 20,
+        "cross_scope": 20,
+    }
+    if not isinstance(by_kind, dict) or any(
+        not isinstance(by_kind.get(kind), dict)
+        or by_kind[kind].get("total") != count
+        or by_kind[kind].get("passed", 0) < int(count * 0.98)
+        for kind, count in expected_mix.items()
+    ):
+        errors.append("LIVE_HCX_E2E_GATE_REPORT has an invalid category mix or category result")
+
+
 def validate_environment(
     environ: Mapping[str, str],
     *,
@@ -246,6 +312,9 @@ def validate_environment(
     live_gate_raw = _required_text(environ, "LIVE_HCX_GATE_REPORT", errors)
     if live_gate_raw:
         _validate_live_hcx_gate(Path(live_gate_raw), errors)
+    live_e2e_gate_raw = _required_text(environ, "LIVE_HCX_E2E_GATE_REPORT", errors)
+    if live_e2e_gate_raw:
+        _validate_live_hcx_e2e_gate(Path(live_e2e_gate_raw), errors)
 
     image_ref = _required_text(environ, "MIRAE_IMAGE", errors)
     if image_ref and (

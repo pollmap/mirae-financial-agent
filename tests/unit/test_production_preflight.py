@@ -15,6 +15,7 @@ from scripts.production_preflight import check_http_readiness, validate_environm
 ROOT = Path(__file__).resolve().parents[2]
 DATABASE = ROOT / "data" / "serving" / "mirae_agent.duckdb"
 LIVE_GATE_REPORT = ROOT / "tests" / "fixtures" / "live_hcx_gate_pass.json"
+LIVE_E2E_GATE_REPORT = ROOT / "tests" / "fixtures" / "live_hcx_e2e_gate_pass.json"
 
 
 def _valid_environment() -> dict[str, str]:
@@ -24,6 +25,7 @@ def _valid_environment() -> dict[str, str]:
         "PLANNER_STAGE": "two",
         "MIRAE_DATABASE_PATH": str(DATABASE),
         "LIVE_HCX_GATE_REPORT": str(LIVE_GATE_REPORT),
+        "LIVE_HCX_E2E_GATE_REPORT": str(LIVE_E2E_GATE_REPORT),
         "MIRAE_IMAGE": "registry.contest-team.kr/mirae-agent@sha256:" + "a" * 64,
         "PUBLIC_BASE_URL": "https://agent.contest-team.kr",
         "CLOVA_STUDIO_API_KEY": "ck_live_" + "a" * 32,
@@ -142,6 +144,20 @@ def test_preflight_rejects_missing_or_failed_live_hcx_gate(tmp_path: Path) -> No
     failed = _valid_environment()
     failed["LIVE_HCX_GATE_REPORT"] = str(failed_report)
     assert any("20-question A/B gate" in error for error in validate_environment(failed))
+
+
+def test_preflight_rejects_missing_or_failed_live_hcx_e2e_gate(tmp_path: Path) -> None:
+    missing = _valid_environment()
+    missing["LIVE_HCX_E2E_GATE_REPORT"] = str(tmp_path / "missing-e2e.json")
+    assert any("E2E_GATE_REPORT" in error for error in validate_environment(missing))
+
+    failed_report = tmp_path / "failed-e2e.json"
+    payload = json.loads(LIVE_E2E_GATE_REPORT.read_text(encoding="utf-8"))
+    payload["evidence_linked_case_count"] = 99
+    failed_report.write_text(json.dumps(payload), encoding="utf-8")
+    failed = _valid_environment()
+    failed["LIVE_HCX_E2E_GATE_REPORT"] = str(failed_report)
+    assert any("100-question E2E gate" in error for error in validate_environment(failed))
 
 
 def test_cli_never_echoes_a_rejected_secret() -> None:

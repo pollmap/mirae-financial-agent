@@ -72,7 +72,9 @@ CASES = [
         "question": "해외 ETF 티커 SPY의 상품 정보와 운용전략을 설명해줘",
         "answerability": "FULL",
         "result_count": 1,
-        "answer_contains": ["운용전략(원문)[cu_strtegy]", "S&P 500"],
+        # Public prose must not leak the source-column identifier.  The
+        # detailed field provenance remains in retrieved_context only.
+        "answer_contains": ["운용전략", "S&P 500"],
     },
     {
         "id": "SMOKE-EXPLAIN-CLARIFY",

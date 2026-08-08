@@ -297,7 +297,10 @@ def run_ablation(connection: duckdb.DuckDBPyConnection) -> dict[str, Any]:
     return {
         "status": "PASS",
         "variants": list(variants),
-        "F_live_hcx_composer": "PENDING_EXTERNAL_CREDENTIAL",
+        # The submitted answer renderer is intentionally deterministic and
+        # evidence-only; a free-form "composer" would weaken grounding.  F
+        # means live HCX two-stage planner-to-evidence verification instead.
+        "F_live_hcx_two_stage_e2e": "PENDING_EXTERNAL_CREDENTIAL",
     }
 
 

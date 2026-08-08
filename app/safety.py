@@ -44,6 +44,8 @@ _OBJECTIVE_SCREENING = re.compile(
 _FORECAST = re.compile(
     r"((?:20\d{2}년|올해\s*말|연말|내년|미래|앞으로|향후|장래).{0,30}"
     r"(?:오를|내릴|수익|상승|하락|예측|전망|예상|유망)|"
+    r"(?:오늘|내일|다음\s*(?:날|주|달|해)|이번\s*(?:주|달|해)).{0,30}"
+    r"(?:오를|내릴|수익|상승|하락|예측|전망|예상|유망)|"
     r"(?:\d+\s*(?:일|주|개월|년)\s*(?:후|뒤)).{0,30}"
     r"(?:오를|내릴|수익|상승|하락|예측|전망|예상|유망)|"
     r"(?:전망|예상|예측).{0,20}(?:ETF|ETN|채권|펀드|수익|상승|하락))"
@@ -61,22 +63,66 @@ _EXPLICIT_SNAPSHOT_BASIS = re.compile(
     r"2026[-.]?07[-.]?11\s*(?:을|를)?\s*기준"
 )
 _INJECTION = re.compile(
-    r"(ignore\s+(all\s+)?previous|system\s+prompt|developer\s+message|raw\s+sql|drop\s+table)",
+    r"(ignore\s+(all\s+)?previous|system\s+prompt|developer\s+message|"
+    r"raw\s+sql|drop\s+table|"
+    r"(?:이전|앞선|기존|모든)\s*(?:지시|명령|규칙|프롬프트)\s*(?:를|을)?\s*무시|"
+    r"(?:시스템|개발자|운영)\s*(?:프롬프트|메시지|지시)|"
+    r"(?:프롬프트|지시|명령).{0,16}(?:출력|보여|공개|무시)|"
+    r"(?:원시|raw)\s*(?:sql|쿼리)|"
+    r"(?:sql|쿼리).{0,16}(?:실행|출력)|"
+    r"(?:테이블|데이터베이스).{0,24}(?:삭제|수정|drop))",
+    re.IGNORECASE,
+)
+
+# The organizer's evaluator may use Korean, English, or mixed inputs.  Keep
+# the Korean policy expressions above source-faithful, then add narrow English
+# equivalents rather than treating an unrecognised English request as harmless.
+# These patterns deliberately target an action/claim, not ordinary product
+# vocabulary such as "forecast" in a fund's description.
+_ENGLISH_INJECTION = re.compile(
+    r"(?:disregard|ignore|override|bypass).{0,32}(?:instruction|rule|policy)|"
+    r"(?:reveal|show|print|output|expose).{0,32}"
+    r"(?:system|developer|hidden).{0,24}(?:prompt|message|instruction)|"
+    r"(?:run|execute).{0,24}(?:raw\s*)?(?:sql|query)|"
+    r"(?:drop|delete|update|alter).{0,24}(?:table|database|record)",
+    re.IGNORECASE,
+)
+_ENGLISH_FORECAST = re.compile(
+    r"(?:will|forecast|predict|expected\s+to|likely\s+to).{0,40}"
+    r"(?:rise|fall|increase|decrease|go\s+up|go\s+down|return|perform)|"
+    r"(?:tomorrow|next\s+(?:day|week|month|year)|future|20\d{2}).{0,40}"
+    r"(?:rise|fall|increase|decrease|return|perform|buy|recommend)|"
+    r"(?:guarantee(?:d)?\s+(?:return|profit)|"
+    r"(?:should|must)\s+(?:i\s+)?buy|personal(?:ized)?\s+(?:investment\s+)?advice)",
+    re.IGNORECASE,
+)
+_ENGLISH_INVENT_MISSING = re.compile(
+    r"(?:missing|blank|null|n/?a).{0,32}(?:as|to).{0,12}zero|"
+    r"(?:invent|fabricate|estimate).{0,32}(?:missing|real[ -]?time|price|value)",
+    re.IGNORECASE,
+)
+_ENGLISH_REALTIME = re.compile(
+    r"(?:real[ -]?time|live|latest|today(?:'s)?|current)"
+    r".{0,32}(?:price|quote|market\s+data|nav|closing\s+price)",
     re.IGNORECASE,
 )
 
 
+def _matches_any(patterns: tuple[re.Pattern[str], ...], text: str) -> bool:
+    return any(pattern.search(text) for pattern in patterns)
+
+
 def evaluate_question(question: str) -> SafetyDecision:
     normalized = " ".join(question.split())
-    if _INJECTION.search(normalized):
+    if _matches_any((_INJECTION, _ENGLISH_INJECTION), normalized):
         return SafetyDecision(
             blocked=True,
             reason_code="INSTRUCTION_INJECTION",
             answerability="SAFETY_LIMITED",
             message="외부 지시나 임의 SQL 실행 요청은 처리할 수 없습니다. 금융상품 조건을 자연어로 질문해 주세요.",
         )
-    if _INVENT_MISSING.search(normalized):
-        if "실시간" in normalized or "시세" in normalized:
+    if _matches_any((_INVENT_MISSING, _ENGLISH_INVENT_MISSING), normalized):
+        if "실시간" in normalized or "시세" in normalized or _ENGLISH_REALTIME.search(normalized):
             return SafetyDecision(
                 True,
                 "SNAPSHOT_NOT_REALTIME",
@@ -96,14 +142,14 @@ def evaluate_question(question: str) -> SafetyDecision:
             "DATA_QUALITY_BLOCKED",
             "결측값은 0과 다르므로 0으로 바꾸어 순위를 계산할 수 없습니다.",
         )
-    if _REALTIME.search(normalized) and not _EXPLICIT_SNAPSHOT_BASIS.search(normalized):
+    if _matches_any((_REALTIME, _ENGLISH_REALTIME), normalized) and not _EXPLICIT_SNAPSHOT_BASIS.search(normalized):
         return SafetyDecision(
             True,
             "SNAPSHOT_NOT_REALTIME",
             "UNAVAILABLE",
             "제공된 데이터는 2026-07-11 스냅샷이므로 실시간 시세나 실시간 순위를 확인할 수 없습니다.",
         )
-    if _FORECAST.search(normalized) or _HARD_ADVICE.search(normalized):
+    if _matches_any((_FORECAST, _ENGLISH_FORECAST, _HARD_ADVICE), normalized):
         return SafetyDecision(
             True,
             "FORECAST_OR_DEFINITIVE_RECOMMENDATION",
@@ -123,7 +169,7 @@ def needs_selection_criteria(question: str) -> bool:
     """
 
     normalized = " ".join(question.split())
-    if _FORECAST.search(normalized) or _HARD_ADVICE.search(normalized):
+    if _matches_any((_FORECAST, _ENGLISH_FORECAST, _HARD_ADVICE), normalized):
         return False
     unsafe_selection = bool(_GENERIC_SELECTION.search(normalized)) and not bool(
         _OBJECTIVE_SCREENING.search(normalized)
@@ -143,7 +189,7 @@ def validate_rendered_answer(
     not replace field-level rendering from evidence.
     """
 
-    if _HARD_ADVICE.search(answer) or _FORECAST.search(answer):
+    if _matches_any((_HARD_ADVICE, _FORECAST, _ENGLISH_FORECAST), answer):
         raise ValueError("rendered answer violates recommendation/forecast policy")
     for token in re.findall(r"[-+]?\d[\d,]*(?:\.\d+)?", answer):
         compact = token.replace(",", "")
@@ -161,5 +207,5 @@ def validate_rendered_policy(answer: str) -> None:
     counts, dates, row numbers, or metric names as ungrounded numeric claims.
     """
 
-    if _HARD_ADVICE.search(answer) or _FORECAST.search(answer):
+    if _matches_any((_HARD_ADVICE, _FORECAST, _ENGLISH_FORECAST), answer):
         raise ValueError("rendered answer violates recommendation/forecast policy")

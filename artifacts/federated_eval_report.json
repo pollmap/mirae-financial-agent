@@ -26,6 +26,6 @@
       "D_graph_sql",
       "E_full_federated_validation"
     ],
-    "F_live_hcx_composer": "PENDING_EXTERNAL_CREDENTIAL"
+    "F_live_hcx_two_stage_e2e": "PENDING_EXTERNAL_CREDENTIAL"
   }
 }

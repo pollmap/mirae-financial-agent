@@ -38,6 +38,7 @@ RUN python -m pip install --disable-pip-version-check --requirement requirements
 
 COPY --chown=agent:agent app ./app
 COPY --chown=agent:agent registry ./registry
+COPY --chown=agent:agent web ./web
 COPY --from=data-builder --chown=agent:agent \
     /build/data/serving/mirae_agent.duckdb \
     /app/data/serving/mirae_agent.duckdb

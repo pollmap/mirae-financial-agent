@@ -46,7 +46,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="Mirae Asset Financial Product Agent",
-        version="1.2.0-prebrief",
+        version="1.3.0",
         docs_url=None if resolved.environment == "production" else "/docs",
         redoc_url=None,
         lifespan=lifespan,
@@ -202,15 +202,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
         return JSONResponse(content=result.model_dump(mode="json"))
 
-    if resolved.environment != "production":
-        # Development-only demo page. The contest submission runtime is the
-        # GET /answer API; production images never expose this route and the
-        # runtime image does not include the web/ directory.
-        demo_page = Path(__file__).resolve().parents[1] / "web" / "index.html"
+    # The page is a minimal public client for the same five-field API.  It
+    # never receives a key and deliberately hides trace/context internals; the
+    # evaluator can continue to call GET /answer directly.
+    web_page = Path(__file__).resolve().parents[1] / "web" / "index.html"
 
-        @app.get("/demo", include_in_schema=False)
-        async def demo() -> FileResponse:
-            return FileResponse(demo_page, media_type="text/html; charset=utf-8")
+    @app.get("/", include_in_schema=False)
+    @app.get("/demo", include_in_schema=False)
+    async def web_client() -> FileResponse:
+        return FileResponse(web_page, media_type="text/html; charset=utf-8")
 
     return app
 

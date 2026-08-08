@@ -117,8 +117,10 @@ def test_secondary_rank_metric_missing_is_retained_and_sorted_last() -> None:
         for limitation in bundle.limitations
     )
     rendered = render_answer(plan, bundle)
-    assert "fund.return_1y=" in rendered
-    assert "fund.return_6m=" in rendered
+    assert "1년 수익률:" in rendered
+    assert "6개월 수익률:" in rendered
+    assert "fund.return_1y" not in rendered
+    assert "fund.return_6m" not in rendered
     assert "확인 불가" in rendered
 
 
@@ -357,7 +359,8 @@ def test_grounded_product_explanation_uses_raw_strategy_and_requires_target() ->
         "normalized_value"
     ]
     assert fields["product.benchmark"]["source_field"] == "cu_base_index"
-    assert "운용전략(원문)[cu_strtegy]=" in exact.answer
+    assert "운용전략:" in exact.answer
+    assert "cu_strtegy" not in exact.answer
     assert "S&P 500" in exact.answer
 
     absent = asyncio.run(
@@ -369,7 +372,8 @@ def test_grounded_product_explanation_uses_raw_strategy_and_requires_target() ->
     absent_context = json.loads(absent.retrieved_context)
     assert absent_context["answerability"] == "PARTIAL_WITH_COVERAGE"
     assert absent_context["reason_code"] == "SOURCE_FIELD_ABSENT"
-    assert "product.strategy" in absent.answer
+    assert "운용전략" in absent.answer
+    assert "product.strategy" not in absent.answer
     assert "확인할 수 없는 항목" in absent.answer
 
 
@@ -388,9 +392,10 @@ def test_explicit_absent_overseas_return_answer_contains_available_alternatives(
     context = json.loads(response.retrieved_context)
     assert context["answerability"] == "UNAVAILABLE"
     assert context["reason_code"] == "SOURCE_FIELD_ABSENT"
-    assert "AUM(overseas_etp.aum_last)" in response.answer
-    assert "종가(overseas_etp.close_price)" in response.answer
-    assert "거래량(overseas_etp.volume_1d)" in response.answer
+    assert "AUM" in response.answer
+    assert "종가" in response.answer
+    assert "거래량" in response.answer
+    assert "overseas_etp." not in response.answer
 
 
 def test_catalog_benchmark_lookup_returns_matching_source_evidence() -> None:

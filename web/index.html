@@ -3,205 +3,188 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>금융상품 Agent 데모</title>
+<title>미래에셋 금융상품 조회</title>
 <style>
   :root {
-    --bg: #f5f7fa; --card: #ffffff; --ink: #1c2733; --sub: #5b6b7c;
-    --accent: #f58220; --accent-ink: #ffffff; --line: #e3e8ee;
-    --ok: #1a7f4b; --warn: #a05a00; --bad: #b3261e; --chip: #eef2f6;
+    --bg: #f5f7fa; --card: #fff; --ink: #172331; --sub: #5c6b7b;
+    --accent: #f58220; --accent-dark: #cb5f00; --line: #dfe6ed;
+    --ok: #087443; --warn: #986000; --info: #255db2; --bad: #b3261e; --soft: #eef2f6;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #10151b; --card: #1a212a; --ink: #e8edf2; --sub: #9aa8b6;
-      --line: #2a3441; --chip: #232d38;
+      --bg: #10161d; --card: #18222c; --ink: #e7edf3; --sub: #a2b0bf;
+      --line: #2b3846; --soft: #222e3a;
     }
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font-family: "Segoe UI", "Malgun Gothic", Pretendard, sans-serif;
-    line-height: 1.55;
-  }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 64px; }
-  header h1 { font-size: 1.35rem; margin: 0 0 4px; }
-  header p { margin: 0 0 20px; color: var(--sub); font-size: .9rem; }
-  .banner {
-    background: var(--chip); border: 1px solid var(--line); border-radius: 8px;
-    padding: 8px 12px; font-size: .82rem; color: var(--sub); margin-bottom: 20px;
-  }
-  form { display: flex; gap: 8px; margin-bottom: 12px; }
-  input[type=text] {
-    flex: 1; padding: 12px 14px; font-size: 1rem; border: 1px solid var(--line);
-    border-radius: 10px; background: var(--card); color: var(--ink);
-  }
-  button {
-    padding: 12px 20px; font-size: 1rem; border: 0; border-radius: 10px;
-    background: var(--accent); color: var(--accent-ink); cursor: pointer;
-  }
-  button:disabled { opacity: .5; cursor: default; }
-  .samples { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-  .samples button {
-    background: var(--chip); color: var(--ink); font-size: .82rem;
-    padding: 7px 12px; border: 1px solid var(--line);
-  }
-  .card {
-    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
-    padding: 18px; margin-bottom: 16px;
-  }
-  .badge {
-    display: inline-block; padding: 2px 10px; border-radius: 999px;
-    font-size: .78rem; font-weight: 600; margin-right: 8px;
-  }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Malgun Gothic", Pretendard, "Segoe UI", sans-serif; line-height: 1.58; }
+  .wrap { width: min(920px, 100%); margin: 0 auto; padding: 30px 18px 72px; }
+  header { margin-bottom: 24px; }
+  h1 { margin: 0 0 6px; font-size: clamp(1.45rem, 3vw, 1.9rem); letter-spacing: -.04em; }
+  header p { margin: 0; color: var(--sub); font-size: .94rem; }
+  .notice { margin: 0 0 20px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); color: var(--sub); font-size: .84rem; }
+  form { display: flex; gap: 8px; margin-bottom: 11px; }
+  input[type=text] { min-width: 0; flex: 1; padding: 13px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); font: inherit; }
+  input[type=text]:focus { outline: 3px solid color-mix(in srgb, var(--accent) 28%, transparent); border-color: var(--accent); }
+  button { border: 0; border-radius: 10px; padding: 12px 18px; background: var(--accent); color: white; cursor: pointer; font: inherit; font-weight: 700; }
+  button:hover { background: var(--accent-dark); }
+  button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 48%, transparent); outline-offset: 2px; }
+  button:disabled { cursor: default; opacity: .55; }
+  .samples { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 24px; }
+  .samples button { padding: 7px 10px; border: 1px solid var(--line); background: var(--soft); color: var(--ink); font-size: .8rem; font-weight: 500; }
+  .samples button:hover { background: color-mix(in srgb, var(--soft) 60%, var(--accent)); }
+  .card { margin-bottom: 16px; padding: 19px; border: 1px solid var(--line); border-radius: 13px; background: var(--card); box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+  .question { margin: 0 0 4px; font-weight: 700; }
+  .summary { color: var(--sub); font-size: .83rem; }
+  .answer { margin-top: 14px; white-space: pre-wrap; word-break: break-word; font-size: .97rem; }
+  .badge { display: inline-block; margin-right: 8px; padding: 2px 9px; border-radius: 999px; font-size: .75rem; font-weight: 800; }
   .b-FULL { background: #d9f2e4; color: var(--ok); }
   .b-PARTIAL_WITH_COVERAGE { background: #fdeeda; color: var(--warn); }
-  .b-NEEDS_CLARIFICATION { background: #e3ecfb; color: #2456a6; }
-  .b-UNAVAILABLE { background: #fbdddb; color: var(--bad); }
-  .meta { color: var(--sub); font-size: .82rem; margin-top: 4px; }
-  .answer { white-space: pre-wrap; margin-top: 12px; font-size: .97rem; }
-  .clarify-opts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-  .clarify-opts button { background: #2456a6; }
-  details { margin-top: 14px; }
-  summary { cursor: pointer; color: var(--sub); font-size: .85rem; }
-  pre {
-    background: var(--chip); border: 1px solid var(--line); border-radius: 8px;
-    padding: 12px; overflow-x: auto; font-size: .78rem; white-space: pre-wrap;
-    word-break: break-all;
-  }
-  table { border-collapse: collapse; width: 100%; margin-top: 8px; font-size: .82rem; }
-  th, td { border-bottom: 1px solid var(--line); text-align: left; padding: 6px 8px; }
-  th { color: var(--sub); font-weight: 600; }
-  .spin { color: var(--sub); font-size: .9rem; }
-  .err { color: var(--bad); }
+  .b-NEEDS_CLARIFICATION { background: #e3ecfb; color: var(--info); }
+  .b-NO_RESULT, .b-UNAVAILABLE, .b-INCOMPARABLE, .b-SAFETY_LIMITED, .b-DATA_QUALITY_BLOCKED { background: #fbdddb; color: var(--bad); }
+  .clarify-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+  .clarify-options button { background: var(--info); font-weight: 600; }
+  .clarify-options button:hover { background: #164683; }
+  details { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+  summary { cursor: pointer; color: var(--sub); font-size: .84rem; }
+  table { width: 100%; margin-top: 9px; border-collapse: collapse; font-size: .8rem; }
+  th, td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { color: var(--sub); font-weight: 700; }
+  .spin, .error { color: var(--sub); font-size: .9rem; }
+  .error { color: var(--bad); }
+  @media (max-width: 540px) { form { align-items: stretch; flex-direction: column; } button { min-height: 46px; } .card { padding: 15px; } }
 </style>
 </head>
 <body>
-<div class="wrap">
+<main class="wrap">
   <header>
-    <h1>금융상품 Agent 데모</h1>
-    <p>국내채권 · 국내 ETF/ETN · 해외 ETF/ETN · 공모펀드 — 데이터 스냅샷 기준 조회</p>
+    <h1>금융상품 조회</h1>
+    <p>국내채권 · 국내 ETF/ETN · 해외 ETF/ETN · 공모펀드</p>
   </header>
-  <div class="banner">
-    개발 환경 전용 화면입니다. 제출 평가 대상은 GET <code>/answer</code> API이며,
-    이 화면은 같은 API를 그대로 호출해 보여줍니다. 데이터는 주최 측 제공 스냅샷
-    기준으로 실시간 정보가 아니며, 투자 추천이 아닙니다.
-  </div>
+  <p class="notice">주최 측 제공 데이터 스냅샷을 기준으로 조회합니다. 실시간 정보나 투자 추천을 제공하지 않습니다.</p>
 
-  <form id="f">
-    <input id="q" type="text" placeholder="예: 국내 ETF만 대상으로 1년 수익률이 높은 3개를 알려줘." autocomplete="off" required>
-    <button id="go" type="submit">질문</button>
+  <form id="question-form">
+    <input id="question" type="text" placeholder="예: 국내 ETF만 대상으로 1년 수익률이 높은 3개를 알려줘." autocomplete="off" required>
+    <button id="submit" type="submit">조회</button>
   </form>
-  <div class="samples" id="samples"></div>
-  <div id="out"></div>
-</div>
+  <div class="samples" id="samples" aria-label="예시 질문"></div>
+  <section id="results" aria-live="polite"></section>
+</main>
 
 <script>
 "use strict";
 const SAMPLES = [
   "채권 코드 KR101501DA16의 상세 정보를 알려줘.",
   "국내 ETF만 대상으로 1년 수익률이 높은 3개를 알려줘.",
-  "수익률 높은 ETF 3개 알려줘",
   "위험등급이 1등급인 공모펀드는 몇 개야?",
-  "상품군별 상품 수를 알려줘",
+  "상품군별 상품 수를 알려줘.",
+  "수익률 높은 ETF 3개 알려줘.",
 ];
+const STATUS_LABEL = {
+  FULL: "조회 완료",
+  PARTIAL_WITH_COVERAGE: "일부 정보 제한",
+  NEEDS_CLARIFICATION: "추가 조건 필요",
+  NO_RESULT: "조회 결과 없음",
+  UNAVAILABLE: "확인 불가",
+  INCOMPARABLE: "비교 기준 확인 필요",
+  SAFETY_LIMITED: "안전 안내",
+  DATA_QUALITY_BLOCKED: "데이터 확인 필요",
+};
 const $ = (id) => document.getElementById(id);
-const out = $("out");
-let seq = 0;
-let pending = null; // { token, question }
+const results = $("results");
+let sequence = 0;
+let pending = null;
 
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, c => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;",
+  })[character]);
 }
 
-SAMPLES.forEach(s => {
-  const b = document.createElement("button");
-  b.type = "button"; b.textContent = s;
-  b.onclick = () => { $("q").value = s; ask(s); };
-  $("samples").appendChild(b);
+function sourceRows(context) {
+  const rows = [];
+  const seen = new Set();
+  for (const item of context.items || []) {
+    for (const field of item.fields || []) {
+      const row = { file: field.source_file || "제공 데이터", sheet: field.sheet || "-", row: field.excel_row ?? "-" };
+      const key = JSON.stringify(row);
+      if (!seen.has(key)) { seen.add(key); rows.push(row); }
+    }
+  }
+  for (const aggregate of context.aggregates || []) {
+    for (const source of aggregate.sources || []) {
+      const row = { file: source.source_file || "제공 데이터", sheet: source.sheet || "-", row: source.excel_row ?? "-" };
+      const key = JSON.stringify(row);
+      if (!seen.has(key)) { seen.add(key); rows.push(row); }
+    }
+  }
+  return rows.slice(0, 20);
+}
+
+for (const sample of SAMPLES) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = sample;
+  button.addEventListener("click", () => { $("question").value = sample; ask(sample); });
+  $("samples").appendChild(button);
+}
+
+$("question-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const question = $("question").value.trim();
+  if (question) ask(question);
 });
 
-$("f").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const q = $("q").value.trim();
-  if (q) ask(q);
-});
-
-async function ask(question, clarValue) {
-  $("go").disabled = true;
-  const card = document.createElement("div");
+async function ask(question, clarificationResponse) {
+  $("submit").disabled = true;
+  const card = document.createElement("article");
   card.className = "card";
-  card.innerHTML = '<div class="spin">응답 대기 중…</div>';
-  out.prepend(card);
-
-  const params = new URLSearchParams({
-    question_id: "DEMO-WEB-" + (++seq),
-    question: question,
-  });
-  if (clarValue && pending && pending.question === question) {
+  card.innerHTML = '<div class="spin">조회 중입니다…</div>';
+  results.prepend(card);
+  const params = new URLSearchParams({ question_id: `WEB-${++sequence}`, question });
+  if (clarificationResponse && pending?.question === question) {
     params.set("clarification_token", pending.token);
-    params.set("clarification_response", clarValue);
+    params.set("clarification_response", clarificationResponse);
   }
-
-  let data = null, status = 0;
   try {
-    const res = await fetch("/answer?" + params.toString());
-    status = res.status;
-    data = await res.json();
-  } catch (err) {
-    card.innerHTML = '<div class="err">요청 실패: ' + esc(err) + "</div>";
-    $("go").disabled = false;
-    return;
+    const response = await fetch(`/answer?${params.toString()}`);
+    const data = await response.json();
+    render(card, question, response.status, data);
+  } catch (_) {
+    card.innerHTML = '<p class="error">요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.</p>';
+  } finally {
+    $("submit").disabled = false;
   }
-  $("go").disabled = false;
-  render(card, question, status, data);
 }
 
 function render(card, question, status, data) {
-  if (!data || !data.retrieved_context) {
-    card.innerHTML =
-      '<div class="err">HTTP ' + status + "</div><pre>" +
-      esc(JSON.stringify(data, null, 1)) + "</pre>";
+  if (!data?.retrieved_context) {
+    card.innerHTML = '<p class="error">요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.</p>';
     return;
   }
-  let ctx = {};
-  try { ctx = JSON.parse(data.retrieved_context); } catch (_) {}
-  const ans = ctx.answerability || "UNKNOWN";
-  const clar = ctx.clarification || null;
-
+  let context;
+  try { context = JSON.parse(data.retrieved_context); } catch (_) { context = {}; }
+  const answerability = context.answerability || "UNAVAILABLE";
+  const rows = sourceRows(context);
   let html =
-    '<div><span class="badge b-' + esc(ans) + '">' + esc(ans) + "</span>" +
-    '<strong>' + esc(question) + "</strong></div>" +
-    '<div class="meta">기준일 ' + esc(ctx.data_snapshot_date || "-") +
-    " · 결과 " + esc(ctx.result_count ?? "-") + "건 · HTTP " + status + "</div>" +
-    '<div class="answer">' + esc(data.answer || "") + "</div>";
-
-  if (clar && Array.isArray(clar.options) && clar.options.length) {
-    pending = { token: clar.clarification_token, question: question };
-    html += '<div class="clarify-opts">' + clar.options.map(o =>
-      '<button type="button" data-v="' + esc(o.value) + '">' +
-      esc(o.label || o.value) + "</button>").join("") + "</div>";
+    `<p class="question"><span class="badge b-${esc(answerability)}">${esc(STATUS_LABEL[answerability] || "확인 필요")}</span>${esc(question)}</p>` +
+    `<p class="summary">기준일 ${esc(context.data_snapshot_date || "-")} · ${esc(context.result_count ?? "-")}건</p>` +
+    `<div class="answer">${esc(data.answer || "")}</div>`;
+  const clarification = context.clarification;
+  if (clarification?.options?.length) {
+    pending = { token: clarification.clarification_token, question };
+    html += '<div class="clarify-options">' + clarification.options.map((option) =>
+      `<button type="button" data-value="${esc(option.value)}">${esc(option.label || option.value)}</button>`
+    ).join("") + "</div>";
   }
-
-  const ev = ctx.evidence || ctx.sources || null;
-  if (Array.isArray(ev) && ev.length) {
-    html += "<details><summary>근거 " + ev.length + "건</summary><table>" +
-      "<tr><th>파일</th><th>시트</th><th>행</th><th>필드</th></tr>" +
-      ev.slice(0, 20).map(e =>
-        "<tr><td>" + esc(e.source_file || e.file || "-") + "</td><td>" +
-        esc(e.sheet || "-") + "</td><td>" + esc(e.excel_row ?? e.row ?? "-") +
-        "</td><td>" + esc(e.source_field || e.field || "-") + "</td></tr>"
-      ).join("") + "</table></details>";
+  if (rows.length) {
+    html += '<details><summary>확인 근거 보기</summary><table><thead><tr><th>출처</th><th>시트</th><th>행</th></tr></thead><tbody>' +
+      rows.map((row) => `<tr><td>${esc(row.file)}</td><td>${esc(row.sheet)}</td><td>${esc(row.row)}</td></tr>`).join("") +
+      "</tbody></table></details>";
   }
-
-  html +=
-    "<details><summary>think_trace</summary><pre>" + esc(data.think_trace || "") +
-    "</pre></details>" +
-    "<details><summary>retrieved_context 원문</summary><pre>" +
-    esc(JSON.stringify(ctx, null, 1)) + "</pre></details>";
-
   card.innerHTML = html;
-  card.querySelectorAll(".clarify-opts button").forEach(b => {
-    b.onclick = () => ask(question, b.dataset.v);
+  card.querySelectorAll(".clarify-options button").forEach((button) => {
+    button.addEventListener("click", () => ask(question, button.dataset.value));
   });
 }
 </script>

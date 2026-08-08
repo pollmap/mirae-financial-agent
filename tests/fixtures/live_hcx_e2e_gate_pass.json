@@ -1,0 +1,27 @@
+{
+  "accuracy": 1.0,
+  "answers_recorded": false,
+  "approved_planner_stage": "two",
+  "by_kind": {
+    "count_aggregate": {"passed": 20, "total": 20},
+    "cross_scope": {"passed": 20, "total": 20},
+    "filter_search": {"passed": 25, "total": 25},
+    "rank_single": {"passed": 35, "total": 35}
+  },
+  "case_count": 100,
+  "completed_at_utc": "2026-08-09T00:00:00+00:00",
+  "cross_scope_refusal_count": 0,
+  "evidence_linked_case_count": 100,
+  "gate": "HCX_100_QUESTION_TWO_STAGE_E2E",
+  "hcx_planned_case_count": 100,
+  "minimum_accuracy": 0.98,
+  "model_id": "HCX-007",
+  "passed_count": 100,
+  "plans_recorded": false,
+  "product_identifiers_recorded": false,
+  "prompts_recorded": false,
+  "question_suite_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "questions_recorded": false,
+  "secret_values_recorded": false,
+  "status": "PASS"
+}
