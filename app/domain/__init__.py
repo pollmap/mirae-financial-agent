@@ -7,6 +7,7 @@ from app.domain.models import (
     EvidenceBundle,
     OrganizerResponse,
     QueryPlan,
+    RetrievalTrace,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "EvidenceBundle",
     "OrganizerResponse",
     "QueryPlan",
+    "RetrievalTrace",
 ]

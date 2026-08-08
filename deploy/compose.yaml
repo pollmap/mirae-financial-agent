@@ -21,7 +21,7 @@ services:
     environment:
       APP_ENV: production
       PLANNER_MODE: hcx
-      PLANNER_STAGE: ${PLANNER_STAGE:-one}
+      PLANNER_STAGE: ${PLANNER_STAGE:-two}
       VECTOR_ENABLED: ${VECTOR_ENABLED:-false}
       MIRAE_DATABASE_PATH: /app/data/serving/mirae_agent.duckdb
       CLOVA_STUDIO_API_KEY: ${CLOVA_STUDIO_API_KEY:?inject with a secret manager or protected env file}

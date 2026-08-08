@@ -17,6 +17,7 @@ from app.clarification import ClarificationTokenError
 from app.config import Settings
 from app.execution.engine import DuckDBEngine
 from app.planner.service import build_planner
+from app.retrieval.vector_retriever import ClovaQueryEmbedder
 from app.service import AgentService, PlannerUnavailable
 
 REQUEST_LOGGER = logging.getLogger("mirae.request")
@@ -26,7 +27,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     resolved = settings or Settings.from_env()
     resolved.validate()
     planner = build_planner(resolved)
-    engine = DuckDBEngine(resolved.database_path)
+    query_embedder = (
+        ClovaQueryEmbedder(resolved.clova_studio_api_key)
+        if resolved.vector_enabled and resolved.clova_studio_api_key
+        else None
+    )
+    engine = DuckDBEngine(
+        resolved.database_path,
+        vector_enabled=resolved.vector_enabled,
+        query_embedder=query_embedder,
+    )
     service = AgentService(resolved, planner, engine)
 
     @asynccontextmanager

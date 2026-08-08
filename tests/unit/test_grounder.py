@@ -15,6 +15,8 @@ def _payload(**overrides: Any) -> dict[str, Any]:
         "intent": "search",
         "scope_concepts": ["domestic_etp"],
         "metric_concepts": [],
+        "aggregations": [],
+        "group_by_concepts": [],
         "filters": [],
         "sort_direction": "none",
         "top_n": 10,
@@ -120,6 +122,37 @@ def test_dimension_concept_is_not_a_metric() -> None:
     assert excinfo.value.reason_code == "CONCEPT_NOT_METRIC"
 
 
+def test_aggregate_count_grounds_without_inventing_a_metric() -> None:
+    plan = _ground(
+        intent="aggregate",
+        aggregations=[{"function": "count", "metric_concept": "", "distinct": True}],
+    )
+    assert plan.metrics == []
+    assert plan.aggregations[0].function == "count"
+    assert plan.aggregations[0].field == "product.id"
+    assert plan.aggregations[0].alias == "product_count"
+
+
+def test_aggregate_avg_and_group_by_bind_to_physical_fields() -> None:
+    plan = _ground(
+        intent="aggregate",
+        metric_concepts=[],
+        aggregations=[
+            {"function": "avg", "metric_concept": "return_1y", "distinct": False}
+        ],
+        group_by_concepts=["internal_type"],
+    )
+    assert plan.metrics == ["domestic_etp.return_1y"]
+    assert plan.aggregations[0].field == "domestic_etp.return_1y"
+    assert plan.group_by == ["product.internal_type"]
+
+
+def test_aggregate_without_spec_fails_closed() -> None:
+    with pytest.raises(GroundingError) as excinfo:
+        _ground(intent="aggregate")
+    assert excinfo.value.reason_code == "AGGREGATION_REQUIRED"
+
+
 # ---------------------------------------------------------------------------
 # Scope resolution
 # ---------------------------------------------------------------------------
@@ -209,6 +242,17 @@ def test_pension_eligible_concept_maps_to_pension_trade_eligible_field() -> None
         filters=[{"concept": "pension_eligible", "op": "eq", "value_text": "Y"}],
     )
     assert plan.filter_groups[0].conditions[0].field == "product.pension_trade_eligible"
+
+
+def test_strategy_theme_concept_maps_to_catalog_field() -> None:
+    plan = _ground(
+        scope_concepts=["overseas_etp"],
+        filters=[{"concept": "strategy", "op": "contains", "value_text": "quality factor"}],
+    )
+    condition = plan.filter_groups[0].conditions[0]
+    assert condition.field == "product.strategy"
+    assert condition.op == "contains"
+    assert condition.value == "quality factor"
 
 
 def test_in_filter_translates_each_member() -> None:

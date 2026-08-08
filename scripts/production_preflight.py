@@ -23,6 +23,7 @@ from app.execution.engine import DuckDBEngine  # noqa: E402
 OFFICIAL_HCX_BASE_URL = "https://clovastudio.stream.ntruss.com"
 APPROVED_HCX_MODEL_ID = "HCX-007"
 EXPECTED_SNAPSHOT_DATE = "2026-07-11"
+EXPECTED_LIVE_HCX_GATE = "HCX_20_QUESTION_ONE_VS_TWO_STAGE"
 IMAGE_PATTERN = re.compile(r"^[^\s@]+@sha256:[a-f0-9]{64}$")
 PLACEHOLDER_SECRET_MARKERS = (
     "at-least-",
@@ -167,6 +168,44 @@ def _validate_database(database_path: Path, errors: list[str]) -> None:
         errors.append(f"MIRAE_DATABASE_PATH failed readiness validation ({readiness_error})")
 
 
+def _validate_live_hcx_gate(report_path: Path, errors: list[str]) -> None:
+    """Require sanitized evidence that both HCX planner stages passed 20 live cases."""
+
+    if not report_path.is_file() or report_path.stat().st_size == 0:
+        errors.append("LIVE_HCX_GATE_REPORT must reference a non-empty JSON file")
+        return
+    try:
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        errors.append("LIVE_HCX_GATE_REPORT must be valid UTF-8 JSON")
+        return
+    if not isinstance(payload, dict):
+        errors.append("LIVE_HCX_GATE_REPORT must contain a JSON object")
+        return
+
+    required_matches = {
+        "status": "PASS",
+        "gate": EXPECTED_LIVE_HCX_GATE,
+        "model_id": APPROVED_HCX_MODEL_ID,
+        "approved_planner_stage": "two",
+        "case_count": 20,
+        "provider_call_count": 40,
+        "both_stage_valid_count": 20,
+        "both_stage_match_count": 20,
+        "secret_values_recorded": False,
+        "questions_recorded": False,
+        "plans_recorded": False,
+    }
+    if any(payload.get(key) != value for key, value in required_matches.items()):
+        errors.append("LIVE_HCX_GATE_REPORT did not pass the required sanitized 20-question A/B gate")
+    suite_hash = payload.get("question_suite_sha256")
+    if not isinstance(suite_hash, str) or not re.fullmatch(r"[a-f0-9]{64}", suite_hash):
+        errors.append("LIVE_HCX_GATE_REPORT is missing a valid question-suite hash")
+    completed_at = payload.get("completed_at_utc")
+    if not isinstance(completed_at, str) or not completed_at.endswith(("Z", "+00:00")):
+        errors.append("LIVE_HCX_GATE_REPORT is missing its UTC completion time")
+
+
 def validate_environment(
     environ: Mapping[str, str],
     *,
@@ -179,6 +218,8 @@ def validate_environment(
         errors.append("APP_ENV must be production")
     if _required_text(environ, "PLANNER_MODE", errors) != "hcx":
         errors.append("PLANNER_MODE must be hcx")
+    if _required_text(environ, "PLANNER_STAGE", errors) != "two":
+        errors.append("PLANNER_STAGE must be two")
     if _required_text(environ, "HCX_MODEL_ID", errors) != APPROVED_HCX_MODEL_ID:
         errors.append(f"HCX_MODEL_ID must be {APPROVED_HCX_MODEL_ID}")
     if _required_text(environ, "HCX_BASE_URL", errors).rstrip("/") != OFFICIAL_HCX_BASE_URL:
@@ -201,6 +242,10 @@ def validate_environment(
     database_raw = _required_text(environ, "MIRAE_DATABASE_PATH", errors)
     if database_raw:
         _validate_database(Path(database_raw), errors)
+
+    live_gate_raw = _required_text(environ, "LIVE_HCX_GATE_REPORT", errors)
+    if live_gate_raw:
+        _validate_live_hcx_gate(Path(live_gate_raw), errors)
 
     image_ref = _required_text(environ, "MIRAE_IMAGE", errors)
     if image_ref and (

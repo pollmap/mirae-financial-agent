@@ -46,6 +46,7 @@ internal_type,DIMENSION,상품유형,NONE,bond:product.internal_type|domestic_et
 manager,ENTITY_ROLE,운용사,NONE,domestic_etp:product.manager|overseas_etp:product.manager|bond:ABSENT|fund:ABSENT,ENTITY,운용사|자산운용사,ETN rows hold issuer; fund has code only
 issuer,ENTITY_ROLE,발행기관,NONE,bond:product.issuer|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,ENTITY,발행기관|발행사,
 benchmark,DIMENSION,벤치마크,NONE,domestic_etp:product.benchmark|overseas_etp:product.benchmark|fund:product.benchmark|bond:ABSENT,TEXT,벤치마크|기초지수,overseas has 2 sentinel non-values
+strategy,DIMENSION,운용전략,NONE,domestic_etp:product.strategy|overseas_etp:product.strategy|bond:ABSENT|fund:ABSENT,TEXT,운용전략|테마|투자전략,free text routed to lexical and optional vector retrieval
 sale_status,DIMENSION,판매상태,NONE,bond:product.sale_status|domestic_etp:product.sale_status|overseas_etp:product.sale_status|fund:product.sale_status,CATEGORY,판매중|판매상태,
 public_private,DIMENSION,공모·사모,NONE,fund:product.public_private|bond:ABSENT|domestic_etp:ABSENT|overseas_etp:ABSENT,CATEGORY,공모|사모,
 pension_eligible,DIMENSION,연금거래 가능,NONE,domestic_etp:product.pension_trade_eligible|bond:ABSENT|overseas_etp:ABSENT|fund:ABSENT,CATEGORY,연금,

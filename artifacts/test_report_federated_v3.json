@@ -1,0 +1,59 @@
+{
+  "report_version": "4.0",
+  "as_of": "2026-08-08T23:33:48+09:00",
+  "status": "LOCAL_AND_DOCKER_PASS_EXTERNAL_LIVE_GATES_PENDING",
+  "release_scope": "codex/federated-completion-v3 candidate",
+  "pytest_summary": {
+    "passed": 262,
+    "failed": 0,
+    "skipped": 0,
+    "duration_seconds": 152.65
+  },
+  "source_verification": {
+    "verified_source_files": 3,
+    "verified_inner_xlsx": 8,
+    "official_task_pdf_sha256": "3717441e091958b7214db710e0e4b9b8ae15ac6c205cad6e51721214798eb3de",
+    "official_data_zip_sha256": "c3809aca73396f57242ded0188fa06a3d271bd4ad65010e53d5533efc7c18163"
+  },
+  "data_build": {
+    "database_sha256": "8d221384543fd6a9b14da2f55de79de65b2c7b4bdd3149cdfdf6cde8afcf0977",
+    "raw_rows": 145393,
+    "logical_products": 60913,
+    "serving_products": 60903,
+    "quarantine_rows": 10,
+    "metric_evidence_rows": 1156332,
+    "kg_nodes": 71683,
+    "kg_edges": 206274,
+    "kg_aliases": 249874,
+    "lexical_docs": 80670,
+    "lexical_terms": 1288698,
+    "lexical_vocab": 43935,
+    "vector_embeddings": 0,
+    "status": "PASS"
+  },
+  "evaluation": {
+    "legacy_questions": "640/640",
+    "cross_scope_refusal_rate": 0.0,
+    "metamorphic_groups": "137/137",
+    "frozen_holdout": "100/100",
+    "federated_graph": "120/120",
+    "federated_lexical": "20/20",
+    "ablation_a_to_e": "PASS",
+    "ablation_f_live_hcx": "PENDING_EXTERNAL_CREDENTIAL"
+  },
+  "runtime_checks": {
+    "ruff": "PASS",
+    "compliance": "88 files / 0 findings",
+    "real_http_smoke": "15/15",
+    "local_load": "100/100, concurrency 10, failures 0, p95 115.89ms",
+    "docker_image_id": "sha256:39902aeb5213603d45ef147f3f33db9f285d7dc9d35e40ea4268a38639bc0ae0",
+    "docker_no_cache_build": "PASS",
+    "docker_restart_health": "PASS"
+  },
+  "external_gates": [
+    "HCX 20-question one/two live A/B report",
+    "CLOVA Embedding credential, 1024-dimensional cache, and live smoke",
+    "NCP public HTTPS deployment and external smoke",
+    "human submission approval and freeze"
+  ]
+}

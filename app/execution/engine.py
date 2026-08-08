@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import time
 import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -20,11 +21,13 @@ from app.domain.models import (
     AggregateEvidence,
     Answerability,
     CalculationEvidence,
+    Condition,
     CoverageEvidence,
     EvidenceBundle,
     FieldEvidence,
     ProductEvidence,
     QueryPlan,
+    RetrievalTrace,
     UniverseEvidence,
 )
 from app.execution.registry import (
@@ -253,9 +256,22 @@ def _bounded_filter_summary(plan: QueryPlan) -> str:
 class DuckDBEngine:
     """Compile a validated QueryPlan into parameterized, allow-listed SQL."""
 
-    def __init__(self, database_path: Path, registry: MetricRegistry | None = None) -> None:
+    def __init__(
+        self,
+        database_path: Path,
+        registry: MetricRegistry | None = None,
+        *,
+        graph_enabled: bool = True,
+        lexical_enabled: bool = True,
+        vector_enabled: bool = False,
+        query_embedder: Any = None,
+    ) -> None:
         self.database_path = Path(database_path)
         self.registry = registry or MetricRegistry.load()
+        self.graph_enabled = graph_enabled
+        self.lexical_enabled = lexical_enabled
+        self.vector_enabled = bool(vector_enabled and query_embedder is not None)
+        self.query_embedder = query_embedder
 
     def _connect(self) -> duckdb.DuckDBPyConnection:
         if not self.database_path.is_file():
@@ -483,28 +499,355 @@ class DuckDBEngine:
 
         from app.retrieval.router import route_entity_fallback
 
-        # vector_enabled is hardcoded False here (not threaded from Settings):
-        # DuckDBEngine has no settings handle, and vector search has no
-        # committed embeddings cache yet everywhere else in this codebase
-        # either (config.py's own default is False). Once a real cache
-        # exists, extending this call to accept the flag is a one-line change.
-        decision = route_entity_fallback(exact_match_count=0, vector_enabled=False)
+        decision = route_entity_fallback(
+            exact_match_count=0, vector_enabled=self.vector_enabled
+        )
         if "lexical" not in decision.channels:
             return ()
         from app.retrieval.fusion import reciprocal_rank_fusion
         from app.retrieval.lexical_retriever import search as lexical_search
 
         hits = lexical_search(connection, label, field="name", scope=scope, limit=5)
-        # Single channel today (vector_enabled is always False here -- see the
-        # comment above), so this is provably a no-op on ordering: RRF's
-        # score 1/(k+rank) is strictly monotonic in rank within one channel.
-        # Routing through it anyway keeps this call site correct by
-        # construction once a second channel is added, rather than requiring
-        # someone to remember to insert fusion at that point.
-        fused = reciprocal_rank_fusion(
-            {"lexical": [hit.product_uid for hit in hits]}, limit=5
-        )
+        channels = {"lexical": [hit.product_uid for hit in hits]}
+        if "vector" in decision.channels and self.query_embedder is not None:
+            from app.retrieval.vector_retriever import search as vector_search
+
+            vector_hits = vector_search(
+                connection,
+                label,
+                self.query_embedder,
+                field="name",
+                scope=scope,
+                limit=5,
+            )
+            if vector_hits:
+                channels["vector"] = [hit.product_uid for hit in vector_hits]
+        fused = reciprocal_rank_fusion(channels, limit=5)
         return tuple(fused)
+
+    def _catalog_candidates_for_condition(
+        self,
+        connection: duckdb.DuckDBPyConnection,
+        plan: QueryPlan,
+        condition: Condition,
+    ) -> list[str]:
+        """Return SQL-authoritative UIDs for exactly one catalog condition."""
+
+        payload = plan.model_dump(mode="json")
+        payload["filter_groups"] = [
+            {"join": "AND", "conditions": [condition.model_dump(mode="json")]}
+        ]
+        payload["groups_join"] = "AND"
+        temporary = QueryPlan.model_validate(payload)
+        filters_sql, params = self._compile_filters(temporary, include_metric=False)
+        rows = connection.execute(
+            "SELECT c.product_uid FROM product_catalog c WHERE c.scope=?"
+            + filters_sql
+            + " ORDER BY c.product_uid",
+            [plan.scopes[0], *params],
+        ).fetchall()
+        return [str(row[0]) for row in rows]
+
+    @staticmethod
+    def _trace(
+        channel: str,
+        status: str,
+        reason: str,
+        scope: str,
+        started: float,
+        *,
+        candidates: int = 0,
+        fallback_reason: str | None = None,
+        evidence_refs: list[str] | None = None,
+    ) -> RetrievalTrace:
+        return RetrievalTrace(
+            channel=channel,
+            status=status,
+            reason=reason,
+            scope=scope,
+            candidate_count=candidates,
+            latency_ms=round((time.perf_counter() - started) * 1000, 3),
+            data_hash=OFFICIAL_DATA_ZIP_SHA256,
+            fallback_reason=fallback_reason,
+            evidence_refs=(evidence_refs or [])[:8],
+        )
+
+    def _prepare_federated(
+        self,
+        connection: duckdb.DuckDBPyConnection,
+        plan: QueryPlan,
+    ) -> Any:
+        """Build a conservative federated candidate plan for one scope.
+
+        Graph constraints are activated only when their UID set exactly
+        matches the same official catalog condition. Text retrieval may
+        replace a zero-result ``contains`` condition, but every returned UID
+        is still re-joined to the official SQL catalog for evidence.
+        """
+
+        from app.retrieval.federated import RetrievalPlan, without_theme_filters
+        from app.retrieval.fusion import reciprocal_rank_fusion
+        from app.retrieval.graph_retriever import (
+            products_for_concept_value,
+            products_for_party,
+            resolve_product_nodes_by_name,
+        )
+        from app.retrieval.lexical_retriever import search as lexical_search
+        from app.retrieval.router import route_theme_query
+        from app.retrieval.vector_retriever import search as vector_search
+
+        retrieval = RetrievalPlan(execution_plan=plan)
+        scope = plan.scopes[0]
+
+        # Exact KG aliases and fuzzy name retrieval now constrain the actual
+        # execution, fixing the old diagnostic-only fallback gap.
+        if plan.entities and all(entity.name and not entity.code for entity in plan.entities):
+            resolved_entities: list[list[str]] = []
+            ranked_entities: list[str] = []
+            for entity in plan.entities:
+                label = entity.name or ""
+                started = time.perf_counter()
+                exact = resolve_product_nodes_by_name(connection, label) if self.graph_enabled else []
+                exact = [
+                    uid
+                    for uid in exact
+                    if connection.execute(
+                        "SELECT COUNT(*) FROM product_catalog WHERE scope=? AND product_uid=?",
+                        [scope, uid],
+                    ).fetchone()[0]
+                ]
+                if exact:
+                    resolved_entities.append(exact)
+                    retrieval.trace.append(
+                        self._trace(
+                            "exact_alias",
+                            "used",
+                            "exact product alias resolved before SQL evidence join",
+                            scope,
+                            started,
+                            candidates=len(exact),
+                        )
+                    )
+                    continue
+                hits = (
+                    lexical_search(
+                        connection,
+                        label,
+                        field="name",
+                        scope=scope,
+                        limit=max(12, plan.limit),
+                    )
+                    if self.lexical_enabled
+                    else []
+                )
+                uids = [hit.product_uid for hit in hits]
+                retrieval.trace.append(
+                    self._trace(
+                        "lexical",
+                        "used" if uids else "fallback",
+                        "name fallback after exact alias miss",
+                        scope,
+                        started,
+                        candidates=len(uids),
+                        fallback_reason=None if uids else "no lexical name candidate",
+                    )
+                )
+                if uids:
+                    resolved_entities.append(uids)
+                    ranked_entities.extend(uids)
+            if len(resolved_entities) == len(plan.entities):
+                union = list(dict.fromkeys(uid for group in resolved_entities for uid in group))
+                retrieval.intersect(union)
+                retrieval.ranked_candidate_uids = tuple(dict.fromkeys(ranked_entities))
+                retrieval.execution_plan = without_theme_filters(
+                    retrieval.execution_plan, set(), clear_name_entities=True
+                )
+
+        relation_fields: dict[str, tuple[str, tuple[str, ...] | None]] = {
+            "product.manager": ("party", ("managedBy",)),
+            "product.issuer": ("party", ("issuedBy",)),
+            "product.asset_type": ("asset_type", None),
+            "product.asset_class": ("asset_type", None),
+            "product.region": ("region", None),
+            "product.investment_region": ("region", None),
+            "product.risk_grade": ("risk_grade", None),
+            "product.benchmark": ("benchmark", None),
+        }
+        conditions = [
+            condition
+            for group in plan.filter_groups
+            for condition in group.conditions
+        ]
+        if plan.groups_join == "AND" and self.graph_enabled:
+            for condition in conditions:
+                relation = relation_fields.get(condition.field)
+                if relation is None or condition.op not in {"eq", "in"}:
+                    continue
+                started = time.perf_counter()
+                raw_values = condition.value if isinstance(condition.value, list) else [condition.value]
+                graph_hits = []
+                for raw in raw_values:
+                    value = str(raw)
+                    if relation[0] == "party":
+                        graph_hits.extend(
+                            products_for_party(
+                                connection,
+                                value,
+                                roles=relation[1] or (),
+                                scope=scope,
+                            )
+                        )
+                    else:
+                        graph_hits.extend(
+                            products_for_concept_value(
+                                connection, relation[0], value, scope=scope
+                            )
+                        )
+                graph_uids = list(dict.fromkeys(hit.product_uid for hit in graph_hits))
+                sql_uids = self._catalog_candidates_for_condition(connection, plan, condition)
+                if set(graph_uids) == set(sql_uids):
+                    if graph_uids:
+                        retrieval.intersect(graph_uids)
+                    retrieval.trace.append(
+                        self._trace(
+                            "graph",
+                            "validated",
+                            f"{condition.field} relation matched SQL candidate set",
+                            scope,
+                            started,
+                            candidates=len(graph_uids),
+                            evidence_refs=[hit.path_note for hit in graph_hits],
+                        )
+                    )
+                else:
+                    retrieval.trace.append(
+                        self._trace(
+                            "graph",
+                            "fallback",
+                            f"{condition.field} relation cross-check",
+                            scope,
+                            started,
+                            candidates=len(graph_uids),
+                            fallback_reason=(
+                                f"graph/sql candidate mismatch {len(graph_uids)}/{len(sql_uids)}; SQL retained"
+                            ),
+                            evidence_refs=[hit.path_note for hit in graph_hits],
+                        )
+                    )
+        elif not self.graph_enabled and any(
+            condition.field in relation_fields for condition in conditions
+        ):
+            retrieval.trace.append(
+                RetrievalTrace(
+                    channel="graph",
+                    status="skipped",
+                    reason="graph channel disabled for ablation",
+                    scope=scope,
+                    data_hash=OFFICIAL_DATA_ZIP_SHA256,
+                    fallback_reason="SQL retained",
+                )
+            )
+        elif any(condition.field in relation_fields for condition in conditions):
+            retrieval.trace.append(
+                RetrievalTrace(
+                    channel="graph",
+                    status="skipped",
+                    reason="OR filter graph hard-intersection is intentionally disabled",
+                    scope=scope,
+                    data_hash=OFFICIAL_DATA_ZIP_SHA256,
+                    fallback_reason="SQL preserves boolean semantics",
+                )
+            )
+
+        replaced_theme_fields: set[str] = set()
+        for condition in conditions:
+            if condition.field not in {"product.strategy", "product.benchmark"}:
+                continue
+            if condition.op not in {"contains", "eq"} or isinstance(condition.value, list):
+                continue
+            query_text = str(condition.value)
+            field = "strategy" if condition.field == "product.strategy" else "benchmark"
+            decision = route_theme_query(
+                has_theme_text=bool(query_text.strip()), vector_enabled=self.vector_enabled
+            )
+            channel_results: dict[str, list[str]] = {}
+            if "lexical" in decision.channels and self.lexical_enabled:
+                started = time.perf_counter()
+                hits = lexical_search(connection, query_text, field=field, scope=scope, limit=50)
+                channel_results["lexical"] = [hit.product_uid for hit in hits]
+                retrieval.trace.append(
+                    self._trace(
+                        "lexical",
+                        "used" if hits else "fallback",
+                        f"{field} thematic retrieval",
+                        scope,
+                        started,
+                        candidates=len(hits),
+                        fallback_reason=None if hits else "no lexical theme candidate",
+                    )
+                )
+            if "vector" in decision.channels and self.query_embedder is not None:
+                started = time.perf_counter()
+                vector_hits = vector_search(
+                    connection,
+                    query_text,
+                    self.query_embedder,
+                    field=field,
+                    scope=scope,
+                    limit=50,
+                )
+                if vector_hits is None:
+                    retrieval.trace.append(
+                        self._trace(
+                            "vector",
+                            "unavailable",
+                            f"{field} vector retrieval",
+                            scope,
+                            started,
+                            fallback_reason="embedding call/cache/dimension unavailable; BM25 retained",
+                        )
+                    )
+                else:
+                    channel_results["vector"] = [hit.product_uid for hit in vector_hits]
+                    retrieval.trace.append(
+                        self._trace(
+                            "vector",
+                            "used",
+                            f"{field} vector retrieval",
+                            scope,
+                            started,
+                            candidates=len(vector_hits),
+                        )
+                    )
+            fused = reciprocal_rank_fusion(channel_results, limit=50)
+            sql_uids = self._catalog_candidates_for_condition(connection, plan, condition)
+            if sql_uids:
+                sql_set = set(sql_uids)
+                validated = [uid for uid in fused if uid in sql_set]
+                if validated:
+                    retrieval.intersect(validated)
+                    retrieval.ranked_candidate_uids = tuple(validated)
+            elif fused:
+                retrieval.intersect(fused)
+                retrieval.ranked_candidate_uids = tuple(fused)
+                replaced_theme_fields.add(condition.field)
+
+        if replaced_theme_fields:
+            retrieval.execution_plan = without_theme_filters(
+                retrieval.execution_plan, replaced_theme_fields
+            )
+        retrieval.trace.append(
+            RetrievalTrace(
+                channel="sql",
+                status="used",
+                reason="official catalog/metric filters, calculations, ordering, and evidence join",
+                scope=scope,
+                candidate_count=(len(retrieval.candidate_uids) if retrieval.candidate_uids is not None else 0),
+                data_hash=OFFICIAL_DATA_ZIP_SHA256,
+                evidence_refs=[f"official_zip_sha256:{OFFICIAL_DATA_ZIP_SHA256[:16]}"],
+            )
+        )
+        return retrieval
 
     def resolve_entities(self, plan: QueryPlan) -> list[tuple[str, int]]:
         """Return match cardinality per declared entity without applying limits."""
@@ -830,6 +1173,7 @@ class DuckDBEngine:
         self,
         plan: QueryPlan,
         latest_dates: dict[str, str | None] | None = None,
+        candidate_uids: tuple[str, ...] | None = None,
     ) -> tuple[str, list[Any]]:
         if not plan.scopes:
             raise ValueError("execution requires at least one scope after policy validation")
@@ -851,13 +1195,30 @@ class DuckDBEngine:
         entity_sql, entity_params = self._entity_filter(plan)
         sql += entity_sql
         params.extend(entity_params)
+        candidate_sql, candidate_params = self._candidate_filter(candidate_uids)
+        sql += candidate_sql
+        params.extend(candidate_params)
         return sql, params
+
+    @staticmethod
+    def _candidate_filter(
+        candidate_uids: tuple[str, ...] | None,
+    ) -> tuple[str, list[str]]:
+        if candidate_uids is None:
+            return "", []
+        if not candidate_uids:
+            return " AND FALSE", []
+        return (
+            " AND c.product_uid IN (" + ",".join("?" for _ in candidate_uids) + ")",
+            list(candidate_uids),
+        )
 
     def _metric_latest_date(
         self,
         connection: duckdb.DuckDBPyConnection,
         plan: QueryPlan,
         metric_id: str,
+        candidate_uids: tuple[str, ...] | None = None,
     ) -> str | None:
         """Return the common latest date inside the non-metric eligible universe.
 
@@ -874,6 +1235,7 @@ class DuckDBEngine:
             plan, include_metric=False
         )
         entity_sql, entity_params = self._entity_filter(plan)
+        candidate_sql, candidate_params = self._candidate_filter(candidate_uids)
         valid_states = sorted(VALID_VALUE_STATES)
         placeholders = ",".join("?" for _ in valid_states)
         value = connection.execute(
@@ -884,13 +1246,15 @@ class DuckDBEngine:
             f"AND m.quality_status IN ({placeholders}) "
             "WHERE c.scope=? AND m.as_of_date IS NOT NULL"
             + catalog_filter_sql
-            + entity_sql,
+            + entity_sql
+            + candidate_sql,
             [
                 metric_id,
                 *valid_states,
                 plan.scopes[0],
                 *catalog_filter_params,
                 *entity_params,
+                *candidate_params,
             ],
         ).fetchone()[0]
         return _scalar(value) if value is not None else None
@@ -899,6 +1263,7 @@ class DuckDBEngine:
         self,
         connection: duckdb.DuckDBPyConnection,
         plan: QueryPlan,
+        candidate_uids: tuple[str, ...] | None = None,
     ) -> dict[str, str | None]:
         metric_ids = {
             metric_id
@@ -917,7 +1282,9 @@ class DuckDBEngine:
             if aggregation.field and self.registry.get(aggregation.field) is not None
         )
         return {
-            metric_id: self._metric_latest_date(connection, plan, metric_id)
+            metric_id: self._metric_latest_date(
+                connection, plan, metric_id, candidate_uids
+            )
             for metric_id in sorted(metric_ids)
         }
 
@@ -1042,6 +1409,7 @@ class DuckDBEngine:
         plan: QueryPlan,
         stats: DatasetStats,
         latest_dates: dict[str, str | None] | None = None,
+        candidate_uids: tuple[str, ...] | None = None,
     ) -> CoverageEvidence | None:
         if not plan.metrics:
             return None
@@ -1053,8 +1421,9 @@ class DuckDBEngine:
             plan, include_metric=False
         )
         entity_sql, entity_params = self._entity_filter(plan)
-        non_metric_sql = catalog_filter_sql + entity_sql
-        non_metric_params = [*catalog_filter_params, *entity_params]
+        candidate_sql, candidate_params = self._candidate_filter(candidate_uids)
+        non_metric_sql = catalog_filter_sql + entity_sql + candidate_sql
+        non_metric_params = [*catalog_filter_params, *entity_params, *candidate_params]
         eligible_sql = "SELECT COUNT(*) FROM product_catalog c WHERE c.scope = ?" + non_metric_sql
         eligible_params: list[Any] = [plan.scopes[0], *non_metric_params]
         eligible = int(connection.execute(eligible_sql, eligible_params).fetchone()[0])
@@ -1072,7 +1441,11 @@ class DuckDBEngine:
             ).fetchone()[0]
         )
         valid = self._valid_metric_count(
-            connection, plan, metric_id, latest_dates=latest_dates
+            connection,
+            plan,
+            metric_id,
+            latest_dates=latest_dates,
+            candidate_uids=candidate_uids,
         )
         rankable = valid if policy.ranking_allowed else 0
         return CoverageEvidence(
@@ -1100,6 +1473,7 @@ class DuckDBEngine:
         plan: QueryPlan,
         metric_id: str,
         latest_dates: dict[str, str | None] | None = None,
+        candidate_uids: tuple[str, ...] | None = None,
     ) -> int:
         """Count the exact valid, non-null population used by rank/aggregate."""
 
@@ -1108,6 +1482,7 @@ class DuckDBEngine:
             plan, include_metric=False
         )
         entity_sql, entity_params = self._entity_filter(plan)
+        candidate_sql, candidate_params = self._candidate_filter(candidate_uids)
         value_column = "value_num" if policy.value_kind == "numeric" else "value_text"
         valid_states = sorted(VALID_VALUE_STATES)
         valid_placeholders = ",".join("?" for _ in valid_states)
@@ -1122,7 +1497,8 @@ class DuckDBEngine:
                 f"AND m.quality_status IN ({valid_placeholders}){date_sql} "
                 "WHERE c.scope=?"
                 + catalog_filter_sql
-                + entity_sql,
+                + entity_sql
+                + candidate_sql,
                 [
                     metric_id,
                     *sorted(VALID_VALUE_STATES),
@@ -1130,6 +1506,7 @@ class DuckDBEngine:
                     plan.scopes[0],
                     *catalog_filter_params,
                     *entity_params,
+                    *candidate_params,
                 ],
             ).fetchone()[0]
         )
@@ -1298,8 +1675,12 @@ class DuckDBEngine:
         connection: duckdb.DuckDBPyConnection,
         plan: QueryPlan,
         latest_dates: dict[str, str | None] | None = None,
+        candidate_uids: tuple[str, ...] | None = None,
+        ranked_candidate_uids: tuple[str, ...] = (),
     ) -> tuple[list[ProductEvidence], str, list[Any], bool]:
-        base_sql, params = self._catalog_base(plan, latest_dates=latest_dates)
+        base_sql, params = self._catalog_base(
+            plan, latest_dates=latest_dates, candidate_uids=candidate_uids
+        )
         sql = "SELECT c.* " + base_sql
         if plan.intent == "rank":
             joins: list[str] = []
@@ -1332,7 +1713,16 @@ class DuckDBEngine:
             params = [*metric_params, *params]
             sql += " ORDER BY " + ", ".join([*order, "c.product_uid ASC"]) + " LIMIT ?"
         else:
-            sql += " ORDER BY c.product_uid ASC LIMIT ?"
+            if ranked_candidate_uids and plan.intent == "search":
+                ordered = ranked_candidate_uids[:50]
+                cases = " ".join(
+                    f"WHEN ? THEN {index}" for index, _ in enumerate(ordered, start=1)
+                )
+                sql += f" ORDER BY CASE c.product_uid {cases} ELSE 999999 END, c.product_uid ASC"
+                params.extend(ordered)
+            else:
+                sql += " ORDER BY c.product_uid ASC"
+            sql += " LIMIT ?"
         params.append(plan.limit)
         rows = self._rows(connection, sql, params)
         selected_columns: set[str] | None = None
@@ -1345,6 +1735,11 @@ class DuckDBEngine:
                     if column:
                         selected_columns.add(column)
                         metric_ids_by_column[column] = condition.field
+            for metric_id in plan.metrics:
+                column = CATALOG_FIELD_MAP.get(metric_id)
+                if column:
+                    selected_columns.add(column)
+                    metric_ids_by_column[column] = metric_id
             if any(
                 (policy := self.registry.get(metric_id)) is not None
                 and policy.requires_currency_partition
@@ -1402,6 +1797,7 @@ class DuckDBEngine:
         plan: QueryPlan,
         stats: DatasetStats,
         latest_dates: dict[str, str | None] | None = None,
+        candidate_uids: tuple[str, ...] | None = None,
     ) -> tuple[list[AggregateEvidence], str, list[Any], list[str]]:
         scope = plan.scopes[0]
         source_table = SOURCE_TABLE_BY_SCOPE[scope]
@@ -1454,7 +1850,9 @@ class DuckDBEngine:
             executed_params: list[Any] = []
             for aggregation in plan.aggregations:
                 base_sql, base_params = self._catalog_base(
-                    plan, latest_dates=latest_dates
+                    plan,
+                    latest_dates=latest_dates,
+                    candidate_uids=candidate_uids,
                 )
                 where_part = base_sql.removeprefix("FROM product_catalog c ")
                 group_expression = (
@@ -1727,14 +2125,25 @@ class DuckDBEngine:
         if len(plan.scopes) != 1:
             raise ValueError("a validated executable plan requires at least one scope")
         scope = plan.scopes[0]
+        requested_plan = plan
         with self._connect() as connection:
+            retrieval = self._prepare_federated(connection, plan)
+            plan = retrieval.execution_plan
             stats = self._stats(connection, scope)
-            latest_dates = self._latest_dates_for_plan(connection, plan)
+            latest_dates = self._latest_dates_for_plan(
+                connection, plan, retrieval.candidate_uids
+            )
             coverage = self._coverage(
-                connection, plan, stats, latest_dates=latest_dates
+                connection,
+                plan,
+                stats,
+                latest_dates=latest_dates,
+                candidate_uids=retrieval.candidate_uids,
             )
             catalog_sql, catalog_params = self._catalog_base(
-                plan, latest_dates=latest_dates
+                plan,
+                latest_dates=latest_dates,
+                candidate_uids=retrieval.candidate_uids,
             )
             filtered_eligible = int(
                 connection.execute(
@@ -1747,7 +2156,11 @@ class DuckDBEngine:
             secondary_aggregate_missing: dict[str, int] = {}
             if plan.intent == "aggregate":
                 aggregates, sql, params, aggregate_notes = self._execute_aggregate(
-                    connection, plan, stats, latest_dates=latest_dates
+                    connection,
+                    plan,
+                    stats,
+                    latest_dates=latest_dates,
+                    candidate_uids=retrieval.candidate_uids,
                 )
                 execution_notes.extend(aggregate_notes)
                 if (
@@ -1768,7 +2181,11 @@ class DuckDBEngine:
                     if self.registry.get(metric_id) is None:
                         continue
                     valid_count = self._valid_metric_count(
-                        connection, plan, metric_id, latest_dates=latest_dates
+                        connection,
+                        plan,
+                        metric_id,
+                        latest_dates=latest_dates,
+                        candidate_uids=retrieval.candidate_uids,
                     )
                     if valid_count < aggregate_denominator:
                         secondary_aggregate_missing[metric_id] = (
@@ -1811,19 +2228,25 @@ class DuckDBEngine:
                     )
             else:
                 items, sql, params, has_share_class_candidates = self._execute_products(
-                    connection, plan, latest_dates=latest_dates
+                    connection,
+                    plan,
+                    latest_dates=latest_dates,
+                    candidate_uids=retrieval.candidate_uids,
+                    ranked_candidate_uids=retrieval.ranked_candidate_uids,
                 )
                 aggregates = []
                 result_count = len(items)
                 context_error = self._comparison_context_error(plan, items)
                 if context_error is not None:
                     reason_code, limitation = context_error
-                    return self.empty_bundle(
-                        plan,
+                    bundle = self.empty_bundle(
+                        requested_plan,
                         answerability=Answerability.INCOMPARABLE,
                         reason_code=reason_code,
                         limitation=limitation,
                     )
+                    bundle.retrieval_trace = retrieval.trace
+                    return bundle
                 if plan.intent == "compare":
                     for metric_id in plan.metrics:
                         metric_fields = [
@@ -2005,7 +2428,7 @@ class DuckDBEngine:
                 serving_count=stats.serving_count,
                 eligible_count=eligible,
                 excluded_count=max(stats.serving_count - eligible, 0),
-                filter_summary=_bounded_filter_summary(plan),
+                filter_summary=_bounded_filter_summary(requested_plan),
             ),
             coverage=coverage,
             calculation=CalculationEvidence(
@@ -2027,5 +2450,6 @@ class DuckDBEngine:
             ),
             aggregates=aggregates,
             items=items,
+            retrieval_trace=retrieval.trace,
             limitations=limitations,
         )

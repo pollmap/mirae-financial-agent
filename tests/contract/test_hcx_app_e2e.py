@@ -91,6 +91,7 @@ def test_public_endpoint_runs_through_real_hcx_http_adapter_before_duckdb() -> N
             environment="test",
             database_path=DATABASE,
             planner_mode="hcx",
+            planner_stage="one",
             hcx_base_url=base_url,
             clova_studio_api_key="mock-service-key",
             hcx_timeout_seconds=3,

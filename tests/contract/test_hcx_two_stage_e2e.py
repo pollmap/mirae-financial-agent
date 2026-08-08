@@ -90,6 +90,8 @@ def test_two_stage_semantic_plan_grounds_to_single_scope_lookup() -> None:
         "intent": "lookup",
         "scope_concepts": ["bond"],
         "metric_concepts": [],
+        "aggregations": [],
+        "group_by_concepts": [],
         "filters": [],
         "sort_direction": "none",
         "top_n": 5,
@@ -164,6 +166,8 @@ def test_two_stage_cross_scope_unified_rank_matches_stage_one_result() -> None:
         "intent": "rank",
         "scope_concepts": ["domestic_etp", "fund"],
         "metric_concepts": ["return_1y"],
+        "aggregations": [],
+        "group_by_concepts": [],
         "filters": [],
         "sort_direction": "desc",
         "top_n": 3,
@@ -193,3 +197,43 @@ def test_two_stage_cross_scope_unified_rank_matches_stage_one_result() -> None:
 
     assert stage_two_uids == stage_one_uids
     assert "[교차 상품군 응답: 통합 순위" in response.json()["answer"]
+
+
+def test_two_stage_aggregate_count_reaches_physical_executor() -> None:
+    semantic_plan = {
+        "intent": "aggregate",
+        "scope_concepts": ["domestic_etp"],
+        "metric_concepts": [],
+        "aggregations": [{"function": "count", "metric_concept": "", "distinct": True}],
+        "group_by_concepts": [],
+        "filters": [],
+        "sort_direction": "none",
+        "top_n": 10,
+        "entities": [],
+        "needs_clarification": False,
+        "clarification_question": "",
+    }
+    with _mock_hcx(semantic_plan) as (base_url, _seen):
+        settings = Settings(
+            environment="test",
+            database_path=DATABASE,
+            planner_mode="hcx",
+            planner_stage="two",
+            hcx_base_url=base_url,
+            clova_studio_api_key="mock-service-key",
+            hcx_timeout_seconds=3,
+            hcx_max_retries=1,
+        )
+        app = create_app(settings)
+        response = asyncio.run(
+            _ask(app, "HCX-STAGE2-AGG", "국내 ETF와 ETN의 전체 상품 수를 집계해줘.")
+        )
+
+    assert response.status_code == 200
+    context = json.loads(response.json()["retrieved_context"])
+    assert context["answerability"] == "FULL"
+    assert len(context["aggregates"]) == 1
+    aggregate = context["aggregates"][0]
+    assert aggregate["aggregate_id"] == "product_count"
+    assert int(aggregate["value"]) == 1733
+    assert aggregate["source_row_count"] == 1733

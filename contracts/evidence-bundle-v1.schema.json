@@ -16,6 +16,7 @@
     "calculation",
     "aggregates",
     "items",
+    "retrieval_trace",
     "limitations"
   ],
   "properties": {
@@ -83,6 +84,11 @@
       "maxItems": 50,
       "items": {"$ref": "#/$defs/productEvidence"}
     },
+    "retrieval_trace": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {"$ref": "#/$defs/retrievalTrace"}
+    },
     "limitations": {
       "type": "array",
       "maxItems": 30,
@@ -120,6 +126,38 @@
         "numerator": {"type": "integer", "minimum": 0},
         "denominator": {"type": "integer", "minimum": 0},
         "basis": {"type": "string", "minLength": 1, "maxLength": 1000}
+      }
+    },
+    "retrievalTrace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "channel",
+        "status",
+        "reason",
+        "scope",
+        "candidate_count",
+        "latency_ms",
+        "observed_at_utc",
+        "data_hash",
+        "fallback_reason",
+        "evidence_refs"
+      ],
+      "properties": {
+        "channel": {"enum": ["sql", "exact_alias", "graph", "lexical", "vector"]},
+        "status": {"enum": ["used", "validated", "fallback", "unavailable", "skipped"]},
+        "reason": {"type": "string", "minLength": 1, "maxLength": 300},
+        "scope": {"type": ["string", "null"], "enum": ["bond", "domestic_etp", "overseas_etp", "fund", null]},
+        "candidate_count": {"type": "integer", "minimum": 0},
+        "latency_ms": {"type": "number", "minimum": 0, "maximum": 60000},
+        "observed_at_utc": {"type": "string", "format": "date-time", "maxLength": 40},
+        "data_hash": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+        "fallback_reason": {"type": ["string", "null"], "maxLength": 300},
+        "evidence_refs": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {"type": "string", "maxLength": 300}
+        }
       }
     },
     "clarificationOption": {

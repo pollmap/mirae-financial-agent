@@ -88,9 +88,9 @@ class ClovaQueryEmbedder:
 
 
 def _prepare_query_vector(vector: list[float] | None) -> list[float] | None:
-    """Pad to ``EMBEDDING_DIM`` (zero-fill) or reject; never crash the caller."""
+    """Require exactly ``EMBEDDING_DIM`` values; never crash the caller."""
 
-    if not vector or len(vector) > EMBEDDING_DIM:
+    if not vector or len(vector) != EMBEDDING_DIM:
         return None
     try:
         values = [float(value) for value in vector]
@@ -98,8 +98,6 @@ def _prepare_query_vector(vector: list[float] | None) -> list[float] | None:
         return None
     if not any(values):
         return None  # zero magnitude: cosine similarity is undefined
-    if len(values) < EMBEDDING_DIM:
-        values = values + [0.0] * (EMBEDDING_DIM - len(values))
     return values
 
 
@@ -123,7 +121,7 @@ def search(
     """Top-k cosine search; ``None`` means "degrade to BM25".
 
     ``None`` is returned when the embedder fails (returns ``None``), when the
-    query vector cannot be validated/padded to 1024 dims, or when
+    query vector is not exactly 1024 dimensions, or when
     ``kg.vec_embedding`` is missing or empty (databases built before the
     vector stage, or built with the stage disabled).
     """

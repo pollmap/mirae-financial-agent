@@ -1,0 +1,31 @@
+{
+  "status": "LOCAL_PASS_EXTERNAL_LIVE_GATES_PENDING",
+  "holdout_sha256": "0c7de9a9c98378a0d44c47e289c4ef7b9fb577cf3cebbd473b421066e5f823a8",
+  "holdout": {
+    "total": 100,
+    "passed": 100,
+    "graph_route_hits": 39
+  },
+  "federated_graph": {
+    "total": 120,
+    "passed": 120,
+    "path_evidence_hits": 28196,
+    "safe_sql_fallbacks": 10
+  },
+  "federated_lexical": {
+    "total": 20,
+    "passed": 20
+  },
+  "vector": "FIXTURE_VERIFIED_BY_PYTEST_LIVE_CACHE_PENDING",
+  "ablation": {
+    "status": "PASS",
+    "variants": [
+      "A_sql_baseline",
+      "B_typed_plan_sql",
+      "C_ontology_grounded_sql",
+      "D_graph_sql",
+      "E_full_federated_validation"
+    ],
+    "F_live_hcx_composer": "PENDING_EXTERNAL_CREDENTIAL"
+  }
+}

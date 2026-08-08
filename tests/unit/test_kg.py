@@ -9,6 +9,11 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from app.retrieval.graph_retriever import (  # noqa: E402
+    products_for_concept_value,
+    products_for_party,
+    traverse,
+)
 from etl.kg import BENCHMARK_SENTINELS, build_kg  # noqa: E402
 
 _COLUMNS = [
@@ -278,3 +283,56 @@ def test_structural_invariants_hold(tmp_path: Path) -> None:
         """
     ).fetchone()[0]
     assert orphans == 0
+
+
+def test_party_lookup_and_bounded_traversal_are_live(tmp_path: Path) -> None:
+    rows = [
+        _row(
+            product_uid="E1", name="ETF1", scope="domestic_etp", internal_type="ETF",
+            manager="Manager A", source_table_id="PREF01N001", source_row_hash="a" * 32,
+        ),
+        _row(
+            product_uid="E2", name="ETF2", scope="domestic_etp", internal_type="ETF",
+            manager="Manager A", source_table_id="PREF01N001", source_row_hash="b" * 32,
+        ),
+    ]
+    connection, _ = _build(rows, tmp_path)
+    hits = products_for_party(
+        connection, "Manager A", roles=("managedBy",), scope="domestic_etp"
+    )
+    assert [hit.product_uid for hit in hits] == ["E1", "E2"]
+    assert all("managedBy" in hit.path_note and "row_hash" in hit.path_note for hit in hits)
+    assert traverse(
+        connection,
+        ["party:domestic_etp:manager a"],
+        ("managedBy",),
+        max_depth=1,
+    ) == ["E1", "E2"]
+
+
+def test_concept_and_benchmark_relations_return_scoped_products(tmp_path: Path) -> None:
+    rows = [
+        _row(
+            product_uid="E1", name="ETF1", scope="domestic_etp", internal_type="ETF",
+            manager="Manager A", asset_type="Equity", region="US", risk_grade="High",
+            benchmark="S&P 500", source_table_id="PREF01N001", source_row_hash="c" * 32,
+        ),
+        _row(
+            product_uid="O1", name="ETF2", scope="overseas_etp", internal_type="ETF",
+            manager="Manager B", asset_type="Equity", region="US",
+            benchmark="S&P 500", source_table_id="PREF02N001", source_row_hash="d" * 32,
+        ),
+    ]
+    connection, _ = _build(rows, tmp_path)
+    assert [
+        hit.product_uid
+        for hit in products_for_concept_value(
+            connection, "region", "US", scope="domestic_etp"
+        )
+    ] == ["E1"]
+    assert [
+        hit.product_uid
+        for hit in products_for_concept_value(
+            connection, "benchmark", "S&P 500", scope="overseas_etp"
+        )
+    ] == ["O1"]

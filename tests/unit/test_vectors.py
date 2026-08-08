@@ -238,12 +238,12 @@ def test_search_returns_none_on_zero_query_vector(tmp_path: Path) -> None:
     assert search(connection, "영벡터", FakeEmbedder([0.0, 0.0, 0.0])) is None
 
 
-def test_search_pads_short_query_vectors(tmp_path: Path) -> None:
+def test_search_rejects_short_query_vectors(tmp_path: Path) -> None:
     connection = _built_connection(tmp_path, _default_rows())
 
     hits = search(connection, "짧은 벡터", FakeEmbedder([1.0, 0.2]))
 
-    assert hits is not None and hits[0].product_uid == "GLOBAL_ETP:A"
+    assert hits is None
 
 
 # ------------------------------------------------- ClovaQueryEmbedder (runtime)

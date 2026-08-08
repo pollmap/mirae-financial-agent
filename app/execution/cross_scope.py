@@ -342,6 +342,11 @@ def execute_cross_scope(engine: DuckDBEngine, plan: QueryPlan) -> EvidenceBundle
         for bundle in sub_bundles.values()
         for aggregate in bundle.aggregates
     ][:100]
+    retrieval_trace = [
+        trace
+        for bundle in sub_bundles.values()
+        for trace in bundle.retrieval_trace
+    ][:24]
 
     universe = _multi_universe(sub_bundles)
     limitations: list[str] = list(disclosure)
@@ -361,6 +366,7 @@ def execute_cross_scope(engine: DuckDBEngine, plan: QueryPlan) -> EvidenceBundle
         coverage=None,
         items=fused_items,
         aggregates=aggregates,
+        retrieval_trace=retrieval_trace,
         limitations=limitations[:_MAX_LIMITATIONS],
     )
 

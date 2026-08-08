@@ -45,6 +45,7 @@ from pathlib import Path
 from typing import Any
 
 from app.domain.models import (
+    Aggregation,
     ClarificationOption,
     Condition,
     Entity,
@@ -59,6 +60,8 @@ _ALL_SCOPES: tuple[str, ...] = ("bond", "domestic_etp", "overseas_etp", "fund")
 _SEMANTIC_SCOPES = {*_ALL_SCOPES, "all", "unspecified"}
 _INTENTS = {"lookup", "search", "rank", "compare", "aggregate", "explain", "clarify", "unsupported"}
 _FILTER_OPS = {"eq", "in", "gte", "lte", "contains"}
+_AGGREGATION_FUNCTIONS = {"count", "sum", "avg", "min", "max"}
+_GROUP_BY_FIELDS = {"scope": "product.scope", "internal_type": "product.internal_type"}
 _IN_SPLIT = re.compile(r"[,|]")
 
 # Default physical field per filter concept.  Used verbatim for multi-scope
@@ -72,6 +75,8 @@ _FILTER_CONCEPT_FIELDS: dict[str, str] = {
     "internal_type": "product.internal_type",
     "manager": "product.manager",
     "issuer": "product.issuer",
+    "benchmark": "product.benchmark",
+    "strategy": "product.strategy",
     "sale_status": "product.sale_status",
     "public_private": "product.public_private",
     "pension_eligible": "product.pension_trade_eligible",
@@ -147,6 +152,92 @@ def _metric_concepts(payload: Mapping[str, Any], catalog: ConceptCatalog) -> lis
             )
         concept_ids.append(concept_id)
     return concept_ids
+
+
+def _aggregation_concepts(payload: Mapping[str, Any], catalog: ConceptCatalog) -> list[str]:
+    concept_ids: list[str] = []
+    for item in _as_list(payload, "aggregations"):
+        if not isinstance(item, Mapping):
+            raise GroundingError("PAYLOAD_MALFORMED", "aggregations 항목은 객체여야 합니다.")
+        function = str(item.get("function") or "").strip()
+        concept_id = str(item.get("metric_concept") or "").strip()
+        if function not in _AGGREGATION_FUNCTIONS:
+            raise GroundingError(
+                "AGGREGATION_FUNCTION_UNKNOWN", f"'{function}'은(는) 지원하지 않는 집계입니다."
+            )
+        if function != "count" and not concept_id:
+            raise GroundingError(
+                "AGGREGATION_METRIC_REQUIRED", f"{function} 집계에는 지표 개념이 필요합니다."
+            )
+        if not concept_id or concept_id in concept_ids:
+            continue
+        concept = catalog.concepts.get(concept_id)
+        if concept is None:
+            raise GroundingError(
+                "CONCEPT_UNKNOWN", f"'{concept_id}'은(는) 알 수 없는 지표 개념입니다."
+            )
+        if concept.concept_kind != "METRIC":
+            raise GroundingError(
+                "CONCEPT_NOT_METRIC", f"'{concept_id}'은(는) 집계 가능한 지표 개념이 아닙니다."
+            )
+        concept_ids.append(concept_id)
+    return concept_ids
+
+
+def _ground_aggregations(
+    payload: Mapping[str, Any],
+    concept_ids: list[str],
+    physical_metrics: list[str],
+) -> list[Aggregation]:
+    aggregations: list[Aggregation] = []
+    used_aliases: set[str] = set()
+    for index, item in enumerate(_as_list(payload, "aggregations"), start=1):
+        if not isinstance(item, Mapping):
+            raise GroundingError("PAYLOAD_MALFORMED", "aggregations 항목은 객체여야 합니다.")
+        function = str(item.get("function") or "").strip()
+        concept_id = str(item.get("metric_concept") or "").strip()
+        if function not in _AGGREGATION_FUNCTIONS:
+            raise GroundingError(
+                "AGGREGATION_FUNCTION_UNKNOWN", f"'{function}'은(는) 지원하지 않는 집계입니다."
+            )
+        if concept_id:
+            try:
+                field = physical_metrics[concept_ids.index(concept_id)]
+            except (ValueError, IndexError) as exc:
+                raise GroundingError(
+                    "AGGREGATION_METRIC_UNKNOWN", f"'{concept_id}' 집계 지표를 grounding하지 못했습니다."
+                ) from exc
+            alias_base = f"{function}_{concept_id}"
+        else:
+            if function != "count":
+                raise GroundingError(
+                    "AGGREGATION_METRIC_REQUIRED", f"{function} 집계에는 지표 개념이 필요합니다."
+                )
+            field = "product.id"
+            alias_base = "product_count"
+        alias = alias_base if alias_base not in used_aliases else f"{alias_base}_{index}"
+        used_aliases.add(alias)
+        aggregations.append(
+            Aggregation(
+                function=function,
+                field=field,
+                alias=alias,
+                distinct=bool(item.get("distinct", function == "count")),
+            )
+        )
+    return aggregations
+
+
+def _ground_group_by(payload: Mapping[str, Any]) -> list[str]:
+    fields: list[str] = []
+    for raw in _as_list(payload, "group_by_concepts"):
+        concept = str(raw).strip()
+        field = _GROUP_BY_FIELDS.get(concept)
+        if field is None:
+            raise GroundingError("GROUP_BY_UNKNOWN", f"'{concept}'은(는) 지원하지 않는 그룹 기준입니다.")
+        if field not in fields:
+            fields.append(field)
+    return fields
 
 
 def _resolve_scopes(
@@ -330,13 +421,6 @@ def ground_semantic(payload: Mapping[str, Any], *, question: str) -> QueryPlan:
         raise GroundingError("INTENT_UNKNOWN", f"'{intent}'은(는) 지원하지 않는 의도입니다.")
     if intent == "unsupported":
         return QueryPlan(intent="unsupported")
-    if intent == "aggregate":
-        # The semantic schema carries no aggregation spec; inventing count/avg
-        # here would violate the fail-closed contract.
-        raise GroundingError(
-            "AGGREGATE_UNSUPPORTED", "집계 질의는 2단계 의미 계획에서 아직 지원되지 않습니다."
-        )
-
     direction = str(payload.get("sort_direction") or "none").strip()
     if direction not in {"desc", "asc", "none"}:
         raise GroundingError(
@@ -346,10 +430,15 @@ def ground_semantic(payload: Mapping[str, Any], *, question: str) -> QueryPlan:
     catalog = load_concept_catalog()
     assumptions: list[str] = []
     metric_concepts = _metric_concepts(payload, catalog)
+    for concept_id in _aggregation_concepts(payload, catalog):
+        if concept_id not in metric_concepts:
+            metric_concepts.append(concept_id)
     scopes = _resolve_scopes(payload, metric_concepts, catalog, assumptions)
     metrics = _ground_metrics(metric_concepts, scopes, catalog)
     conditions = _ground_filters(payload, scopes, catalog, assumptions)
     entities = _ground_entities(payload, scopes)
+    aggregations = _ground_aggregations(payload, metric_concepts, metrics)
+    group_by = _ground_group_by(payload)
 
     if intent == "search" and metrics and direction != "none":
         intent = "rank"
@@ -359,6 +448,8 @@ def ground_semantic(payload: Mapping[str, Any], *, question: str) -> QueryPlan:
         raise GroundingError(
             "ENTITY_REQUIRED", "조회할 상품명이나 상품코드가 지정되지 않았습니다."
         )
+    if intent == "aggregate" and not aggregations:
+        raise GroundingError("AGGREGATION_REQUIRED", "집계 질의에 집계 방식이 지정되지 않았습니다.")
 
     sort: list[SortItem] = []
     if metrics and (intent == "rank" or direction != "none"):
@@ -371,7 +462,9 @@ def ground_semantic(payload: Mapping[str, Any], *, question: str) -> QueryPlan:
         entities=entities,
         filter_groups=[FilterGroup(conditions=conditions)] if conditions else [],
         metrics=metrics,
+        aggregations=aggregations,
         sort=sort,
+        group_by=group_by,
         limit=_limit(payload),
         assumptions=assumptions[:10],
     )

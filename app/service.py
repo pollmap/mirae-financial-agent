@@ -1687,12 +1687,17 @@ class AgentService:
         sort_summary = ",".join(
             f"{item.field}:{item.direction}:nulls_{item.nulls}" for item in plan.sort
         ) or "none"
+        retrieval_summary = ",".join(
+            f"{item.channel}:{item.status}:{item.candidate_count}"
+            for item in evidence.retrieval_trace
+        ) or "sql_only_or_not_executed"
         trace = (
             f"intent={plan.intent}; scopes={','.join(plan.scopes) or 'unresolved'}; "
             f"metrics={','.join(plan.metrics) or 'none'}; groups={len(plan.filter_groups)}; "
             f"filter_fields={filter_fields}; sort={sort_summary}; "
             f"result_count={evidence.result_count}; answerability={evidence.answerability}; "
-            f"planner={self.planner.name}; fallback_llm=none; executor=DuckDB; data=2026-07-11"
+            f"retrieval={retrieval_summary}; planner={self.planner.name}; "
+            "fallback_llm=none; executor=DuckDB; data=2026-07-11"
         )
         context = evidence.model_dump_json(exclude_none=False)
         if len(context) > _RETRIEVED_CONTEXT_MAX_CHARS:

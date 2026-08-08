@@ -1,0 +1,15 @@
+{
+  "approved_planner_stage": "two",
+  "both_stage_match_count": 20,
+  "both_stage_valid_count": 20,
+  "case_count": 20,
+  "completed_at_utc": "2026-08-08T00:00:00+00:00",
+  "gate": "HCX_20_QUESTION_ONE_VS_TWO_STAGE",
+  "model_id": "HCX-007",
+  "plans_recorded": false,
+  "provider_call_count": 40,
+  "question_suite_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "questions_recorded": false,
+  "secret_values_recorded": false,
+  "status": "PASS"
+}

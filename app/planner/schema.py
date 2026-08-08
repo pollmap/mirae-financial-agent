@@ -300,6 +300,27 @@ HCX_SEMANTIC_PLAN_SCHEMA: dict[str, Any] = {
             "items": {"type": "string"},
             "maxItems": 4,
         },
+        "aggregations": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "function": {
+                        "type": "string",
+                        "enum": ["count", "sum", "avg", "min", "max"],
+                    },
+                    "metric_concept": {"type": "string"},
+                    "distinct": {"type": "boolean"},
+                },
+                "required": ["function", "metric_concept", "distinct"],
+            },
+        },
+        "group_by_concepts": {
+            "type": "array",
+            "maxItems": 2,
+            "items": {"type": "string", "enum": ["scope", "internal_type"]},
+        },
         "filters": {
             "type": "array",
             "maxItems": 8,
@@ -330,6 +351,8 @@ HCX_SEMANTIC_PLAN_SCHEMA: dict[str, Any] = {
         "intent",
         "scope_concepts",
         "metric_concepts",
+        "aggregations",
+        "group_by_concepts",
         "filters",
         "sort_direction",
         "top_n",
@@ -346,9 +369,14 @@ metric_concepts에는 개념 이름만 사용한다: return_1d/1w/1m/3m/6m/1y/yt
 expense_ratio(보수), aum(순자산), net_assets, nav, close_price(종가), volume_1d(거래량),
 coupon_rate(표면금리), buy_yield, credit_rating(신용등급), risk_grade_metric(위험등급),
 maturity_date(만기), duration, issue_amount, evaluation_price, buyable_quantity.
+aggregate 의도에서는 aggregations에 count/sum/avg/min/max를 넣는다. 단순 상품 수 count는
+metric_concept를 빈 문자열로 두고 distinct=true를 사용한다. 지표 집계는 metric_concept에
+위 개념 이름을 넣으며, sum/avg/min/max에는 반드시 지표 개념이 있어야 한다.
+상품군별 상품 수는 group_by_concepts=["scope"], ETF/ETN 유형별 수는 ["internal_type"]이다.
 filters의 concept은 asset_type(자산유형)/region(투자지역)/risk_grade(위험등급)/
 internal_type(ETF·ETN)/manager(운용사)/issuer(발행기관)/sale_status/public_private/
-pension_eligible 중 하나이고 value_text는 사용자의 표현 그대로 둔다.
+pension_eligible/benchmark(벤치마크)/strategy(운용전략) 중 하나이고 value_text는
+사용자의 표현 그대로 둔다. benchmark와 strategy의 주제 검색은 contains를 사용한다.
 entities에는 상품코드·ISIN·티커·정확한 상품명만 원문 그대로 넣는다.
 물리 컬럼명, SQL, 수치 계산, 데이터에 없는 값 생성은 금지한다.
 결과를 바꾸는 조건이 정말 불명확할 때만 needs_clarification=true로 두고

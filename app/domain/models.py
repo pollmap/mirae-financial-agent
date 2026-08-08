@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any, Literal
 
@@ -267,6 +268,25 @@ class CalculationEvidence(StrictModel):
     tie_breakers: list[str] = Field(default_factory=list, max_length=10)
 
 
+class RetrievalTrace(StrictModel):
+    """Bounded, non-sensitive metadata for one retrieval channel decision."""
+
+    channel: Literal["sql", "exact_alias", "graph", "lexical", "vector"]
+    status: Literal["used", "validated", "fallback", "unavailable", "skipped"]
+    reason: str = Field(min_length=1, max_length=300)
+    scope: Scope | None = None
+    candidate_count: int = Field(default=0, ge=0)
+    latency_ms: float = Field(default=0.0, ge=0, le=60_000)
+    observed_at_utc: str = Field(
+        default_factory=lambda: datetime.now(UTC).isoformat(),
+        pattern=r"^\d{4}-\d{2}-\d{2}T.*(?:Z|\+00:00)$",
+        max_length=40,
+    )
+    data_hash: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    fallback_reason: str | None = Field(default=None, max_length=300)
+    evidence_refs: list[str] = Field(default_factory=list, max_length=8)
+
+
 class EvidenceBundle(StrictModel):
     version: Literal["1.1"] = "1.1"
     execution_id: str = Field(min_length=1, max_length=100)
@@ -280,6 +300,7 @@ class EvidenceBundle(StrictModel):
     calculation: CalculationEvidence | None = None
     aggregates: list[AggregateEvidence] = Field(default_factory=list, max_length=100)
     items: list[ProductEvidence] = Field(default_factory=list, max_length=50)
+    retrieval_trace: list[RetrievalTrace] = Field(default_factory=list, max_length=24)
     limitations: list[str] = Field(default_factory=list, max_length=30)
 
 
