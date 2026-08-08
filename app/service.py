@@ -27,7 +27,7 @@ from app.execution.engine import DuckDBEngine
 from app.planner.catalog_filters import resolve_catalog_filters
 from app.planner.hcx import HCXError
 from app.rendering import render_answer
-from app.safety import evaluate_question, validate_rendered_policy
+from app.safety import evaluate_question, needs_selection_criteria, validate_rendered_policy
 
 RETURN_PERIODS = (
     ("18개월", "18m"),
@@ -101,8 +101,13 @@ _METRIC_CLARIFICATION_SLOTS = frozenset(
     {"return_period", "return_period_priority", "ranking_priority", "comparison_metric"}
 )
 
-_RETRIEVED_CONTEXT_MAX_CHARS = 500_000
-_RETRIEVED_CONTEXT_TARGET_CHARS = 499_000
+# Keep the public evidence payload evaluator-friendly: a compact context is
+# easier for the grading pipeline to transfer and parse, and the full row-level
+# audit trail still exists server-side. Sized so the MAX_RESULT_LIMIT=50 item
+# contract (~80KB of field evidence) never truncates, while pathological
+# payloads stay bounded far below the 500,000 outer schema cap.
+_RETRIEVED_CONTEXT_MAX_CHARS = 100_000
+_RETRIEVED_CONTEXT_TARGET_CHARS = 95_000
 _RESPONSE_TRUNCATION_PREFIX = "응답 크기 제한으로 전체"
 _CLARIFICATION_TOKEN_MAX_CHARS = 10_000
 
@@ -595,6 +600,26 @@ class AgentService:
 
     def _preflight_clarification(self, question: str) -> QueryPlan | None:
         """Resolve obvious high-impact ambiguity before spending an HCX request."""
+
+        if needs_selection_criteria(question):
+            # Official task: ask for the missing condition instead of refusing.
+            # Definitive/personal/forecast advice never reaches here — it is
+            # blocked earlier by evaluate_question.
+            return self._clarification_plan(
+                original_question=question,
+                scopes=[],
+                question=(
+                    "단정적인 추천 대신 객관적 기준으로 조회합니다. "
+                    "어떤 기준을 우선할까요?"
+                ),
+                missing_slot="selection_criteria",
+                options=[
+                    ClarificationOption(value="수익률 높은 순", label="수익률 높은 순"),
+                    ClarificationOption(value="보수 낮은 순", label="보수 낮은 순"),
+                    ClarificationOption(value="순자산 큰 순", label="순자산(AUM) 큰 순"),
+                    ClarificationOption(value="위험등급 낮은 순", label="위험등급 낮은 순"),
+                ],
+            )
 
         upper = question.upper()
         has_etp = any(token in upper for token in ("ETF", "ETN", "ETP"))

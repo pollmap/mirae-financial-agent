@@ -103,18 +103,7 @@ def evaluate_question(question: str) -> SafetyDecision:
             "UNAVAILABLE",
             "제공된 데이터는 2026-07-11 스냅샷이므로 실시간 시세나 실시간 순위를 확인할 수 없습니다.",
         )
-    unsafe_selection = bool(_GENERIC_SELECTION.search(normalized)) and not bool(
-        _OBJECTIVE_SCREENING.search(normalized)
-    )
-    subjective_best = bool(_SUBJECTIVE_BEST.search(normalized)) and not bool(
-        _OBJECTIVE_BEST.search(normalized)
-    )
-    if (
-        _FORECAST.search(normalized)
-        or _HARD_ADVICE.search(normalized)
-        or subjective_best
-        or unsafe_selection
-    ):
+    if _FORECAST.search(normalized) or _HARD_ADVICE.search(normalized):
         return SafetyDecision(
             True,
             "FORECAST_OR_DEFINITIVE_RECOMMENDATION",
@@ -122,6 +111,27 @@ def evaluate_question(question: str) -> SafetyDecision:
             "미래 수익을 보장·예측하거나 특정 상품 매수를 단정할 수 없습니다. 확인 가능한 조건별 상품 정보와 비교는 제공할 수 있습니다.",
         )
     return SafetyDecision(blocked=False)
+
+
+def needs_selection_criteria(question: str) -> bool:
+    """Generic pick/best request without an objective basis.
+
+    The official task requires asking for missing conditions instead of
+    refusing, so these flow to a criteria clarification rather than a
+    safety block. Definitive/personal/forecast advice stays blocked in
+    ``evaluate_question`` and never reaches this relaxed path.
+    """
+
+    normalized = " ".join(question.split())
+    if _FORECAST.search(normalized) or _HARD_ADVICE.search(normalized):
+        return False
+    unsafe_selection = bool(_GENERIC_SELECTION.search(normalized)) and not bool(
+        _OBJECTIVE_SCREENING.search(normalized)
+    )
+    subjective_best = bool(_SUBJECTIVE_BEST.search(normalized)) and not bool(
+        _OBJECTIVE_BEST.search(normalized)
+    )
+    return unsafe_selection or subjective_best
 
 
 def validate_rendered_answer(

@@ -216,6 +216,18 @@ def render_answer(plan: QueryPlan, evidence: EvidenceBundle) -> str:
         if plan.intent in {"lookup", "explain"}:
             for item in evidence.items:
                 details = []
+                # The same source column means the asset manager for an ETF but
+                # the issuing securities company for an ETN, so the label must
+                # follow the product type instead of a fixed dictionary entry.
+                internal_type = next(
+                    (
+                        str(field.normalized_value)
+                        for field in item.fields
+                        if field.metric_id == "product.internal_type"
+                        and field.normalized_value is not None
+                    ),
+                    None,
+                )
                 for field in item.fields:
                     if field.metric_id in {
                         "product.id",
@@ -238,6 +250,8 @@ def render_answer(plan: QueryPlan, evidence: EvidenceBundle) -> str:
                         "product.strategy",
                     }:
                         label = _CATALOG_LABELS.get(field.metric_id, field.metric_id)
+                        if field.metric_id == "product.manager" and internal_type == "ETN":
+                            label = "발행사"
                         details.append(
                             f"{label}[{field.source_field}]="
                             f"{_format_value(field.normalized_value)}"

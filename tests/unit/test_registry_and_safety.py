@@ -6,7 +6,7 @@ import pytest
 
 from app.domain.models import QueryPlan
 from app.execution.registry import MetricRegistry, canonicalize_numeric_operand
-from app.safety import evaluate_question
+from app.safety import evaluate_question, needs_selection_criteria
 
 
 def test_metric_registry_blocks_absent_and_uncertain_metrics() -> None:
@@ -537,7 +537,6 @@ def test_safety_blocks_korean_forecast_and_recommendation_variants() -> None:
     questions = [
         "2027년에 가장 많이 오를 국내 ETF 3개를 추천해줘",
         "올해 말 상승할 채권을 알려줘",
-        "가장 좋은 국내 ETF 하나 추천해줘",
         "향후 유망한 펀드를 골라 줘",
         "1년 뒤 가장 오를 ETF를 예상해줘",
         "6개월 후 수익이 날 펀드를 알려줘",
@@ -546,6 +545,35 @@ def test_safety_blocks_korean_forecast_and_recommendation_variants() -> None:
         decision = evaluate_question(question)
         assert decision.blocked is True
         assert decision.reason_code == "FORECAST_OR_DEFINITIVE_RECOMMENDATION"
+
+
+def test_generic_recommendation_without_criteria_asks_instead_of_blocking() -> None:
+    # Official task: missing conditions get a clarification, not a refusal.
+    asks = [
+        "가장 좋은 국내 ETF 하나 추천해줘",
+        "가장 좋은 ETF 하나 알려줘",
+        "펀드 하나 골라줘",
+        "ETF 추천해줘",
+    ]
+    for question in asks:
+        assert evaluate_question(question).blocked is False, question
+        assert needs_selection_criteria(question) is True, question
+    # Objective criteria present → no criteria question needed.
+    objective = [
+        "1년 수익률 높은 ETF 3개 골라줘",
+        "거래량 많은 해외 ETF 3개 추천해줘",
+    ]
+    for question in objective:
+        assert needs_selection_criteria(question) is False, question
+    # Definitive/personal/forecast advice must never reach the relaxed path.
+    still_blocked = [
+        "향후 유망한 펀드를 골라 줘",
+        "나에게 맞는 ETF를 골라줘",
+        "무조건 오를 상품 추천해줘",
+    ]
+    for question in still_blocked:
+        assert needs_selection_criteria(question) is False, question
+        assert evaluate_question(question).blocked is True, question
 
 
 def test_safety_blocks_latest_snapshot_and_missing_value_spelling_variants() -> None:
@@ -580,13 +608,12 @@ def test_safety_allows_objective_candidate_selection_without_buy_advice() -> Non
     assert all(evaluate_question(question).blocked is False for question in questions)
 
 
-def test_safety_blocks_personal_suitability_buy_guarantee_and_subjective_best() -> None:
+def test_safety_blocks_personal_suitability_buy_guarantee_and_hard_advice() -> None:
     questions = [
         "나에게 맞는 ETF를 골라줘",
         "내 상황에 적합한 펀드를 추천해줘",
         "내 투자 성향에 맞는 ETF를 추천해줘",
         "개인 맞춤 상품을 선정해줘",
-        "가장 좋은 ETF 하나 알려줘",
         "유망한 펀드를 골라줘",
         "이 채권을 사야 해?",
         "이 ETF 사도 돼?",

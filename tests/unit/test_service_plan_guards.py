@@ -585,10 +585,10 @@ def test_large_evidence_and_rendered_answer_are_deterministically_bounded() -> N
     bounded = service._bounded_response_evidence(raw)
     bounded_context = bounded.model_dump_json(exclude_none=False)
 
-    assert len(raw_context) > 500_000
+    assert len(raw_context) > 100_000
     assert len(raw_answer) <= 30_000
     assert "응답 길이 제한으로 이후 항목을 생략" in raw_answer
-    assert len(bounded_context) <= 500_000
+    assert len(bounded_context) <= 100_000
     assert 0 < len(bounded.items) < len(raw.items)
     assert bounded.result_count == len(bounded.items)
     assert bounded.answerability.value == "PARTIAL_WITH_COVERAGE"
