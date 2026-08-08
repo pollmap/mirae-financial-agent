@@ -21,6 +21,14 @@ _US_REGION_VALUE = {
     "domestic_etp": "미국",
     "overseas_etp": "United States of America",
 }
+# Verified literal serving values (product_catalog.region), not a translation
+# guess: domestic_etp/fund store the Korean label directly, overseas_etp
+# stores the English label used by the source workbook.
+_GLOBAL_REGION_VALUE = {
+    "domestic_etp": "글로벌",
+    "overseas_etp": "Global",
+    "fund": "글로벌",
+}
 _DOMESTIC_RISK_GRADE = {
     "1": "매우높은위험(1등급)",
     "2": "높은위험(2등급)",
@@ -35,6 +43,10 @@ _BOND_FUND_PATTERN = re.compile(r"(?:채권형\s*펀드|채권\s*펀드)")
 _US_INVESTMENT_PATTERN = re.compile(
     r"(?:미국(?:\s*(?:주식|채권|시장))?\s*(?:에\s*)?투자|"
     r"투자\s*지역(?:이|은|는|:)?\s*미국)"
+)
+_GLOBAL_INVESTMENT_PATTERN = re.compile(
+    r"(?:글로벌(?:\s*(?:주식|채권|시장))?\s*(?:에\s*)?투자|"
+    r"투자\s*지역(?:이|은|는|:)?\s*글로벌)"
 )
 _PENSION_PATTERN = re.compile(r"연금\s*(?:투자|거래|편입)?\s*(?:가능|대상|적격)")
 _RISK_GRADE_PATTERN = re.compile(r"위험\s*등급(?:이|은|는|:)?\s*([1-6])\s*등급")
@@ -52,9 +64,12 @@ def resolve_catalog_filters(question: str, scopes: list[str]) -> CatalogFilterRe
     asks_equity = bool(_EQUITY_PATTERN.search(question))
     asks_bond_fund = bool(_BOND_FUND_PATTERN.search(question))
     asks_us_region = bool(_US_INVESTMENT_PATTERN.search(question))
+    asks_global_region = bool(_GLOBAL_INVESTMENT_PATTERN.search(question))
     asks_pension = bool(_PENSION_PATTERN.search(question))
     risk_match = _RISK_GRADE_PATTERN.search(question)
-    if not any((asks_equity, asks_bond_fund, asks_us_region, asks_pension, risk_match)):
+    if not any(
+        (asks_equity, asks_bond_fund, asks_us_region, asks_global_region, asks_pension, risk_match)
+    ):
         return CatalogFilterResolution()
     if len(scopes) != 1:
         return CatalogFilterResolution(reason_code="CATALOG_VALUE_SCOPE_AMBIGUOUS")
@@ -72,6 +87,11 @@ def resolve_catalog_filters(question: str, scopes: list[str]) -> CatalogFilterRe
         conditions.append(Condition(field="product.asset_type", op="eq", value="채권형"))
     if asks_us_region:
         value = _US_REGION_VALUE.get(scope)
+        if value is None:
+            return CatalogFilterResolution(reason_code="CATALOG_VALUE_UNAVAILABLE")
+        conditions.append(Condition(field="product.region", op="eq", value=value))
+    if asks_global_region:
+        value = _GLOBAL_REGION_VALUE.get(scope)
         if value is None:
             return CatalogFilterResolution(reason_code="CATALOG_VALUE_UNAVAILABLE")
         conditions.append(Condition(field="product.region", op="eq", value=value))

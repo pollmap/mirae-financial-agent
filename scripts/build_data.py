@@ -34,11 +34,22 @@ def main() -> None:
         action="store_true",
         help="Skip Parquet export and build only DuckDB",
     )
+    parser.add_argument(
+        "--vector-enabled",
+        action="store_true",
+        help=(
+            "Load the committed embeddings cache "
+            "(artifacts/embeddings/embeddings_cache.parquet) into the vector "
+            "index. Requires the cache to already exist; fails the build if "
+            "it is missing."
+        ),
+    )
     args = parser.parse_args()
     result = build_database(
         package_root=PACKAGE_ROOT,
         output_database=args.output,
         parquet_dir=None if args.no_parquet else args.parquet_dir,
+        vector_enabled=args.vector_enabled,
     )
     print(json.dumps({"status": "ok", **result.as_dict()}, ensure_ascii=False, indent=2))
 

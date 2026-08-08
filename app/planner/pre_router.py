@@ -46,10 +46,18 @@ _PREFIX_CODE = re.compile(r"(?:KR|XS|US)[A-Z0-9]{8,12}")
 _TICKER_CONTEXT_WORDS = ("종목", "코드", "티커")
 
 # The question must read as a plain detail request ...
-_LOOKUP_HINT = re.compile(r"상세|정보|알려\s*[주줘]|뭐야|설명")
-# ... and must not carry rank / aggregate / compare vocabulary.  Over-blocking
-# is fine (the full planner runs); under-blocking is not.
-_RANK_AGGREGATE = re.compile(r"높은|낮은|순|개수|몇\s*개|평균|비교|상위|하위|가장")
+# NOTE: "설명" is deliberately excluded even though it reads like a lookup.
+# `deterministic.py` treats any "설명" question as `intent=explain`, a
+# distinct contract (raw strategy/benchmark fields, target-required
+# clarification) that this router's plain `intent=lookup` output does not
+# reproduce.  Routing it here would silently substitute the wrong shape.
+_LOOKUP_HINT = re.compile(r"상세|정보|알려\s*[주줘]|뭐야")
+# ... and must not carry rank / aggregate / compare / explain vocabulary.
+# Over-blocking is fine (the full planner runs); under-blocking is not.
+_RANK_AGGREGATE = re.compile(
+    r"높은|낮은|순|개수|몇\s*개|평균|비교|상위|하위|가장|"
+    r"설명|운용전략|투자전략|전략|벤치마크|기초지수"
+)
 
 
 def _claim(found: list[tuple[int, int, str]], start: int, end: int, code: str) -> None:
@@ -77,16 +85,14 @@ def _extract_identifiers(question: str) -> list[str]:
         code = match.group(0)
         if _DOMESTIC_ETP_CODE.fullmatch(code):
             pass  # A/Q + 6 digits is a code by convention; no context needed.
-        elif _PREFIX_CODE.fullmatch(code):
+        elif _PREFIX_CODE.fullmatch(code) and not has_code_context:
             # Non-ISIN-shaped KR/XS/US strings (ISIN-shaped ones were claimed
             # above) also match currency-amount runs such as "USD1000000",
             # so demand explicit 코드 context before trusting them.
-            if not has_code_context:
-                continue
-        elif "." in code:
+            continue
+        elif "." in code and not has_ticker_context:
             # Dot tickers ("BRK.B") collide with abbreviations ("U.S.").
-            if not has_ticker_context:
-                continue
+            continue
         # else: the `티커 <SYMBOL>` branch carries its own context.
         _claim(found, match.start(), match.end(), code)
 

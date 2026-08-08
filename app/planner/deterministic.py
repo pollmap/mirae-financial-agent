@@ -385,6 +385,7 @@ class DeterministicPlanner:
                     "가장 낮은",
                     "큰 순",
                     "큰 ",
+                    "작은",
                     "많은",
                     "적은",
                     "좋은",
@@ -430,7 +431,8 @@ class DeterministicPlanner:
             if explicit_priority:
                 multi_metrics.sort(key=lambda item: item[2] != explicit_priority)
 
-        codes = _CODES.findall(question)
+        code_matches = list(_CODES.finditer(question))
+        codes = [match.group(0) for match in code_matches]
         if scopes == ["overseas_etp"]:
             reserved = {
                 "ETF",
@@ -444,13 +446,19 @@ class DeterministicPlanner:
                 "YTD",
                 "NYSE",
             }
-            supplemental_codes = [
-                token
-                for token in re.findall(
-                    r"(?<![A-Za-z0-9])[A-Z]{1,6}(?![A-Za-z0-9])", question
-                )
-                if token not in reserved and token not in codes
-            ]
+            claimed_spans = [match.span() for match in code_matches]
+            supplemental_codes = []
+            for match in re.finditer(r"(?<![A-Za-z0-9])[A-Z]{1,6}(?![A-Za-z0-9])", question):
+                token = match.group(0)
+                if token in reserved or token in codes:
+                    continue
+                # Skip fragments of an already-claimed code (e.g. the bare
+                # "AAAA" and "K" this pattern would otherwise also find
+                # inside a dot-ticker like "AAAA.K" already matched above).
+                start, end = match.span()
+                if any(start < c_end and c_start < end for c_start, c_end in claimed_spans):
+                    continue
+                supplemental_codes.append(token)
             codes.extend(supplemental_codes[: 10 - len(codes)])
         entities: list[Entity] = []
         for code in codes[:10]:
@@ -586,9 +594,10 @@ class DeterministicPlanner:
             filters.append(Condition(field="bond.exchange", op="eq", value="장내"))
         if "장외" in question:
             filters.append(Condition(field="bond.exchange", op="eq", value="장외"))
-        if "ETF" in question and "ETF와 ETN" not in question and "ETF·ETN" not in question:
+        _combined_etf_etn = ("ETF와 ETN", "ETF·ETN", "ETF/ETN", "ETN와 ETF", "ETN·ETF")
+        if "ETF" in question and not any(token in question for token in _combined_etf_etn):
             filters.append(Condition(field="product.internal_type", op="eq", value="ETF"))
-        if "ETN" in question and "ETF와 ETN" not in question:
+        if "ETN" in question and not any(token in question for token in _combined_etf_etn):
             filters.append(Condition(field="product.internal_type", op="eq", value="ETN"))
         if "거래통화가 USD" in question or "거래통화 USD" in question:
             filters.append(Condition(field="product.trading_currency", op="eq", value="USD"))
@@ -698,14 +707,23 @@ class DeterministicPlanner:
                 if multi_metrics
                 else requested_metrics
             )
-            sort = (
-                [
+            if len(multi_metrics) > 1:
+                # Same-scope explicit multi-metric priority: each metric
+                # keeps its own detected direction (e.g. 보수 ascending
+                # alongside 수익률 descending).
+                sort = [
                     SortItem(field=metric_id, direction=item_direction)
                     for metric_id, item_direction, _ in multi_metrics
                 ]
-                if len(multi_metrics) > 1
-                else [SortItem(field=metric or "product.id", direction=direction)]
-            )
+            elif len(metrics) > 1:
+                # Cross-scope: `_requested_metrics` can return one metric per
+                # scope (e.g. bond.coupon_rate + fund.return_1y for a
+                # side-by-side rank). QueryPlan requires exactly one sort
+                # item per metric, mirrored in the same order, regardless of
+                # scope count.
+                sort = [SortItem(field=metric_id, direction=direction) for metric_id in metrics]
+            else:
+                sort = [SortItem(field=metric or "product.id", direction=direction)]
             return QueryPlan(
                 intent="rank",
                 scopes=scopes,

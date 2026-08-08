@@ -21,7 +21,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.execution.engine import DuckDBEngine  # noqa: E402
-from app.planner.schema import HCX_QUERY_PLAN_SCHEMA, QUERY_PLANNER_SYSTEM_PROMPT  # noqa: E402
+from app.planner.schema import (  # noqa: E402
+    HCX_QUERY_PLAN_SCHEMA,
+    HCX_SEMANTIC_PLAN_SCHEMA,
+    QUERY_PLANNER_SYSTEM_PROMPT,
+    SEMANTIC_PLANNER_SYSTEM_PROMPT,
+)
 
 ZERO_40 = "0" * 40
 ZERO_64 = "0" * 64
@@ -252,9 +257,24 @@ def main() -> None:
             ROOT / "contracts" / "evidence-bundle-v1.schema.json"
         ),
         "etl_source_sha256": sha256_files(
-            [ROOT / "etl" / "build.py", ROOT / "etl" / "source.py"]
+            [
+                ROOT / "etl" / "build.py",
+                ROOT / "etl" / "source.py",
+                ROOT / "etl" / "kg.py",
+                ROOT / "etl" / "lexical.py",
+                ROOT / "etl" / "vectors.py",
+            ]
         ),
         "application_source_sha256": sha256_files(list((ROOT / "app").rglob("*.py"))),
+        "semantic_registry_sha256": sha256_files(
+            sorted((ROOT / "registry" / "semantic").glob("*.csv"))
+        ),
+        "hcx_semantic_schema_sha256": sha256_text(
+            json.dumps(
+                HCX_SEMANTIC_PLAN_SCHEMA, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            )
+        ),
+        "semantic_planner_prompt_sha256": sha256_text(SEMANTIC_PLANNER_SYSTEM_PROMPT),
         "runtime_lock_sha256": sha256(ROOT / "requirements-runtime.lock"),
         "build_lock_sha256": sha256(ROOT / "requirements-build.lock"),
         "renderer_sha256": sha256(ROOT / "app" / "rendering.py"),

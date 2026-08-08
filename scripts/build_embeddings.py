@@ -311,7 +311,9 @@ def main() -> None:
 
     api_key = os.getenv("CLOVA_STUDIO_API_KEY")
     if not api_key:
-        raise SystemExit("CLOVA_STUDIO_API_KEY 환경변수가 필요합니다 (키 값은 로그에 남기지 않습니다).")
+        raise SystemExit(
+            "CLOVA_STUDIO_API_KEY 환경변수가 필요합니다 (키 값은 로그에 남기지 않습니다)."
+        )
     url = os.getenv("CLOVA_EMBEDDING_URL", DEFAULT_EMBEDDING_URL)
     model_id = os.getenv("CLOVA_EMBEDDING_MODEL_ID", DEFAULT_MODEL_ID)
 

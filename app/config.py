@@ -30,6 +30,12 @@ class Settings:
     # "one" = full physical QueryPlan from HCX; "two" = HCX emits concepts
     # only and the server-side grounder maps them to physical fields.
     planner_stage: str = "one"
+    # Vector retrieval requires a committed embeddings cache
+    # (artifacts/embeddings/embeddings_cache.parquet, built by
+    # scripts/build_embeddings.py with a real CLOVA_STUDIO_API_KEY). Off by
+    # default: the cache does not exist yet, and every retrieval path
+    # degrades to lexical/BM25 without it.
+    vector_enabled: bool = False
     hcx_model_id: str = "HCX-007"
     hcx_base_url: str = "https://clovastudio.stream.ntruss.com"
     clova_studio_api_key: str | None = None
@@ -58,6 +64,7 @@ class Settings:
             ),
             planner_mode=os.getenv("PLANNER_MODE", "deterministic").strip().lower(),
             planner_stage=os.getenv("PLANNER_STAGE", "one").strip().lower(),
+            vector_enabled=_bool_env("VECTOR_ENABLED", False),
             hcx_model_id=os.getenv("HCX_MODEL_ID", "HCX-007").strip(),
             hcx_base_url=os.getenv("HCX_BASE_URL", "https://clovastudio.stream.ntruss.com").rstrip(
                 "/"

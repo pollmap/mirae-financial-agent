@@ -1546,7 +1546,17 @@ class AgentService:
                     limitation=safety.message or "금융 안전정책상 처리할 수 없습니다.",
                 )
         else:
-            plan = self._preflight_clarification(execution_question)
+            plan = None
+            if follow_up_state is None:
+                # Exact-identifier detail questions skip the LLM entirely.
+                # Never consulted mid clarification flow: a follow-up answer
+                # must be reconciled against the signed preserved plan, not
+                # re-routed from scratch.
+                from app.planner.pre_router import pre_route
+
+                plan = pre_route(execution_question)
+            if plan is None:
+                plan = self._preflight_clarification(execution_question)
             if plan is None:
                 try:
                     plan = await self.planner.plan(execution_question)

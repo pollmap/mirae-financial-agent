@@ -107,7 +107,16 @@ def test_public_endpoint_runs_through_real_hcx_http_adapter_before_duckdb() -> N
                         "/answer",
                         params={
                             "question_id": "HCX-MOCK-E2E",
-                            "question": "채권 코드 KR101501DA16의 상세 정보를 알려줘.",
+                            # No exact identifier in the question text: the
+                            # deterministic pre-router (app/planner/pre_router.py)
+                            # would otherwise resolve an ISIN-shaped code
+                            # straight to a lookup plan and this request would
+                            # never reach the HCX adapter under test.  The mock
+                            # server below returns the canned `plan` (entity
+                            # code KR101501DA16) regardless of the question
+                            # text, so this still exercises the same execution
+                            # path end to end.
+                            "question": "이 국공채 상품의 발행기관과 위험등급을 알려줘.",
                         },
                     )
             finally:

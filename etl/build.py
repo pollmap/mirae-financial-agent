@@ -20,7 +20,7 @@ import os
 import re
 import unicodedata
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -142,6 +142,9 @@ class BuildResult:
     serving_fund_attribute_count: int
     serving_metric_count: int
     parquet_dir: Path | None
+    kg_counts: dict[str, int] = field(default_factory=dict)
+    lexical_counts: dict[str, int] = field(default_factory=dict)
+    vector_counts: dict[str, int] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -154,6 +157,9 @@ class BuildResult:
             "serving_fund_attribute_count": self.serving_fund_attribute_count,
             "serving_metric_count": self.serving_metric_count,
             "parquet_dir": str(self.parquet_dir) if self.parquet_dir else None,
+            "kg_counts": self.kg_counts,
+            "lexical_counts": self.lexical_counts,
+            "vector_counts": self.vector_counts,
         }
 
 
@@ -838,6 +844,8 @@ def _create_database(
     raw_frames: dict[str, pd.DataFrame],
     clean_frames: dict[str, pd.DataFrame],
     parquet_dir: Path | None,
+    *,
+    vector_enabled: bool = False,
 ) -> BuildResult:
     catalog, metrics, fund_attribute, source_locator, quarantine, reconciliation = (
         _canonical_tables(package_root, clean_frames)
@@ -946,8 +954,12 @@ def _create_database(
         )
 
         from etl.kg import build_kg
+        from etl.lexical import build_lexical
+        from etl.vectors import build_vectors
 
         kg_counts = build_kg(connection, package_root)
+        lexical_counts = build_lexical(connection)
+        vector_counts = build_vectors(connection, package_root, enabled=vector_enabled)
 
         for view_name in ("product_catalog", "product_metrics", "fund_attribute", "quarantine"):
             connection.execute(f"CREATE VIEW {view_name} AS SELECT * FROM serving.{view_name}")
@@ -982,6 +994,10 @@ def _create_database(
             raise RuntimeError("Quarantine reconciliation failed")
         if min(kg_counts.values()) <= 0:
             raise RuntimeError(f"KG reconciliation failed: {kg_counts}")
+        if min(lexical_counts.values()) <= 0:
+            raise RuntimeError(f"Lexical index reconciliation failed: {lexical_counts}")
+        if vector_enabled and vector_counts.get("vec_embeddings", 0) <= 0:
+            raise RuntimeError(f"Vector index reconciliation failed: {vector_counts}")
 
         if parquet_dir is not None:
             parquet_dir.mkdir(parents=True, exist_ok=True)
@@ -1016,6 +1032,9 @@ def _create_database(
                 "SELECT COUNT(*) FROM serving.product_metrics"
             ).fetchone()[0],
             parquet_dir=parquet_dir,
+            kg_counts=kg_counts,
+            lexical_counts=lexical_counts,
+            vector_counts=vector_counts,
         )
         connection.execute("CHECKPOINT")
         return result
@@ -1027,6 +1046,8 @@ def build_database(
     package_root: Path,
     output_database: Path,
     parquet_dir: Path | None = None,
+    *,
+    vector_enabled: bool = False,
 ) -> BuildResult:
     """Verify inputs and atomically build the full DuckDB serving database."""
 
@@ -1045,6 +1066,7 @@ def build_database(
             raw_frames,
             clean_frames,
             parquet_dir.resolve() if parquet_dir else None,
+            vector_enabled=vector_enabled,
         )
         os.replace(temporary, output)
         return BuildResult(
@@ -1056,6 +1078,9 @@ def build_database(
             quarantine_count=interim.quarantine_count,
             serving_fund_attribute_count=interim.serving_fund_attribute_count,
             serving_metric_count=interim.serving_metric_count,
+            kg_counts=interim.kg_counts,
+            lexical_counts=interim.lexical_counts,
+            vector_counts=interim.vector_counts,
             parquet_dir=interim.parquet_dir,
         )
     except Exception:

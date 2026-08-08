@@ -1,0 +1,8 @@
+{
+  "database_path": "data\\serving\\mirae_agent.duckdb",
+  "groups_total": 137,
+  "groups_evaluated": 137,
+  "groups_invariant": 137,
+  "invariance_rate": 1.0,
+  "violations": []
+}

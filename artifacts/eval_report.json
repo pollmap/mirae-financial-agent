@@ -1,0 +1,52 @@
+{
+  "database_path": "data\\serving\\mirae_agent.duckdb",
+  "question_total": 640,
+  "accuracy": 1.0,
+  "by_kind": {
+    "ambiguous": {
+      "total": 20,
+      "passed": 20,
+      "accuracy": 1.0
+    },
+    "compare": {
+      "total": 40,
+      "passed": 40,
+      "accuracy": 1.0
+    },
+    "count_aggregate": {
+      "total": 83,
+      "passed": 83,
+      "accuracy": 1.0
+    },
+    "cross_scope": {
+      "total": 69,
+      "passed": 69,
+      "accuracy": 1.0
+    },
+    "filter_search": {
+      "total": 114,
+      "passed": 114,
+      "accuracy": 1.0
+    },
+    "lookup_code": {
+      "total": 60,
+      "passed": 60,
+      "accuracy": 1.0
+    },
+    "rank_single": {
+      "total": 234,
+      "passed": 234,
+      "accuracy": 1.0
+    },
+    "safety_block": {
+      "total": 20,
+      "passed": 20,
+      "accuracy": 1.0
+    }
+  },
+  "rank_position_match_mean": 1.0,
+  "cross_scope_refusal_rate": 0.0,
+  "disclosure_rate": 0.9855,
+  "failure_count": 0,
+  "failures": []
+}
