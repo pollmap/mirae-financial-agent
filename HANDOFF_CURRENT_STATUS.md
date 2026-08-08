@@ -9,13 +9,28 @@
 단일 진입점입니다. **"왜 지금 이 모습인지"(설계 결정의 이유, 사용자의 협상
 불가 원칙, 기각된 대안)는 이 파일이 아니라
 `docs/16_MASTER_PROJECT_NARRATIVE.md`가 담당합니다 — 다른 코드 에이전트
-계정이 처음 이어받는다면 그 문서부터 읽으세요.** 내용이 다른 문서와
-상충하면 이 파일 → `docs/16_MASTER_PROJECT_NARRATIVE.md` →
+계정이 처음 이어받는다면 **`docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`
+부터**, 이 파일과 16을 차례로 읽으세요.** 내용이 다른 문서와 상충하면
+`docs/17` → 이 파일 → `docs/16_MASTER_PROJECT_NARRATIVE.md` →
 `docs/15_REBASELINE_VALIDATION_REPORT.md` → `docs/14_BRIEFING_REBASELINE_PLAN.md`
-순으로 최신입니다(이 파일이 실시간 상태, 16은 서사이므로 상태 판단은 항상
-이 파일 기준). `00_START_HERE.md`, `docs/11_IMPLEMENTATION_HANDOFF.md`,
+순으로 최신입니다(`docs/17`은 공식 기준/적대적 검증, 이 파일은 실시간 상태,
+16은 서사). `00_START_HERE.md`, `docs/11_IMPLEMENTATION_HANDOFF.md`,
 `artifacts/windows_docker_verification_20260803.md`는 8/3-8/4 시점(설명회 이전
 "prebrief" 상태, 태그 `prebrief-v1`)에서 멈춘 배경 문서입니다.
+
+## 2026-08-09 최신 재검증 부록 — 현재 상태는 이 절을 우선
+
+- 공식 PDF·FAQ·녹취의 권위를 재분리한 최신 기준은 `docs/17`이다. PDF가 요구한
+  정보부족 역질문은 실제 API/화면에 있고, 주입·임의 SQL·미래예측은 안전 차단한다.
+- source/ETL/KG/lexical을 새로 만들고 전체 pytest **272/272**, Ruff PASS,
+  compliance **91 files/0**, eval **640/640**, metamorphic **137/137**, holdout
+  **100/100**, Graph **120/120**, BM25 **20/20**, A–E PASS를 재실행했다.
+- 20은 주최 측 평가 문항 수가 아니라 one/two planner parity smoke다. production은
+  그 40-call report와 새 100-case HCX two-stage E2E report를 모두 요구한다. 둘 다
+  key 대기이며 실제 HCX 정확도/운영 완료라고 주장하면 안 된다.
+- fresh Docker build는 Docker Desktop builder의 `auth.docker.io` DNS 실패로 두 번
+  중단됐다. 기존 과거 image 성공을 재사용하지 않았으며, DNS 복구 뒤 fresh build/run/
+  restart smoke가 남아 있다.
 
 ## v3 완료 상태 — 이 절이 아래의 과거 미연결 서술을 대체함
 

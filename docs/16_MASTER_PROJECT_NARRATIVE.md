@@ -8,11 +8,13 @@
 겉보기에 합리적인 "개선"이 실제로는 사용자가 이미 명시적으로 거부한 방향으로
 되돌아가는 실수를 할 수 있다.
 
-**읽는 순서**: 이 문서 → `HANDOFF_CURRENT_STATUS.md`(현재 상태 압축본) →
-`docs/15_REBASELINE_VALIDATION_REPORT.md`(실측 수치와 3번의 사후 검증
-전체 경위) → `docs/14_BRIEFING_REBASELINE_PLAN.md`(원 설계안+주차별 진행
-기록). 넷 중 내용이 상충하면 이 문서가 아니라 **`HANDOFF_CURRENT_STATUS.md`가
-최신**이다(이 문서는 서사이지 실시간으로 갱신되는 상태판이 아니다) — 단,
+**읽는 순서**: `docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`
+(공식 기준·적대적 검증의 최신 상태) → `HANDOFF_CURRENT_STATUS.md`(현재 상태
+압축본) → 이 문서 → `docs/15_REBASELINE_VALIDATION_REPORT.md`(실측 수치와
+3번의 사후 검증 전체 경위) → `docs/14_BRIEFING_REBASELINE_PLAN.md`(원 설계안+
+주차별 진행 기록). 다섯 문서 중 내용이 상충하면 이 문서가 아니라
+**`docs/17`과 `HANDOFF_CURRENT_STATUS.md`가 최신**이다(이 문서는 서사지
+실시간으로 갱신되는 상태판이 아니다) — 단,
 "왜 이렇게 결정했는가"는 이 문서에만 있다.
 
 ## 0. v3 완성 부록 — 2026-08-08 `codex/federated-completion-v3`

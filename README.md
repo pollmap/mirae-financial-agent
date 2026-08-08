@@ -1,16 +1,19 @@
 # 미래에셋증권 금융상품 Agent
 
-> **2026-08-08 v3 최신 상태**: 기준 브랜치는 `codex/federated-completion-v3`다.
+> **2026-08-09 최신 기준**: 기준 브랜치는 `codex/federated-completion-v3`다.
 > 2단계 HCX 개념 플래너가 기본이며, 1단계는 명시적 롤백 전용이다. Exact/Alias,
 > SQL, Graph 1-hop 관계, BM25, 선택적 1,024차원 Vector/RRF가 실제 실행 경로에서
 > 하나의 `RetrievalPlan`으로 연결된다. 아래의 과거 수치·미연결 설명과 상충하면
+> `docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`,
 > `HANDOFF_CURRENT_STATUS.md`의 v3 절과 `docs/16_MASTER_PROJECT_NARRATIVE.md`의
 > v3 부록을 우선한다.
-> 최신 자동 검증은 pytest 262/262, eval 640/640, holdout 100/100,
-> Federated Graph 120/120, BM25 20/20, 교차질의 거부 0%다.
+> 2026-08-09 재실행 기준 최신 자동 검증은 pytest 272/272, eval 640/640,
+> metamorphic 137/137, holdout 100/100, Federated Graph 120/120, BM25 20/20,
+> 교차질의 거부 0%, runtime compliance 91 files/0 findings다. fresh Docker build는
+> Docker Desktop builder DNS 장애로 재실행 대기이며 통과로 표시하지 않는다.
 
 > **다른 AI 에이전트/세션이 이어받는 경우**: 가장 먼저
-> [`HANDOFF_CURRENT_STATUS.md`](HANDOFF_CURRENT_STATUS.md)를 읽으세요.
+> [`docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`](docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md)를 읽으세요.
 > 지금 뭐가 완료됐고, 뭐가 안 됐고, 다음에 뭘 해야 하는지 빠짐없이 정리돼
 > 있습니다. 과거 서술은 설계 변천 기록으로 보존돼 있습니다.
 

@@ -4,8 +4,9 @@
 없는 현재 환경에서는 **live 호출 또는 공개 배포를 완료했다고 주장하지 않는다**.
 
 > **v3 운영 변경**: `PLANNER_STAGE=two`가 필수 기본값이다. production preflight는
-> 실제 HCX 20문항을 one/two 두 방식으로 실행한 40-call A/B PASS 보고서 없이는
-> 실패한다. Vector credential/cache는 선택 사항이며 없으면 Exact+SQL+Graph+BM25로
+> 실제 HCX 20문항 one/two 40-call parity 보고서와 100문항 two-stage E2E 보고서가
+> 모두 없으면 실패한다. 20과 100은 팀 내부 gate이며 공식 평가 문항 수가 아니다.
+> Vector credential/cache는 선택 사항이며 없으면 Exact+SQL+Graph+BM25로
 > 정상 동작한다.
 
 ## 1. 먼저 고정할 경계

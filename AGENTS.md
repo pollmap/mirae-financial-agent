@@ -1,13 +1,14 @@
 # Codex Project Rules - 미래에셋증권 금융상품 Agent
 
-> **Read `HANDOFF_CURRENT_STATUS.md` and `docs/16_MASTER_PROJECT_NARRATIVE.md`
+> **Read `docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`,
+> `HANDOFF_CURRENT_STATUS.md`, and `docs/16_MASTER_PROJECT_NARRATIVE.md`
 > first, before anything below.** This file predates the 2026-08-06 briefing
 > and the federated-semantic-rebaseline that followed it (branch
 > `briefing-rebaseline-v2`). Most of it is still binding project policy, but
 > §5's "do not start with ... GraphDB" line is now stale -- the project
 > *did* add a Knowledge Graph (`etl/kg.py`) once the briefing made it a
 > required tech-spec item, and §10's paths/commands predate that work too.
-> Where this file and the two documents above disagree, they are newer and
+> Where this file and the three documents above disagree, they are newer and
 > win.
 
 ## 1. Source of truth

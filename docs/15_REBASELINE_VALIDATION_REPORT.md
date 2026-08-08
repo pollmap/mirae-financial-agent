@@ -6,6 +6,12 @@
 
 ## v3 최종 검증 갱신 (`codex/federated-completion-v3`)
 
+> **2026-08-09 정정**: 이 절의 8/8 수치는 당시 증빙이다. 이후 전체 재실행의 최신
+> 수치와 Docker DNS 미통과 상태는
+> `docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md` 및
+> `HANDOFF_CURRENT_STATUS.md`의 2026-08-09 부록을 우선한다. F는 free-form composer가
+> 아니라 live HCX two-stage planner→evidence E2E gate다.
+
 원본 SHA-256 확인부터 ETL·KG·lexical을 깨끗하게 재생성했다. 결과는 raw
 145,393, logical 60,913, serving 60,903, quarantine 10, metric 1,156,332,
 KG 71,683 node/206,274 edge/249,874 alias, lexical 80,670 doc/1,288,698 term/
@@ -14,8 +20,9 @@ runtime compliance는 88 files/0 findings다.
 
 정확도는 640/640, 교차질의 거부율 0%, metamorphic 137/137이다. v3 전용으로
 고정 holdout 100/100, Graph 관계·Graph+SQL 120/120, BM25 20/20, Vector/RRF
-fixture와 KG/Vector 장애 fallback, A~E 절제실험을 통과했다. F 실제 HCX composer와
-실 Vector cache만 외부 credential 대기다. 로컬 burst는 100/100·동시10·오류0·
+fixture와 KG/Vector 장애 fallback, A~E 절제실험을 통과했다. F는 자유형 composer가
+아닌 실제 HCX two-stage planner→evidence E2E이며, 실 Vector cache와 함께 외부
+credential 대기다. 로컬 burst는 100/100·동시10·오류0·
 p95 115.89ms이고, 최초 cold 657.22ms도 별도 관찰했다.
 
 Docker는 최종 HEAD `--no-cache --pull=false` build(내부 source verify+ETL+compliance), runtime image

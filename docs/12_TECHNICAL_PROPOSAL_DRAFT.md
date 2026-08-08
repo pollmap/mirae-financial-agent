@@ -3,8 +3,10 @@
 상태: **DRAFT — 8/6 설명회 반영 federated semantic rebaseline(W1-W4)+최종 적대적
 리뷰 완료 시점 기준 재작성, 외부 release gate(실 HCX 키·public 배포·9/6 freeze)
 미완료**  
-최신 실측 수치·외부 gate 목록은 `HANDOFF_CURRENT_STATUS.md`가 항상 최신이며
-이 문서와 상충하면 그쪽을 따른다. 제출 형식·페이지 제한 확인 후 PDF로 편집
+최신 공식 기준·적대적 검증·외부 gate 목록은
+`docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`와
+`HANDOFF_CURRENT_STATUS.md`가 항상 최신이며 이 문서와 상충하면 그쪽을 따른다.
+제출 형식·페이지 제한 확인 후 PDF로 편집
 
 > **v3 반영**: 운영 기본은 HCX 개념 플랜→서버 grounding의 2단계다. 내부
 > `RetrievalPlan`이 Exact/Alias+SQL+Graph+BM25+(cache 준비 시 Vector/RRF)를
