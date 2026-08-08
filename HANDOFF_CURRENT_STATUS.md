@@ -40,8 +40,8 @@
   실제 HCX F만 credential 대기다.
 - **부하/Docker**: 로컬 warm 100요청·동시10에서 실패 0, p95 115.89ms
   (이전 131.75ms 대비 개선). ETL 직후 cold 657.22ms와 Windows Docker p95
-  491.21ms도 별도 기록해 숨기지 않는다. fresh `--no-cache` image
-  `sha256:39902a...0ae0`, smoke 15/15, restart 후 healthy를 확인했다.
+  473.98ms도 별도 기록해 숨기지 않는다. 최종 HEAD fresh `--no-cache --pull=false`
+  image `sha256:bdce35e5...68445`, smoke 15/15, restart 후 healthy를 확인했다.
 - **운영 release gate**: `deploy/live_hcx_plan_smoke.py --confirm-live-calls 40`이
   20문항을 1단계/2단계로 각각 호출하고, 질문·plan·key를 저장하지 않은 일치 보고서를
   만든다. `scripts/production_preflight.py`는 이 PASS 보고서와 `PLANNER_STAGE=two`가

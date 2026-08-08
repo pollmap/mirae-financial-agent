@@ -1,10 +1,10 @@
 {
   "release_id": "federated-completion-v3-draft",
   "release_status": "DRAFT",
-  "built_at": "2026-08-08T23:41:13+09:00",
+  "built_at": "2026-08-08T23:51:44+09:00",
   "freeze_at": "2026-09-05T00:00:00+09:00",
-  "git_sha": "762fac48802c4f071d6b88963a19ec77e08f99b3",
-  "container_image_digest": "sha256:39902aeb5213603d45ef147f3f33db9f285d7dc9d35e40ea4268a38639bc0ae0",
+  "git_sha": "e270772d8fc72230d9afa588d8e00cecb7fa3700",
+  "container_image_digest": "sha256:bdce35e5a13a0e6994c5824cf226b1564224f7c48e34c42b0d189806abd68445",
   "source_sha256": {
     "official_task_pdf": "3717441e091958b7214db710e0e4b9b8ae15ac6c205cad6e51721214798eb3de",
     "official_data_zip": "c3809aca73396f57242ded0188fa06a3d271bd4ad65010e53d5533efc7c18163"
@@ -36,7 +36,7 @@
     "passed": 262,
     "failed": 0,
     "skipped": 0,
-    "report_sha256": "e1d7b1d967337949608177e7c54d73d16e8aea899e718f74232dda4ec8c0c18e"
+    "report_sha256": "ad835114227603e9aeb7063bd28be089e1fc0befa90225b6bf0bd1a326afd14e"
   },
   "post_freeze_policy": "NO_COMMIT_PUSH_DEPLOY_OR_ARTIFACT_CHANGES"
 }

@@ -1,6 +1,6 @@
 {
   "report_version": "4.0",
-  "as_of": "2026-08-08T23:40:55+09:00",
+  "as_of": "2026-08-08T23:51:28+09:00",
   "status": "LOCAL_AND_DOCKER_PASS_EXTERNAL_LIVE_GATES_PENDING",
   "release_scope": "codex/federated-completion-v3 candidate",
   "pytest_summary": {
@@ -46,7 +46,7 @@
     "compliance": "88 files / 0 findings",
     "real_http_smoke": "15/15",
     "local_load": "100/100, concurrency 10, failures 0, p95 115.89ms",
-    "docker_image_id": "sha256:39902aeb5213603d45ef147f3f33db9f285d7dc9d35e40ea4268a38639bc0ae0",
+    "docker_image_id": "sha256:bdce35e5a13a0e6994c5824cf226b1564224f7c48e34c42b0d189806abd68445",
     "docker_no_cache_build": "PASS",
     "docker_restart_health": "PASS"
   },

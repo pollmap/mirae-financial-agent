@@ -18,10 +18,10 @@ fixture와 KG/Vector 장애 fallback, A~E 절제실험을 통과했다. F 실제
 실 Vector cache만 외부 credential 대기다. 로컬 burst는 100/100·동시10·오류0·
 p95 115.89ms이고, 최초 cold 657.22ms도 별도 관찰했다.
 
-Docker는 `--no-cache` build(내부 source verify+ETL+compliance), runtime image
-`sha256:39902aeb5213603d45ef147f3f33db9f285d7dc9d35e40ea4268a38639bc0ae0`,
+Docker는 최종 HEAD `--no-cache --pull=false` build(내부 source verify+ETL+compliance), runtime image
+`sha256:bdce35e5a13a0e6994c5824cf226b1564224f7c48e34c42b0d189806abd68445`,
 HTTP smoke 15/15, 100요청 스키마 오류 0, restart 후 healthy를 확인했다. Windows
-Docker p95는 491.21ms로 로컬 baseline과 실행환경이 달라 성능 합격 근거에는 쓰지 않는다.
+Docker p95는 473.98ms로 로컬 baseline과 실행환경이 달라 성능 합격 근거에는 쓰지 않는다.
 
 **중요 — §0, §0-2, §0-3을 먼저 읽을 것.** 이 문서의 최초 버전(W1-W3 시점)이
 보고한 "640/640 100%, cross_scope 69/69 정답"은 사후 적대적 리뷰(§0)에서

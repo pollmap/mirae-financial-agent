@@ -4,13 +4,13 @@
   "concurrency": 10,
   "completed": 100,
   "failure_count": 0,
-  "elapsed_seconds": 2.417,
-  "throughput_rps": 41.37,
+  "elapsed_seconds": 2.315,
+  "throughput_rps": 43.19,
   "latency_ms": {
-    "p50": 197.94,
-    "p95": 491.21,
-    "p99": 627.6,
-    "max": 676.38
+    "p50": 196.63,
+    "p95": 473.98,
+    "p99": 656.18,
+    "max": 713.14
   },
   "failures": []
 }
