@@ -405,6 +405,8 @@ class Oracle:
             return {"kind": "compare", "product_uids": unique_uids}
         if expect_kind == "cross_rank":
             return self._expected_cross_rank(spec)
+        if expect_kind == "cross_split_rank":
+            return self._expected_cross_split_rank(spec)
         if expect_kind == "cross_behavior":
             return {
                 "kind": "behavior",
@@ -438,6 +440,16 @@ class Oracle:
                 dominant = self._dominant_value(scope, partition_column)
                 if dominant is not None:
                     filters.append({"column": partition_column, "value": dominant})
+            # The real cross-scope executor runs each scope as an independent
+            # single-scope subplan (app/execution/cross_scope.py), so a scope
+            # whose single-scope rank the engine would refuse (e.g. ascending
+            # domestic_etp.return_* is blocked pending official -100-sentinel
+            # policy) is silently dropped from that plan's fusion -- not
+            # "wrongly ranked", genuinely excluded. Mirror that exclusion here
+            # instead of computing a naive expectation the real system was
+            # never going to produce for this scope.
+            if _single_scope_rank_refusal(scope, metric_id, direction, filters) is not None:
+                continue
             for uid, value in self._rank_rows(scope, metric_id, direction, n, filters):
                 entries.append((value, uid, scope))
         entries.sort(key=lambda row: (row[0], row[1]), reverse=direction == "desc")
@@ -449,3 +461,38 @@ class Oracle:
                 {"product_uid": uid, "scope": scope, "value": value} for value, uid, scope in top
             ],
         }
+
+    def _expected_cross_split_rank(self, spec: dict[str, object]) -> dict[str, object]:
+        """Expected uids for a SPLIT_PRESENTATION family (e.g. AUM dom+ovs).
+
+        Unlike ``_expected_cross_rank``, values are never compared across
+        scopes here (that's the whole reason the comparability matrix marks
+        the family SPLIT_PRESENTATION -- the currencies genuinely differ), so
+        there is no single fused ordering to assert. Each scope's own top-n
+        is computed independently and the caller checks that every one of
+        those uids appears in the response (order-agnostic, matching how
+        cross_scope.py renders each scope's section using its own order).
+        """
+
+        direction = str(spec["direction"])
+        n = int(spec["n"])  # type: ignore[arg-type]
+        metric_by_scope: dict[str, str] = dict(spec["metric_by_scope"])  # type: ignore[arg-type]
+        filters_by_scope: dict[str, list[dict[str, object]]] = {
+            scope: [dict(f) for f in filters]
+            for scope, filters in (spec.get("filters_by_scope") or {}).items()  # type: ignore[union-attr]
+        }
+        partition: dict[str, str] = dict(spec.get("currency_partition") or {})  # type: ignore[arg-type]
+        expected_uids: list[str] = []
+        for scope in spec["scopes"]:  # type: ignore[union-attr]
+            scope = str(scope)
+            metric_id = metric_by_scope[scope]
+            filters = list(filters_by_scope.get(scope, []))
+            partition_column = partition.get(scope)
+            if partition_column:
+                dominant = self._dominant_value(scope, partition_column)
+                if dominant is not None:
+                    filters.append({"column": partition_column, "value": dominant})
+            if _single_scope_rank_refusal(scope, metric_id, direction, filters) is not None:
+                continue
+            expected_uids.extend(uid for uid, _ in self._rank_rows(scope, metric_id, direction, n, filters))
+        return {"kind": "cross_split_rank", "product_uids": expected_uids}

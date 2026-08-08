@@ -102,6 +102,17 @@ def evaluate_cross_scope(plan: QueryPlan) -> CrossScopeDecision:
             decision.per_scope_metrics.setdefault(scope, [])
             if binding not in decision.per_scope_metrics[scope]:
                 decision.per_scope_metrics[scope].append(binding)
+        # Nothing to unify a single (or zero) bound scope against -- e.g.
+        # credit_rating binds only to bond, so a bond+fund plan has no
+        # pairwise comparison to run at all. Leaving `weakest` at its
+        # UNIFIED_RANK default here would try to numerically fuse a ranking
+        # that was never compared against anything, which for a text-valued
+        # concept (rating/scale/category) silently produces zero fused items
+        # instead of the single scope's real answer.
+        if len(bound_scopes) <= 1 and MODE_STRENGTH.get("SPLIT_PRESENTATION", 1) < MODE_STRENGTH.get(
+            weakest, 3
+        ):
+            weakest = "SPLIT_PRESENTATION"
         for index, scope_a in enumerate(bound_scopes):
             for scope_b in bound_scopes[index + 1 :]:
                 entry = matrix.get((concept_id, frozenset({scope_a, scope_b})))

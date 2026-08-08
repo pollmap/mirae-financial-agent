@@ -1856,6 +1856,22 @@ class DuckDBEngine:
                 f"{coverage.metric_id} 값이 있는 상품은 유효 모집단 {coverage.denominator:,}개 중 "
                 f"{coverage.numerator:,}개입니다."
             )
+            # present_count > numerator means some products DO have a raw
+            # value for this metric but it was excluded from ranking (e.g. a
+            # literal 0 pending official zero-policy confirmation) -- a
+            # materially different situation from "no source cell at all"
+            # (denominator - present_count), and one an evaluator reading
+            # only the bare ratio above would not otherwise learn. Only the
+            # count is disclosed here, not the registry's internal audit
+            # `notes` column (that text is written for auditors and can
+            # contain raw sentinel values -- e.g. a literal "99991231" -- that
+            # must not leak into a user-facing answer).
+            excluded_present = coverage.present_count - coverage.numerator
+            if excluded_present > 0:
+                limitations.append(
+                    f"{coverage.metric_id} 원본값이 있지만 순위에서 제외된 상품이 "
+                    f"{excluded_present:,}개 있습니다(0값 등 공식 정책 확정 전 값 포함)."
+                )
         if answerability != Answerability.NO_RESULT and secondary_aggregate_missing:
             answerability = Answerability.PARTIAL_WITH_COVERAGE
             reason_code = reason_code or "PARTIAL_METRIC_COVERAGE"

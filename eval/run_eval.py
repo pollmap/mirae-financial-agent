@@ -195,6 +195,8 @@ def score_response(
     elif kind == "behavior":
         allowed = expected.get("answerability")
         answerability_ok = True if not allowed else answerability in set(allowed)
+        expected_reason = expected.get("reason_code")
+        reason_ok = True if not expected_reason else context.get("reason_code") == expected_reason
         # A genuine follow-up question (e.g. "which metric first?" when a
         # cross-scope rank names two distinct, non-comparable concepts) is
         # not a refusal: it is the same interactive clarification pattern
@@ -209,32 +211,59 @@ def score_response(
             (context.get("clarification") or {}).get("missing_slots")
         )
         disclosure_ok = disclosure or not expected.get("disclosure_required") or is_clarification
+        # NOTE: unlike an earlier version of this check, disclosure text
+        # alone no longer satisfies refusal_ok -- a bundle can carry the
+        # cross-scope disclosure marker even on its total-failure path
+        # (0 results), which must not count as "answered". A real answer
+        # needs actual results (or a legitimate clarification); the
+        # disclosure requirement is verified separately via disclosure_ok.
         refusal_ok = (
-            (answerability not in REFUSAL_ANSWERABILITY and int(result_count) > 0)
-            or disclosure
-            or is_clarification
-        )
+            answerability not in REFUSAL_ANSWERABILITY and int(result_count) > 0
+        ) or is_clarification
         detail = {
             "answerability_ok": answerability_ok,
+            "reason_ok": reason_ok,
             "disclosure_ok": disclosure_ok,
         }
         if expected.get("disclosure_required"):
             detail["refusal_ok"] = refusal_ok
-            passed = answerability_ok and disclosure_ok and refusal_ok
+            passed = answerability_ok and reason_ok and disclosure_ok and refusal_ok
         else:
-            passed = answerability_ok
+            passed = answerability_ok and reason_ok
     elif kind == "cross_rank":
+        # This is the mandate's flagship case (unified cross-scope ranking):
+        # the oracle computes an exact expected order via the same fusion
+        # rule the executor uses (value, uid) tie-break, so -- unlike
+        # `behavior` -- there IS one correct answer here and it must be
+        # checked, not just "did it answer at all". An earlier version of
+        # this branch computed rank_exact/rank_set_overlap into `detail` but
+        # never included them in `passed`, so this case could not fail on a
+        # wrong ranking as long as disclosure text was present.
         exp_uids = list(expected["product_uids"])
-        refusal_ok = (
-            answerability not in REFUSAL_ANSWERABILITY and int(result_count) > 0
-        ) or disclosure
+        refusal_ok = answerability not in REFUSAL_ANSWERABILITY and int(result_count) > 0
+        rank_exact = got_uids == exp_uids
         detail = {
             "refusal_ok": refusal_ok,
             "disclosure_ok": disclosure,
-            "rank_exact": got_uids == exp_uids,
+            "rank_exact": rank_exact,
             "rank_set_overlap": round(_set_overlap(exp_uids, got_uids), 4),
         }
-        passed = refusal_ok and disclosure
+        passed = refusal_ok and disclosure and rank_exact
+    elif kind == "cross_split_rank":
+        # SPLIT_PRESENTATION family (e.g. AUM domestic+overseas): there is no
+        # single fused ordering to require exact-match against (see
+        # Oracle._expected_cross_split_rank) -- each scope's own top-n must
+        # simply all be present in the response, order-agnostic.
+        exp_uids = set(expected["product_uids"])
+        refusal_ok = answerability not in REFUSAL_ANSWERABILITY and int(result_count) > 0
+        contains_all = bool(exp_uids) and exp_uids.issubset(set(got_uids))
+        detail = {
+            "refusal_ok": refusal_ok,
+            "disclosure_ok": disclosure,
+            "contains_all_expected": contains_all,
+            "missing_uids": sorted(exp_uids - set(got_uids))[:5],
+        }
+        passed = refusal_ok and disclosure and contains_all
     else:
         detail = {"error": f"unknown expected kind {kind!r}"}
 

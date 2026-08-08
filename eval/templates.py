@@ -542,6 +542,14 @@ def _generate_cross_scope(out: list[dict[str, object]]) -> None:
                     f"{pair_ko}를 통틀어 {subject} 가장 {word} {n}개를 알려줘.",
                     f"{pair_ko} 전체에서 {metric_ko} {bound} {n}개를 보여줘.",
                 )
+                # A currency-partitioned family (AUM domestic+overseas) is
+                # SPLIT_PRESENTATION per registry/semantic/comparability_matrix_v1.csv
+                # (the currencies genuinely differ, so cross_scope.py shows
+                # each scope's own top-n side by side rather than fusing into
+                # one ranked list) -- the app answering that way is correct,
+                # not a gap. "cross_rank" (a single fused top-n) is only the
+                # right expectation for families the matrix marks UNIFIED_RANK.
+                expect_kind = "cross_split_rank" if family["currency_partition"] else "cross_rank"
                 for variant, question in enumerate(questions):
                     out.append(
                         {
@@ -549,7 +557,7 @@ def _generate_cross_scope(out: list[dict[str, object]]) -> None:
                             "question": question,
                             "kind": "cross_scope",
                             "spec": {
-                                "expect_kind": "cross_rank",
+                                "expect_kind": expect_kind,
                                 "scopes": scopes,
                                 "metric_by_scope": dict(family["metric_by_scope"]),  # type: ignore[arg-type]
                                 "direction": direction,

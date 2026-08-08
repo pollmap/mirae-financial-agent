@@ -1,15 +1,98 @@
-# 재기준화 검증 리포트 (W1-W3 실측)
+# 재기준화 검증 리포트 (W1-W4 실측)
 
 기준: 2026-08-08, branch `briefing-rebaseline-v2`, HEAD는 이 문서 커밋 시점 `git log -1`.
 `docs/14_BRIEFING_REBASELINE_PLAN.md`에서 정의한 게이트의 실측 결과다. 측정하지 않은
 항목은 "미측정"으로 명시하고 추정치를 대신 적지 않는다.
 
-## 1. 핵심 지표 (eval/run_eval.py, 640문항, 독립 SQL oracle)
+**중요 — §0을 먼저 읽을 것.** 이 문서의 최초 버전(W1-W3 시점)이 보고한 "640/640 100%,
+cross_scope 69/69 정답"은 사후 적대적 리뷰에서 **채점 로직 자체의 결함**으로 밝혀졌다.
+거절률 0% 측정치는 그때도 지금도 유효하지만, "순위·값이 정확하다"는 부분은 당시
+검증되지 않은 채로 통과 처리되고 있었다. §0에 전체 경위를 기록한다.
+
+## 0. 사후 적대적 리뷰에서 발견·수정한 것 (2026-08-08, W1-W3 완료 직후)
+
+W1-W4 코드가 전부 green으로 나온 뒤, 별도의 독립 리뷰 라운드를 돌렸다(3개 병렬
+에이전트가 각각 (1) cross-scope/semantics 코드, (2) federated retrieval 코드,
+(3) 데이터 정책·eval 하네스 자체를 대상으로 적대적 검증; 전부 실제 코드 실행으로
+재현 확인, read-only). 핵심 발견:
+
+### 앱 코드의 실제 버그 (전부 수정·재검증 완료)
+
+1. **[크래시]** `cross_scope.py`의 SPLIT/EXPLAIN 융합 결과 캡이 `max()`를 써서
+   사실상 무제한이었음 — 4개 스코프 × limit 50 = 200개 항목이 `EvidenceBundle.items`의
+   `max_length=50` 제약을 그대로 뚫고 `ValidationError`로 죽는 경로가 실존했다(실제
+   `EvidenceBundle` 생성으로 재현 확인). `min()`으로 수정.
+2. **[침묵 오답]** 하나의 스코프에만 바인딩된 개념(예: `credit_rating`은 채권에만
+   존재)을 여러 스코프에 걸쳐 조회하면, 텍스트값("AAA" 등)이 숫자 파싱에 실패해
+   `fused_items=[]`인 채로 `PARTIAL_WITH_COVERAGE`(성공처럼 보이는) 빈 응답이
+   나갔다. `capability.py`가 바인딩 스코프 1개 이하면 애초에 UNIFIED_RANK를
+   선택하지 않도록 수정 + `cross_scope.py`에 숫자 융합이 전부 실패하면
+   SPLIT_PRESENTATION으로 강등하는 방어 로직 추가.
+3. **[비대칭 가드]** "ETF·ETN" 결합 문구 인식이 특정 구분자·순서 조합만 나열해
+   "ETN/ETF"(반대 순서)는 놓쳤다 — 두 값 모두 AND로 걸려 항상 0건. 개별 토큰
+   나열 대신 "ETF와 ETN이 동시에 언급되면 둘 다 필터링 안 함"으로 일반화.
+4. **[의도 소실]** "비교" + 순위 키워드가 함께 오면 순위가 항상 이겨서, 코드로 명시된
+   2개 비교 대상이 있어도 무시하고 전체 모집단 순위를 대신 반환했다. 명시적 상품
+   코드 2개 이상이 감지되면 비교가 이기도록 수정(기존 GOLD-D08처럼 코드 없이
+   "비교해줘"가 순위를 뜻하는 케이스는 회귀 없이 유지 확인).
+5. 그 외 마이너: `product.scope` 조건이 공시 없이 조용히 드롭되던 것(현재는
+   도달 불가 경로지만 방어적으로 수정), `grounder.py`의 `top_n=Infinity/NaN`
+   미처리, 죽은 코드 `MetricPolicy.cross_product_allowed` 제거,
+   보수 0값 배제 설명이 정책 완화 이후 사라졌던 것을 원본값 보유·제외 개수
+   공시로 복원(단, 원본 CSV notes는 사용자 노출용이 아니므로 요약 문구만 사용).
+
+### eval 하네스 자체의 결함 (가장 심각 — 정직하게 기록)
+
+`eval/run_eval.py`의 `cross_rank`/`behavior` 채점이 **disclosure 텍스트 존재 여부만
+보고 실제 순위·값·사유코드 일치는 계산만 하고 판정에 반영하지 않았다.** 마침
+`execute_cross_scope`는 완전 실패 경로에서도 disclosure 마커를 남기므로, 이 채점은
+구조적으로 거의 실패할 수 없었다. 수정: `cross_rank`는 오라클이 계산한 정확한
+순서와 실제 일치해야 통과, `behavior`는 오라클이 제공하는 `reason_code`와도
+일치해야 통과, `refusal_ok`에서 "disclosure만 있으면 통과" 조건 제거(실제 결과가
+있어야 함).
+
+### 오라클 자체의 기존 정책 미반영 (진짜 앱 버그 아님, 오라클 보정)
+
+채점을 정직하게 만들자 정확도가 100%→95.78%로 떨어졌다. 27건 실패를 전수 조사한
+결과 **전부 오라클이 기존에 이미 있던(이번 세션 이전부터 존재) 단일스코프 정책을
+반영하지 못한 것**이었고, 앱 자체는 정확했다:
+
+- 국내 ETP 수익률 하락순위는 `-100` sentinel 정책 미확정으로 원래 차단되는데,
+  오라클의 교차순위 기대값 계산이 이를 몰라서 국내 ETP 쪽 기대값을 잘못 포함시킴
+  → 오라클에 `_single_scope_rank_refusal` 사전검사 추가.
+- AUM(국내+해외) 쌍은 통화가 달라 `comparability_matrix_v1.csv`(W1에서 이미
+  SPLIT_PRESENTATION으로 명시)대로 스코프별 분리 응답이 맞는데, eval 템플릿이
+  이 가족을 "단일 통합순위(cross_rank)"로 잘못 분류해 기대값 자체가 틀렸음
+  → 템플릿의 `currency_partition` 유무로 `cross_rank`/`cross_split_rank`를
+  분기하도록 수정, `cross_split_rank`는 스코프별 top-N이 결과에 전부 포함되는지만
+  확인(순서는 스코프별로 독립이므로 강제하지 않음).
+
+이 두 수정 후 재실측: 95.78%→97.19%→**100%**(진짜). cross_scope 카테고리(69문항)만
+따로 보면 이 라운드에서 60.87%→73.91%→100%로 움직였다 — 이 변동 폭 자체가
+"이전 100%가 채점 결함으로 부풀려져 있었다"는 증거다.
+
+### 검토했지만 낮은 우선순위로 남긴 것
+
+- `etl/kg.py`(KG 빌드 스테이지) 전용 단위테스트 없음 — reconciliation assert만
+  안전망. `normalize_party`는 접미사만 다른 두 실제 다른 회사를 이론상 병합할 수
+  있음(현재 실 데이터 32건 전수 검사로는 오탐 없음 확인, 하지만 향후 데이터
+  갱신 시 재확인 필요). `vector_retriever`의 짧은 벡터 zero-padding이 문서의
+  "엄격한 차원불일치 거부" 주장보다 느슨함(vector_enabled=false라 현재 미도달).
+  이 세 가지는 federated retrieval의 **현재 프로덕션 경로에 연결되지 않은
+  scaffold 코드**(그래프의 party 함수·fusion.py·vector 전부 실제 호출자가
+  아직 없음, entity 해석에만 lexical fallback이 연결됨)에 있어 지금 당장의
+  정답 정확성에는 영향이 없다고 판단해 이번 라운드에서는 보류했다.
+- `bond.credit_rating` 등급 순서, compare의 `COMPARISON_VALUE_UNUSABLE` 분기는
+  실제로는 `quality_flags`가 엔진 전체에서 항상 빈 배열로 생성되어 도달
+  불가능한 것으로 드러났다(별개의 사전 존재 이슈, 이번 범위 밖).
+
+## 1. 핵심 지표 (eval/run_eval.py, 640문항, 독립 SQL oracle, 채점 로직 수정 후 재측정)
 
 ```text
 question_total            640
-accuracy                   100.0%  (목표 ≥95%, 이전 라운드 77.5%→91.1%→94.5%→99.38%→100%)
-cross_scope_refusal_rate   0.0%   (목표 0% — 사용자 핵심 지시)
+accuracy                   100.0%  (목표 ≥95%; 이번 라운드 실측 이력: 77.5%→91.1%→94.5%→
+                                     99.38%→100%(채점결함)→[채점 수정]→95.78%→97.19%→100%(진짜))
+cross_scope_refusal_rate   0.0%   (목표 0% — 사용자 핵심 지시, 전 라운드 일관)
 disclosure_rate            98.55%
 rank_position_match_mean   1.0
 ```

@@ -243,7 +243,6 @@ class MetricPolicy:
     quality_policy: str
     zero_policy: str
     ranking_allowed: bool
-    cross_product_allowed: bool
     quality_status: str
     coverage_count: int
     coverage_ratio: float
@@ -316,7 +315,6 @@ class MetricRegistry:
                     ranking_allowed=(
                         ranking_policy.startswith("ALLOWED") or ranking_policy == "TYPE_CONDITIONAL"
                     ),
-                    cross_product_allowed=row["cross_product_policy"] == "ALLOWED",
                     quality_status=_quality_status(row),
                     coverage_count=(int(serving_present) if serving_present.isdigit() else 0),
                     coverage_ratio=(

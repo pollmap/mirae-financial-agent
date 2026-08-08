@@ -116,13 +116,22 @@ def _subplan(
         kept_conditions = []
         for condition in group["conditions"]:
             field_name = condition["field"]
+            if field_name == "product.scope":
+                # Only ever produced by the safe-count scope-routing path
+                # (app/service.py::_cross_scope_count_plan), which the engine
+                # intercepts before a plan ever reaches this executor -- so
+                # this is unreachable today. If that ever changes, route it
+                # through the same drop-and-disclose path as any other
+                # scope-inapplicable condition (it no longer means anything
+                # once the plan has been split into a single-scope subplan)
+                # instead of silently vanishing.
+                dropped.append(f"{field_name}={condition.get('value')}")
+                continue
             applicable = (
                 field_name in scope_fields
                 or field_name.startswith(f"{scope}.")
-                or field_name in ("product.id", "product.name", "product.scope")
+                or field_name in ("product.id", "product.name")
             )
-            if field_name == "product.scope":
-                continue
             if field_name in ("product.currency", "product.trading_currency"):
                 has_explicit_currency[field_name] = True
             if applicable:
@@ -269,13 +278,16 @@ def execute_cross_scope(engine: DuckDBEngine, plan: QueryPlan) -> EvidenceBundle
         return bundle
 
     fused_items: list[ProductEvidence] = []
-    if decision.mode == "UNIFIED_RANK" and cross_metric_id is not None:
+    unparsed_count = 0
+    attempted_unified_rank = decision.mode == "UNIFIED_RANK" and cross_metric_id is not None
+    if attempted_unified_rank:
         ranked: list[tuple[Decimal, str, ProductEvidence]] = []
         for scope, bundle in sub_bundles.items():
             scope_metrics = decision.per_scope_metrics[scope]
             for item in bundle.items:
                 value = _item_value(item, scope_metrics)
                 if value is None:
+                    unparsed_count += 1
                     continue
                 ranked.append(
                     (value, item.product_uid, _with_cross_field(item, scope_metrics, cross_metric_id))
@@ -284,7 +296,24 @@ def execute_cross_scope(engine: DuckDBEngine, plan: QueryPlan) -> EvidenceBundle
         ranked.sort(key=lambda row: (row[0], row[1]), reverse=descending)
         for position, (_, _, item) in enumerate(ranked[: plan.limit], start=1):
             fused_items.append(item.model_copy(update={"rank": position}))
-    else:
+
+    # A concept whose values can't be parsed as numbers (text/rating/category)
+    # would otherwise fuse to zero items and report a hollow
+    # PARTIAL_WITH_COVERAGE "success". capability.py already prevents this for
+    # the reachable single-bound-scope case; this is the general fallback for
+    # any other numeric-fusion failure: fall back to presenting each scope's
+    # real, already-retrieved items instead of discarding them.
+    fallback_to_split = (
+        attempted_unified_rank and not fused_items and any(bundle.items for bundle in sub_bundles.values())
+    )
+    if fallback_to_split:
+        decision.mode = "SPLIT_PRESENTATION"
+        decision.basis_notes.append(
+            f"{cross_metric_id}은(는) 값이 숫자로 통합 정렬되지 않아 상품군별로 분리해 표시합니다"
+            + (f" ({unparsed_count:,}건 미해석)" if unparsed_count else "") + "."
+        )
+
+    if not attempted_unified_rank or fallback_to_split:
         # SPLIT_PRESENTATION / EXPLAIN_ONLY: keep per-scope ordering, group by
         # scope, keep each item's within-scope rank.
         for scope in plan.scopes:
@@ -299,7 +328,14 @@ def execute_cross_scope(engine: DuckDBEngine, plan: QueryPlan) -> EvidenceBundle
                     else item
                 )
                 fused_items.append(fused)
-        fused_items = fused_items[: max(plan.limit * len(sub_bundles), plan.limit)]
+        # Up to plan.limit per scope is intentional (a "top 5 bonds and top 5
+        # funds side by side" EXPLAIN_ONLY answer should show 10, not 5) -- but
+        # EvidenceBundle.items has a hard max_length of 50 (app/domain/models.py
+        # ProductEvidence list), so the total must still be clamped there
+        # regardless of scope count. A bare `plan.limit * len(sub_bundles)`
+        # cap can exceed 50 (up to 4 scopes x limit 50 = 200) and raise an
+        # unhandled pydantic ValidationError instead of returning an answer.
+        fused_items = fused_items[: min(plan.limit * len(sub_bundles), 50)]
 
     aggregates = [
         aggregate

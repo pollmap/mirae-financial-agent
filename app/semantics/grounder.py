@@ -37,6 +37,7 @@ Deliberate non-defaults:
 from __future__ import annotations
 
 import csv
+import math
 import re
 from collections.abc import Mapping
 from functools import lru_cache
@@ -307,6 +308,13 @@ def _ground_entities(payload: Mapping[str, Any], scopes: list[str]) -> list[Enti
 def _limit(payload: Mapping[str, Any]) -> int:
     raw = payload.get("top_n")
     if isinstance(raw, bool) or not isinstance(raw, int | float):
+        return 10
+    # json.loads accepts the non-standard Infinity/-Infinity/NaN tokens, and
+    # isinstance(float('inf'), int | float) is True -- int() on either raises
+    # (OverflowError / ValueError) uncaught, contradicting this module's
+    # fail-closed-not-crashing contract. The schema constrains top_n to
+    # 1..50, so this is defense-in-depth against a non-conforming response.
+    if isinstance(raw, float) and not math.isfinite(raw):
         return 10
     return max(1, min(50, int(raw)))
 

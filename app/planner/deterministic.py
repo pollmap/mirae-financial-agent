@@ -395,7 +395,17 @@ class DeterministicPlanner:
             )
             and metric is not None
         )
-        compare_request = "비교" in question and not rank_request
+        # "비교" plus a rank keyword is ambiguous Korean phrasing: "국내 ETN을
+        # AUM이 큰 순서로 비교해줘" means "rank/compare the whole category"
+        # (no named targets -> rank_request should win, tested by
+        # GOLD-D08), but "A와 B를 보수가 낮은 게 어느 건지 비교해줘" names two
+        # specific products and should never fall through to a silent
+        # "rank the entire universe" answer that drops them. The two cases
+        # are told apart by whether >=2 explicit product codes are present:
+        # rank_request alone can't check that (codes/entities are extracted
+        # further down), so do a cheap, code-only pre-check here.
+        explicit_targets = len(_CODES.findall(question)) >= 2
+        compare_request = "비교" in question and (not rank_request or explicit_targets)
 
         if rank_request and len(multi_metrics) > 1:
             explicit_priority = next(
@@ -594,10 +604,17 @@ class DeterministicPlanner:
             filters.append(Condition(field="bond.exchange", op="eq", value="장내"))
         if "장외" in question:
             filters.append(Condition(field="bond.exchange", op="eq", value="장외"))
-        _combined_etf_etn = ("ETF와 ETN", "ETF·ETN", "ETF/ETN", "ETN와 ETF", "ETN·ETF")
-        if "ETF" in question and not any(token in question for token in _combined_etf_etn):
+        # Both substrings present ("ETF와 ETN", "ETF·ETN", "ETN/ETF", ...) means
+        # "both types", not "filter to just one" -- and since FilterGroup is
+        # always AND-joined, emitting internal_type='ETF' AND internal_type=
+        # 'ETN' together would guarantee zero rows for any separator order.
+        # Enumerating every connecting phrase/order is a losing game (a
+        # previous version covered "ETF/ETN" but not "ETN/ETF"); checking
+        # both substrings directly is order- and separator-agnostic.
+        both_etf_and_etn_mentioned = "ETF" in question and "ETN" in question
+        if "ETF" in question and not both_etf_and_etn_mentioned:
             filters.append(Condition(field="product.internal_type", op="eq", value="ETF"))
-        if "ETN" in question and not any(token in question for token in _combined_etf_etn):
+        if "ETN" in question and not both_etf_and_etn_mentioned:
             filters.append(Condition(field="product.internal_type", op="eq", value="ETN"))
         if "거래통화가 USD" in question or "거래통화 USD" in question:
             filters.append(Condition(field="product.trading_currency", op="eq", value="USD"))
