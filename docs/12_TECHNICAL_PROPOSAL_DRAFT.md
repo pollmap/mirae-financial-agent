@@ -329,7 +329,7 @@ federated semantic rebaseline(W1-W4) 완료 후, 코드를 읽기만 하는 게 
 - current-code real local HTTP E2E 15/15
 - 100요청·동시성 10 부하 smoke 100/100, failure 0, p95 131.75ms
 - **Docker fresh --no-cache build/run/restart parity 통과**: 컨테이너 내부에서
-  source verify→full ETL(KG 71,671 node/206,274 edge/249,857 alias, lexical
+  source verify→full ETL(KG 71,683 node/206,274 edge/249,874 alias, lexical
   80,670 doc)→compliance scan까지 재현, 15-case smoke가 restart 전후 동일 결과,
   production 모드(`APP_ENV=production`+`PLANNER_MODE=hcx`)는 실 키 없이 fail-closed로
   즉시 종료함을 확인(정상 설계)

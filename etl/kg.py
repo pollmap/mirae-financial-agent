@@ -9,7 +9,14 @@ are excluded as non-values.
 
 Entity resolution is deliberately conservative: names are merged only when
 they are identical after mechanical normalization (whitespace, corporate
-suffixes, casefold). ``한국투자`` and ``한국투자증권`` never merge.
+suffixes, casefold) *and* occur within the same product scope. ``한국투자``
+and ``한국투자증권`` never merge (different normalized strings). A domestic-ETP
+manager and a bond issuer that happen to normalize to the same string also
+never merge into one party node -- e.g. two unrelated firms both named
+"Value Partners" but incorporated as "Ltd" in one filing and "LLC" in
+another, in different scopes, would otherwise collide since normalize_party
+treats those corporate suffixes as interchangeable. Party node ids therefore
+encode scope: ``party:<scope>:<normalized>``, not just ``party:<normalized>``.
 """
 
 from __future__ import annotations
@@ -75,12 +82,11 @@ def build_kg(
     parties = _party_frame(connection)
     canonical = (
         parties.sort_values("product_count", ascending=False)
-        .groupby("normalized", as_index=False)
+        .groupby(["scope", "normalized"], as_index=False)
         .agg(label=("raw_name", "first"), variant_count=("raw_name", "nunique"))
     )
-    canonical["node_id"] = "party:" + canonical["normalized"]
+    canonical["node_id"] = "party:" + canonical["scope"] + ":" + canonical["normalized"]
     canonical["node_type"] = "PARTY"
-    canonical["scope"] = None
     canonical["is_inferred"] = canonical["variant_count"] > 1
     canonical["evidence_note"] = canonical["variant_count"].map(
         lambda count: f"표기 변형 {count}건 정규화 병합" if count > 1 else None
@@ -142,19 +148,31 @@ def build_kg(
 
     # ------------------------------------------------------------- edges
     connection.register("_kg_party_map", parties)
+    # Every text column is explicitly CAST to VARCHAR: this is the table's
+    # first CREATE TABLE AS SELECT, so DuckDB infers kg_edge's column types
+    # from this result set alone. If _kg_party_map (built from the parties
+    # pandas frame) is ever empty -- e.g. a dataset build with zero bond/ETP
+    # rows carrying an issuer/manager, which cannot happen against the real
+    # 145K-row source but does happen in a narrow unit-test fixture -- an
+    # empty pandas frame's columns can register with DuckDB as a non-VARCHAR
+    # type, and the later INSERTs into this same table (which do carry real
+    # string data) then fail with a confusing INT32 conversion error instead
+    # of the schema simply being VARCHAR throughout as intended.
     connection.execute(
         """
         CREATE TABLE kg.kg_edge AS
-        SELECT 'e:' || c.product_uid || ':' || m.role AS edge_id,
-               'product:' || c.product_uid AS src_node_id,
-               'party:' || m.normalized AS dst_node_id,
-               m.role AS edge_type,
+        SELECT CAST('e:' || c.product_uid || ':' || m.role AS VARCHAR) AS edge_id,
+               CAST('product:' || c.product_uid AS VARCHAR) AS src_node_id,
+               CAST('party:' || m.scope || ':' || m.normalized AS VARCHAR) AS dst_node_id,
+               CAST(m.role AS VARCHAR) AS edge_type,
                FALSE AS is_inferred,
                1.0 AS confidence,
-               c.source_table_id AS source_table,
-               CASE WHEN c.scope = 'bond' THEN 'PD_PBCM' ELSE 'cu_fund_mgmt_co' END
-                   AS source_field,
-               c.source_row_hash
+               CAST(c.source_table_id AS VARCHAR) AS source_table,
+               CAST(
+                   CASE WHEN c.scope = 'bond' THEN 'PD_PBCM' ELSE 'cu_fund_mgmt_co' END
+                   AS VARCHAR
+               ) AS source_field,
+               CAST(c.source_row_hash AS VARCHAR) AS source_row_hash
         FROM serving.product_catalog c
         JOIN _kg_party_map m
           ON m.scope = c.scope
@@ -249,13 +267,13 @@ def build_kg(
         [
             parties.assign(
                 alias=parties["raw_name"],
-                node_id="party:" + parties["normalized"],
+                node_id="party:" + parties["scope"] + ":" + parties["normalized"],
                 alias_kind="OFFICIAL",
                 is_inferred=False,
             )[["alias", "node_id", "alias_kind", "is_inferred"]],
             parties.assign(
                 alias=parties["normalized"],
-                node_id="party:" + parties["normalized"],
+                node_id="party:" + parties["scope"] + ":" + parties["normalized"],
                 alias_kind="NORMALIZED",
                 is_inferred=False,
             )[["alias", "node_id", "alias_kind", "is_inferred"]],

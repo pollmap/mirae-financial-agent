@@ -34,7 +34,8 @@
    역할 모델링: ETF→managedBy, ETN→issuedBy, 채권→issuedBy, 펀드는 code
    노드만(발명 금지). entity resolution은 정규화 후 완전일치만(접미사 제거;
    한국투자≠한국투자증권), sameEntityAs는 is_inferred+공시. 해외 benchmark
-   sentinel 2종 제외. 실측: 71,671 node/206,274 edge/249,857 alias.
+   sentinel 2종 제외. 실측: 71,683 node/206,274 edge/249,874 alias(scope-aware
+   병합 수정 후 수치 — 아래 "보류 항목 마무리" 절 참고).
 2. `app/retrieval/graph_retriever.py`: `WITH RECURSIVE` 1-2 hop,
    `engine.py`의 entity 해석에 exact-alias 우선 매칭으로 편입(LIKE fallback 유지).
 3. `app/planner/pre_router.py`: ISIN/티커/정확코드 → HCX 생략 lookup
