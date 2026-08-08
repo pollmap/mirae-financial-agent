@@ -264,6 +264,16 @@ config나 manifest에 넣지 않는다. provider가 hard budget을 제공하면 
 운영 지표에는 request count, status, latency, HCX status, schema failure, token usage 합계만
 남긴다. 질문 원문, GET query string, evidence, answer, secret은 남기지 않는다.
 
+**(2026-08-08 추가)** 2단계 플래닝(`PLANNER_STAGE=two`, `docs/14` W2)은 Stage-1 프롬프트를
+물리 field/metric 이름과 값 리터럴이 없는 개념 전용 스키마로 축소해 요청당 TPM 예약량을
+13,013B→5,383B(**−58.6%**)로 줄였다 — 같은 `HCX_TPM_BUDGET`으로 분당 처리 가능 요청 수가
+늘어나므로 이 문서의 비용 가정에 직접 영향을 준다. 기본값은 검증 완료된 구 스키마
+(`PLANNER_STAGE=one`)를 유지하고 `two`는 opt-in이다(mock-HCX로 결과 동일성 검증 완료,
+640문항 전체 A/B는 미실행 — `docs/15` §2-3). 별도로 `scripts/build_embeddings.py`가 읽는
+`CLOVA_EMBEDDING_URL`/`CLOVA_EMBEDDING_MODEL_ID`는 이 표의 QPM/TPM guardrail과 무관한
+오프라인 1회성 임베딩 생성 전용 변수로, 실 키 발급 후 그때만 실행한다(스크립트 자체
+docstring에 문서화됨).
+
 ## 8. Freeze와 장애복구
 
 freeze 전에는 다음을 하나의 release manifest로 고정한다.

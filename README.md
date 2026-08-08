@@ -26,9 +26,12 @@ Excel 행·필드까지 추적 가능한 근거와 안전한 한국어 답변을
 - serving DuckDB SHA-256:
   `4daab85638b6d6fa1c0f1ebd4070d4050dca57fbfd9aed7e39a8aef2399a1450`
 - 자동 테스트 fast 153/153(14.90초), full-source 포함 전체 158/158(104.57초) 통과
+  — **2026-08-08 재기준화 이후 238/238로 갱신, 독립 SQL oracle 640문항 eval
+  100%·metamorphic 137/137 추가. 최신 수치는 `HANDOFF_CURRENT_STATUS.md` 참고**
 - 공식형 gold 40 + 교차·안전 policy 10 fixture 50/50, plan subset 40개와 선언 assertion
   103개 전부 통과
-- Ruff 통과, runtime compliance 현재 스캔 28 files/0 findings, 실제 HTTP E2E 15/15 통과
+- Ruff 통과, runtime compliance 현재 스캔 28 files/0 findings(2026-08-08 기준 84
+  files/0 findings로 스캔 범위 확장), 실제 HTTP E2E 15/15 통과
 - compliance의 0 findings는 현재 allow-list 기반 스캔 결과이지 비-HCX 사용 부재의 절대적
   증명은 아님
 - 실제 HTTP 부하 smoke 100/100 성공·동시성 10·0 failure(p95 131.75ms), 실제 TCP 모의 HCX
@@ -37,8 +40,10 @@ Excel 행·필드까지 추적 가능한 근거와 안전한 한국어 답변을
   (`HCX-007`은 현재 `TEAM_DECISION`; 주최 측이 지정하는 정확한 HCX model ID는 설명회 확인 전
   `OPEN_QUESTION`)
 - GET `/answer` 5-field provisional contract 및 역질문 후속 흐름 통과
-- 단순 교차 상품군 수는 scope별 `COUNT(DISTINCT product_uid)`로 분리하고, 호환되지 않는
-  지표의 교차 순위는 계속 차단
+- 단순 교차 상품군 수는 scope별 `COUNT(DISTINCT product_uid)`로 분리. **(2026-08-03
+  시점엔 호환되지 않는 지표의 교차 순위를 차단했으나, 2026-08-08 재기준화로 이 문장은
+  더 이상 사실이 아닙니다 — 지금은 통합순위/분리제시/설명전용/대안제시 중 하나로
+  항상 답변하고 절대 거절하지 않습니다. 상세: `HANDOFF_CURRENT_STATUS.md` §2-2.)**
 - 수익률 기간 선택지는 registry의 실제 사용 가능 기간만 제시; 장기 수익률 field가 없는
   해외 ETP에는 가짜 기간을 묻지 않고 AUM·종가·거래량 대안을 표시
 - 자산유형·지역·위험등급·연금 가능 여부의 bounded catalog filter와 원본 label evidence 구현

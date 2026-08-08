@@ -93,9 +93,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     @app.exception_handler(Exception)
-    async def unexpected_error(request: Request, _: Exception):
-        """Return a redacted contract-shaped failure without leaking internals."""
+    async def unexpected_error(request: Request, exc: Exception):
+        """Return a redacted contract-shaped failure without leaking internals.
 
+        Starlette's ServerErrorMiddleware re-raises after this handler runs,
+        so uvicorn's own error logger still records the full exception
+        (traceback, message, file paths) to container stderr -- that's
+        intentional upstream behavior for ops visibility, and this handler
+        doesn't fight it. What it adds is a second, guaranteed-safe line via
+        this app's own logger: exception *type* only, never str(exc) or
+        request content, so a triage signal survives even if some future
+        raise site is ever changed to interpolate user-controlled text
+        (question, entity label) into its message.
+        """
+
+        REQUEST_LOGGER.warning(
+            json.dumps(
+                {"event": "unhandled_exception", "exception_type": type(exc).__name__},
+                separators=(",", ":"),
+            )
+        )
         question_id = request.query_params.get("question_id", "unknown")[:200] or "unknown"
         question = request.query_params.get("question", "처리 중 오류가 발생했습니다.")[:2000]
         payload = {

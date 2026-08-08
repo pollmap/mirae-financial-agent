@@ -1,6 +1,9 @@
 # 제품·아키텍처 설계서
 
-상태: 설명회 전 v1.1 실행 기준  
+상태: 설명회 전 v1.1 실행 기준 — **2026-08-06 설명회 반영 재설계(Ontology/Knowledge
+Graph/Federated Retrieval/2단계 플래닝, branch `briefing-rebaseline-v2`)로 §3의
+"GraphDB 불필요" 결론은 더 이상 유효하지 않습니다. 현재 아키텍처는
+`HANDOFF_CURRENT_STATUS.md`와 `docs/14_BRIEFING_REBASELINE_PLAN.md` 참고.**  
 성격: `TEAM_DECISION` 중심 문서
 
 ## 1. 제품 정의
@@ -68,8 +71,16 @@ Strict JSON Response Adapter
 ```
 
 초기 구현은 단일 FastAPI 서비스와 단일 DuckDB 파일을 권장합니다. 14.5만 정적 행은
-분산 시스템이나 GraphDB가 필요한 규모가 아닙니다. 단일 프로세스가 재현성, 장애
-지점, 배포속도, 정량 정확도 면에서 가장 유리합니다.
+별도 분산 시스템이나 전용 그래프 데이터베이스 제품(Neo4j 등)이 필요한 규모는
+아닙니다. 단일 프로세스가 재현성, 장애 지점, 배포속도, 정량 정확도 면에서 가장
+유리합니다.
+
+**(2026-08-08 수정)** 다만 설명회가 Knowledge Graph를 기술스펙으로 요구하면서,
+"별도 그래프 DB 제품"과 "그래프 관계 모델 자체"를 구분했습니다: 상품-발행사/운용사
+관계는 `etl/kg.py`가 매 빌드마다 같은 단일 DuckDB 파일 안에 `kg` 스키마(노드·엣지·
+별칭 테이블)로 materialize하고, 다중 홉 순회는 `WITH RECURSIVE` SQL로 처리합니다.
+위 문단의 "단일 프로세스·단일 DuckDB" 결론 자체는 그대로 유지됐고, 바뀐 것은 그
+안에 그래프 관계 계층이 추가됐다는 점입니다.
 
 ## 4. 데이터 계층
 

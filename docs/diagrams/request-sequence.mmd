@@ -1,22 +1,38 @@
 sequenceDiagram
     actor Evaluator
     participant API as GET Adapter
+    participant PreR as Pre-router
     participant Planner as HyperCLOVA X
+    participant Ground as Grounder (Stage-2)
     participant Validator as Plan Validator
+    participant Exec as Executor (single or cross-scope)
     participant DB as DuckDB
     participant Evidence as Evidence Builder
     participant Answer as Renderer and Claim Validator
     Evaluator->>API: question_id + question
     API->>API: byte budget, redaction, contract check
-    API->>Planner: canonical question + plan schema
-    Planner-->>API: typed QueryPlan
+    API->>PreR: canonical question
+    alt exact code/ISIN/ticker match
+        PreR-->>API: deterministic lookup plan (HCX skipped)
+    else needs interpretation
+        PreR->>Planner: canonical question + concept-only plan schema
+        Planner-->>Ground: typed concept plan (no physical field names)
+        Ground-->>API: physical QueryPlan (fail-closed on unresolvable concept)
+    end
     API->>Validator: schema + registry policy
     alt invalid plan
         Validator-->>Planner: one bounded repair request
         Planner-->>Validator: repaired QueryPlan
     end
-    Validator->>DB: parameterized deterministic query
+    Validator->>Exec: allow-listed compiled plan
+    alt cross-scope plan
+        Exec->>Exec: decompose into per-scope subplans
+    end
+    Exec->>DB: parameterized deterministic query per scope
     DB-->>Evidence: rows + universe + execution metadata
+    alt cross-scope plan
+        Evidence-->>Evidence: fuse per comparability mode + mandatory disclosure
+    end
     Evidence-->>Answer: evidence IDs + limitations
     Answer->>Answer: every factual claim must cite evidence
     Answer-->>API: DomainAnswer

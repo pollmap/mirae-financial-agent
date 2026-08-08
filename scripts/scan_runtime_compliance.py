@@ -8,12 +8,23 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SCAN_ROOTS = [ROOT / "app", ROOT / "etl"]
+# app/etl ship in the runtime image; scripts/tests/eval/deploy don't, but a
+# stray dependency or credential reference in any of them is still worth
+# catching before it has a chance to migrate into shipped code.
+SCAN_ROOTS = [
+    ROOT / "app",
+    ROOT / "etl",
+    ROOT / "scripts",
+    ROOT / "tests",
+    ROOT / "eval",
+    ROOT / "deploy",
+]
 SCAN_FILES = [
     ROOT / "requirements.txt",
     ROOT / "requirements-runtime.txt",
     ROOT / "requirements-runtime.lock",
     ROOT / "requirements-build.lock",
+    ROOT / "requirements-dev.txt",
     ROOT / "pyproject.toml",
     ROOT / "Dockerfile",
 ]
@@ -34,8 +45,14 @@ FORBIDDEN = {
         re.IGNORECASE,
     ),
     "non_hcx_secret": re.compile(
-        "OPEN"
-        + r"AI_API_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY|COHERE_API_KEY",
+        "|".join(
+            [
+                "OPEN" + "AI_API_KEY",
+                "ANTHROP" + "IC_API_KEY",
+                "GEMIN" + "I_API_KEY",
+                "COHER" + "E_API_KEY",
+            ]
+        ),
         re.IGNORECASE,
     ),
     "non_hcx_dependency": re.compile(

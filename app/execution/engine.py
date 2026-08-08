@@ -491,10 +491,20 @@ class DuckDBEngine:
         decision = route_entity_fallback(exact_match_count=0, vector_enabled=False)
         if "lexical" not in decision.channels:
             return ()
+        from app.retrieval.fusion import reciprocal_rank_fusion
         from app.retrieval.lexical_retriever import search as lexical_search
 
         hits = lexical_search(connection, label, field="name", scope=scope, limit=5)
-        return tuple(hit.product_uid for hit in hits)
+        # Single channel today (vector_enabled is always False here -- see the
+        # comment above), so this is provably a no-op on ordering: RRF's
+        # score 1/(k+rank) is strictly monotonic in rank within one channel.
+        # Routing through it anyway keeps this call site correct by
+        # construction once a second channel is added, rather than requiring
+        # someone to remember to insert fusion at that point.
+        fused = reciprocal_rank_fusion(
+            {"lexical": [hit.product_uid for hit in hits]}, limit=5
+        )
+        return tuple(fused)
 
     def resolve_entities(self, plan: QueryPlan) -> list[tuple[str, int]]:
         """Return match cardinality per declared entity without applying limits."""

@@ -1,15 +1,25 @@
 flowchart LR
     E[Organizer evaluator] -->|GET /answer| A[Contract adapter]
     A --> G[Input guard and log redaction]
-    G --> H[HyperCLOVA X planner]
-    H --> J[QueryPlan JSON Schema]
-    J --> S[Registry semantic validator]
+    G --> PR{Pre-router: exact code/ISIN/ticker?}
+    PR -->|yes, skip HCX| C
+    PR -->|no| H[HyperCLOVA X Stage-1: concept-only plan]
+    H --> GR[Grounder: concept to physical QueryPlan, fail-closed]
+    GR --> S[Registry semantic validator]
     S --> C[Allow-listed compiler]
-    C --> D[(DuckDB and Parquet)]
+    C --> X{Single scope or cross scope?}
+    X -->|single scope| D[(DuckDB)]
+    X -->|cross scope| CS[Cross-scope executor: decompose into per-scope subplans]
+    CS --> D
     D --> B[Evidence Bundle builder]
     B --> R[Template or grounded renderer]
     R --> V[Claim and safety validator]
     V --> A
+    ER[Entity resolution: exact code, then KG alias, then LIKE, then BM25 fallback via RRF] --> C
+    KG[(Knowledge Graph: nodes, edges, aliases)] --> ER
+    LEX[(BM25 lexical index)] --> ER
+    SEM[Semantic layer: concept catalog and comparability matrix] --> GR
+    SEM --> CS
     M[Metric Registry] --> S
     M --> B
     L[Source locator] --> B
