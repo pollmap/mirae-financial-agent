@@ -28,44 +28,64 @@
 - fixture 재기준화: X01(ETP+펀드 1Y 통합)·X02(보수 통합)·X04(표면금리·수익률
   병렬)·D06/O05(보수 순위 재개) 응답형으로 전환. 159/159 green.
 
-## W2 (~8/21): KG + 2단계 플래너
+## W2 완료 내역 (5d20385, 2026-08-08 — 계획보다 조기 완료)
 
-1. `etl/kg.py`: `kg` 스키마(kg_node/kg_edge/kg_alias, edge마다 source_row_hash),
-   `etl/build.py:946-948` 사이 삽입·`:848` 스키마 튜플 확장. 역할 모델링:
-   ETF→managedBy, ETN→issuedBy, 채권→issuedBy, 펀드는 code 노드만(발명 금지).
-   entity resolution은 정규화 후 완전일치만(접미사 제거; 한국투자≠한국투자증권),
-   sameEntityAs는 is_inferred+공시. 해외 benchmark sentinel 2종 제외.
+1. `etl/kg.py`: `kg` 스키마(kg_node/kg_edge/kg_alias, edge마다 source_row_hash).
+   역할 모델링: ETF→managedBy, ETN→issuedBy, 채권→issuedBy, 펀드는 code
+   노드만(발명 금지). entity resolution은 정규화 후 완전일치만(접미사 제거;
+   한국투자≠한국투자증권), sameEntityAs는 is_inferred+공시. 해외 benchmark
+   sentinel 2종 제외. 실측: 71,671 node/206,274 edge/249,857 alias.
 2. `app/retrieval/graph_retriever.py`: `WITH RECURSIVE` 1-2 hop,
-   engine.py:404-449/753-769 LIKE 매칭 대체(플래그, fallback 유지).
-3. `app/planner/pre_router.py`: ISIN/티커/정확명 → HCX 생략 lookup.
-4. 2단계 플래너: Stage-1 축소 스키마(~1.2KB)+프롬프트(~1.5KB, 물리 metric 나열
-   제거) `planner_stage` 플래그 + `app/semantics/grounder.py`(개념→물리,
-   값→canonical, fail-closed). gold 전체 A/B 후 전환. TPM 실측 ≤7KB 게이트.
-5. X03/X05 잔여 완화: 해외 AUM은 실데이터 거래통화 단일(USD) 확인 시
-   허용+공시; 등급 순서는 여전히 순서정책 미확정 시 병렬 설명 유지.
+   `engine.py`의 entity 해석에 exact-alias 우선 매칭으로 편입(LIKE fallback 유지).
+3. `app/planner/pre_router.py`: ISIN/티커/정확코드 → HCX 생략 lookup
+   (explain-intent 질문은 명시적으로 제외 — 다른 계약이므로).
+4. 2단계 플래너 완료: `HCX_SEMANTIC_PLAN_SCHEMA`(1,045B)+
+   `SEMANTIC_PLANNER_SYSTEM_PROMPT`(1,266B) + `app/semantics/grounder.py`
+   (fail-closed, 개념→물리·값→canonical). `planner_stage` 플래그(기본 `one`).
+   `tests/contract/test_hcx_two_stage_e2e.py`로 flagship 교차질의 Stage-1/2
+   결과 동일성 실증. **TPM 13,013B→5,383B(−58.6%), 처리량 4→11건/분.**
+5. X03 완전 해결: 해외/국내 AUM 등 통화분리 지표는 실측 지배통화(해외 USD
+   100%, 국내 KRW 99.94%) 자동적용+공시로 전환(단일스코프 직접호출은 기존
+   명시필터 요구 유지). X05(등급척도 상이)는 설계대로 EXPLAIN_ONLY 병렬 유지.
 
-## W3 (~8/28): Lexical + Federated + eval
+## W3 완료 내역 (4afc169, 2026-08-08)
 
-1. `etl/lexical.py` 순수 SQL BM25(lex_doc/lex_term/lex_df/lex_stats; 해외 전략문
-   5,566건·상품명 2/3-gram·비-sentinel benchmark) + `lexical_retriever`.
-2. `app/retrieval/router.py`/`fusion.py`: 정확식별자→SQL직행 / 구조조건→SQL /
-   관계→Graph / 테마→Lexical(+Vector). 구조필터 교집합, 채널 간 RRF(k=60).
-   융합 결과는 product_uid 재조인 → FieldEvidence 경로 불변.
-3. service.py:1136-1162·catalog_filters.py:59-60 잔여 차단 제거, one-shot
-   기본값(`one_shot_mode`; 모호 시 최고 coverage 해석+대안 병기, demo는 역질문).
-4. `eval/`: 템플릿 ≥500문항 + 독립 pandas oracle + metamorphic + ablation.
-   게이트: 교차 거절 0, 공시 100%, 템플릿 정답 ≥95%.
+1. `etl/lexical.py` 순수 SQL BM25(lex_doc/lex_term/lex_df/lex_stats) +
+   `lexical_retriever`. 실측: 80,670 doc/1,288,698 posting/43,935 vocab.
+2. `app/retrieval/router.py`/`fusion.py`(RRF k=60) 완료. 실제 연결 지점은
+   계획의 "테마 텍스트 질의"가 아니라 **entity 해석 3단 안전망**으로 재설계:
+   정확코드/ISIN → 정확 KG alias → LIKE 부분일치 → (전부 실패시만) lexical
+   fallback. 겹치는 후보는 항상 기존 clarify 계약으로 흐르므로 오답 승격 없음.
+   Vector 채널은 router 로직엔 있으나 엔진 호출부는 `vector_enabled=False`
+   하드코딩(캐시 없는 현재 상태와 일치; 캐시 확보 시 한 줄 변경).
+3. service.py의 교차스코프 수익률-기간 하드 차단
+   (`CROSS_PRODUCT_LOCKED_PENDING_BASIS`) 제거 → 스코프별 선호기간 합집합으로
+   단일스코프와 동일한 역질문 흐름으로 전환.
+4. **one-shot 기본값은 재검토 후 보류**: 공식 요구사항이 "정보 부족 시
+   확인불가 또는 역질문"을 명시적 채점 기준으로 요구하므로, 무조건 추측
+   답변으로 대체하는 것은 확정되지 않은 가정으로 필수 기능을 트레이드하는
+   것과 같다고 판단. 8/6 설명회에서 후속 파라미터 처리 관련 공식 답변이
+   나오면 재검토.
+5. `eval/`: 템플릿 640문항(목표 500 초과) + 독립 SQL oracle + metamorphic.
+   **게이트 결과: 교차 거절 0%, 공시 98.55%, 정답률 100%(초기 77.5%에서
+   4회 반복 개선; 그 과정에서 실제 planner 버그 4건 발견·수정)**.
+   상세: `docs/15_REBASELINE_VALIDATION_REPORT.md`.
 
-## W4 (~9/6): Vector + freeze
+## W4 (~9/6): Vector 배선 + freeze 준비 — 진행 중
 
-1. `etl/vectors.py`: CLOVA Studio 임베딩 사전계산 → parquet 캐시 커밋 →
-   FLOAT[1024]+array_cosine_similarity, 런타임 질의 임베딩 실패 시 BM25 강등.
-   **지연 시 최우선 컷.**
-2. ablation 리포트 → Docker parity·mock E2E·실 HCX smoke → FINAL manifest →
-   9/4-9/6 수정만.
+1. `etl/vectors.py`+`app/retrieval/vector_retriever.py`+
+   `scripts/build_embeddings.py` **코드 완성**(23 unit test). 실 임베딩
+   캐시는 CLOVA_STUDIO_API_KEY 수령 후 생성 필요 — `vector_enabled=false`
+   유지 중. **컷라인 이미 선반영됨(지연 아님, 설계상 키 의존).**
+2. 남은 항목: Docker fresh build/restart parity를 W2-W4 신규 스테이지(KG/
+   lexical 빌드 포함) 대상으로 재검증 → FINAL manifest 준비 → 실 HCX 키
+   수령 시 smoke → 9/4-9/6 수정만.
 
-컷라인 순서: ①vector→BM25만 ②2단계→축소프롬프트 1단계 ③KG 재귀→alias 평면
-lookup ④eval 500→200. **불가침: 교차 답변·공시 계약·증거 규율.**
+컷라인 순서(원안 유지, 현재까지 전부 유지 중): ①vector→BM25만(이미 기본)
+②2단계→축소프롬프트 1단계(이미 기본, `two`는 검증되었으나 미승격)
+③KG 재귀→alias 평면 lookup ④eval 500→200(불필요, 640 완주).
+**불가침 원칙 — 전부 실측 확인됨: 교차 답변(거절률 0%)·공시 계약(98.55%)·
+증거 규율(FieldEvidence 경로 무변경).**
 
 ## 리스크
 
