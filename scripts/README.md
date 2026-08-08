@@ -9,7 +9,7 @@ python scripts/run_gold.py
 python scripts/scan_runtime_compliance.py
 python scripts/e2e_smoke.py --base-url http://127.0.0.1:8080
 python scripts/load_smoke.py --base-url http://127.0.0.1:8080 --requests 100 --concurrency 10
-python scripts/generate_release_manifest.py --passed 158 --failed 0 --skipped 0 \
+python scripts/generate_release_manifest.py --passed 262 --failed 0 --skipped 0 \
   --test-report artifacts/test_report_20260803.json
 
 python scripts/profile_source_data.py \
@@ -25,7 +25,8 @@ schema/header set equality.
 - `run_gold.py`: 40 gold + 10 cross/safety fixture, 40 plan subset과 103 선언 assertion 검증
 - `scan_runtime_compliance.py`: bounded non-HCX LLM SDK/endpoint/key dependency gate
 - `production_preflight.py`: secret 값을 출력하지 않는 production env, immutable image/DB,
-  HCX model/base URL, process, budget, optional public live/ready gate
+  HCX model/base URL, `PLANNER_STAGE=two`, sanitized 20-question live A/B report,
+  process, budget, optional public live/ready gate
 - `e2e_smoke.py`: 15 real HTTP cases against an already-running server; four scopes, clarification,
   safety, safe cross-count, complex catalog filter, exact-target explain, explain clarification,
   signed multi-turn follow-up 포함

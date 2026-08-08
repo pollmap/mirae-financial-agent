@@ -3,6 +3,11 @@
 상태: **DRAFT only** `TEAM_DECISION` 운영안. 실제 HCX credential, 공개 도메인, cloud 권한이
 없는 현재 환경에서는 **live 호출 또는 공개 배포를 완료했다고 주장하지 않는다**.
 
+> **v3 운영 변경**: `PLANNER_STAGE=two`가 필수 기본값이다. production preflight는
+> 실제 HCX 20문항을 one/two 두 방식으로 실행한 40-call A/B PASS 보고서 없이는
+> 실패한다. Vector credential/cache는 선택 사항이며 없으면 Exact+SQL+Graph+BM25로
+> 정상 동작한다.
+
 ## 1. 먼저 고정할 경계
 
 - `OFFICIAL_PDF`: 제출·평가 runtime의 언어모델은 HyperCLOVA X만 사용한다.
@@ -100,11 +105,12 @@ payload를 보내며, 응답은 local schema validation 후 DuckDB 조회와 최
 - HCX adapter real TCP mock contract E2E
 - non-HCX runtime compliance scan
 
-현재 local 증빙은 source XLSX 8/8, fast 153/153(14.90초), full 158/158(104.57초),
-gold/policy 50/50(40 plan subset·103 assertion), runtime scan 28 files/0 findings, real HTTP
-E2E 15/15입니다. load smoke는 100/100·concurrency 10·failure 0·p95 131.75ms입니다. serving
-DB SHA-256은 `4daab85638b6d6fa1c0f1ebd4070d4050dca57fbfd9aed7e39a8aef2399a1450`입니다.
-이는 live HCX·Docker image·public network 검증을 대신하지 않습니다.
+최신 local 증빙은 source XLSX 8/8, eval 640/640, metamorphic 137/137, holdout
+100/100, Graph 120/120, BM25 20/20, runtime scan 88 files/0 findings, real HTTP
+E2E 15/15입니다. load smoke는 100/100·concurrency 10·failure 0·p95 115.89ms이고
+serving DB SHA-256은
+`8d221384543fd6a9b14da2f55de79de65b2c7b4bdd3149cdfdf6cde8afcf0977`입니다.
+fresh Docker build/restart도 완료했지만 live HCX·public network 검증을 대신하지 않습니다.
 
 ## 4. HCX key를 받은 후: 작은 호출부터 단계적으로
 
@@ -112,7 +118,7 @@ DB SHA-256은 `4daab85638b6d6fa1c0f1ebd4070d4050dca57fbfd9aed7e39a8aef2399a1450`
 secret manager를 우선 사용하고, 임시 protected env file을 쓰면 repository 밖에 mode `0600`으로
 두며 `set +x` 상태에서만 load한다.
 
-### Gate A — plan-only live call 1회
+### Gate A — HCX 20문항 one/two A/B live gate (40회)
 
 이 호출은 실제 quota/비용을 쓸 수 있으므로 명시적 확인 flag 없이는 실행되지 않는다.
 
@@ -120,12 +126,13 @@ secret manager를 우선 사용하고, 임시 protected env file을 쓰면 repos
 export CLOVA_STUDIO_API_KEY='<secret-manager-injected>'
 export HCX_MODEL_ID='HCX-007'
 export HCX_BASE_URL='https://clovastudio.stream.ntruss.com'
-.venv/bin/python deploy/live_hcx_plan_smoke.py --confirm-live-call
+.venv/bin/python deploy/live_hcx_plan_smoke.py --confirm-live-calls 40
 ```
 
-고정된 비민감 질문 한 건만 전송하고 출력에는 model, intent, scope, metric, token usage만 남긴다.
-key, 질문 원문, plan 전문, request ID는 기록하지 않는다. 성공 조건은 HTTP 성공만이 아니라
-HCX JSON이 local `QueryPlan` validation을 통과하는 것이다.
+고정된 비민감 질문 20개를 1단계와 2단계에 각각 전송한다. 보고서는 case id,
+validation/match count, model, token 합계만 저장하고 key, 질문 원문, plan 전문,
+request ID는 기록하지 않는다. 20건 모두 local `QueryPlan` validation과 canonical
+일치 검사를 통과해야 PASS다.
 
 ### Gate B — production preflight
 
@@ -137,7 +144,8 @@ make production-preflight
 
 이 gate는 secret 값을 출력하지 않고 다음을 fail-closed로 확인한다.
 
-- `APP_ENV=production`, `PLANNER_MODE=hcx`
+- `APP_ENV=production`, `PLANNER_MODE=hcx`, `PLANNER_STAGE=two`
+- sanitized 20문항 A/B report가 PASS이고 model/call/count/privacy contract가 일치
 - `HCX_MODEL_ID=HCX-007` baseline과 공식 HTTPS base URL
 - HCX key 20 bytes 이상, clarification signing key 24 bytes 이상, placeholder 아님
 - embedded DB 파일 존재·read 가능·snapshot/source hash/schema/count readiness
@@ -254,7 +262,7 @@ platform 양쪽에 중복 구성하지 않는다.
 | `MONTHLY_COST_CAP_KRW` | 팀 승인액 | provider budget/credit alarm 필요 | preflight가 선언만 검증; 실제 hard cap 아님 |
 | completion limit | 1,024 tokens | HCX client | plan 출력 최대치 |
 
-key 발급 뒤 plan-only 1회 응답 header에서 실제 QPM/TPM을 기록하고, 반드시 그 공식 quota와
+key 발급 뒤 20문항 A/B gate 응답 header에서 실제 QPM/TPM을 기록하고, 반드시 그 공식 quota와
 팀이 감당 가능한 금액 중 더 작은 값을 선택한다. header를 확인하기 전에는 추정 숫자를 FINAL
 config나 manifest에 넣지 않는다. provider가 hard budget을 제공하면 50%/80% 경보와 100%
 차단을 설정한다. hard cap이 없다면 `MONTHLY_COST_CAP_KRW`라는 환경변수만으로 비용이
@@ -264,12 +272,11 @@ config나 manifest에 넣지 않는다. provider가 hard budget을 제공하면 
 운영 지표에는 request count, status, latency, HCX status, schema failure, token usage 합계만
 남긴다. 질문 원문, GET query string, evidence, answer, secret은 남기지 않는다.
 
-**(2026-08-08 추가)** 2단계 플래닝(`PLANNER_STAGE=two`, `docs/14` W2)은 Stage-1 프롬프트를
-물리 field/metric 이름과 값 리터럴이 없는 개념 전용 스키마로 축소해 요청당 TPM 예약량을
-13,013B→5,383B(**−58.6%**)로 줄였다 — 같은 `HCX_TPM_BUDGET`으로 분당 처리 가능 요청 수가
-늘어나므로 이 문서의 비용 가정에 직접 영향을 준다. 기본값은 검증 완료된 구 스키마
-(`PLANNER_STAGE=one`)를 유지하고 `two`는 opt-in이다(mock-HCX로 결과 동일성 검증 완료,
-640문항 전체 A/B는 미실행 — `docs/15` §2-3). 별도로 `scripts/build_embeddings.py`가 읽는
+**(2026-08-08 v3)** 2단계 플래닝(`PLANNER_STAGE=two`)은 물리 field/metric 이름과 값
+리터럴이 없는 개념 전용 스키마로 보수적 요청 예약량을 13,013B→6,333B
+(**−51.3%**)로 줄였다. `two`가 운영 기본이고 `one`은 수동 롤백 전용이며 자동
+fallback은 없다. mock-HCX lookup/cross/aggregate, 640 회귀, holdout 100을 검증했고
+실 20문항 A/B만 credential 대기다. 별도로 `scripts/build_embeddings.py`가 읽는
 `CLOVA_EMBEDDING_URL`/`CLOVA_EMBEDDING_MODEL_ID`는 이 표의 QPM/TPM guardrail과 무관한
 오프라인 1회성 임베딩 생성 전용 변수로, 실 키 발급 후 그때만 실행한다(스크립트 자체
 docstring에 문서화됨).

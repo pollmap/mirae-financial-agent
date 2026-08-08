@@ -6,6 +6,12 @@
 최신 실측 수치·외부 gate 목록은 `HANDOFF_CURRENT_STATUS.md`가 항상 최신이며
 이 문서와 상충하면 그쪽을 따른다. 제출 형식·페이지 제한 확인 후 PDF로 편집
 
+> **v3 반영**: 운영 기본은 HCX 개념 플랜→서버 grounding의 2단계다. 내부
+> `RetrievalPlan`이 Exact/Alias+SQL+Graph+BM25+(cache 준비 시 Vector/RRF)를
+> 라우팅하며 SQL 공식 행을 최종 권위 원천으로 유지한다. 100-case 고정 holdout,
+> 120-case Graph, 20-case BM25 및 기존 640문항 회귀를 통과했다. 실 HCX/Embedding,
+> 공개 NCP 배포는 외부 gate로 명확히 분리한다.
+
 ## 1. Executive summary
 
 금융상품 데이터는 상품군마다 필드·식별자·갱신주기·결측 의미가 다릅니다. 사용자는
@@ -352,9 +358,8 @@ HyperCLOVA X 사용만 확정했으므로 정확한 허용 model ID를 공식 �
 - embedded read-only DuckDB, 단일 VM 또는 managed container, 2 vCPU·RAM 2~4 GiB, worker 1
 - Compose 상한 2 CPU·3 GiB; platform TLS 우선, 제공되지 않을 때만 Caddy 사용
 - 현재 team baseline HCX planner 출력은 1,024 token 이하, temperature 0, thinking off
-- 2단계 플래닝(Stage-1은 개념만 출력하는 축소 스키마)으로 요청당 TPM 예약량
-  13,013B→5,383B(**−58.6%**) 실측, 기본 `PLANNER_STAGE=one`은 검증 완료된 구
-  스키마를 유지하며 `two`는 opt-in
+- 2단계 플래닝(개념 전용 축소 스키마)으로 보수적 요청 예약량
+  13,013B→6,333B(**−51.3%**); 기본 `PLANNER_STAGE=two`, `one`은 수동 롤백 전용
 - 429/5xx 제한 재시도, 다른 LLM fallback 없음
 - result limit 50, 입력 2,000자
 - 질문 원문 access log 비활성화; 서버 예외도 원문·트레이스백을 별도 로그에 남기지 않음
@@ -368,7 +373,7 @@ P0는 정확한 API E2E입니다. 그 다음에만 다음을 검토합니다.
 
 - 공식 참고질의 기반 synonym/plan 회귀 확장
 - 승인된 외부 데이터의 별도 source namespace
-- 상품명 semantic retrieval 또는 reranking
+- 실 CLOVA Embedding cache 품질 검증과 제한적 Vector reranking
 - 현업용 UI와 비교표
 - 공식 mapping이 확보된 share-class family 보기
 

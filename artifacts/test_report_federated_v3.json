@@ -1,13 +1,13 @@
 {
   "report_version": "4.0",
-  "as_of": "2026-08-08T23:33:48+09:00",
+  "as_of": "2026-08-08T23:40:55+09:00",
   "status": "LOCAL_AND_DOCKER_PASS_EXTERNAL_LIVE_GATES_PENDING",
   "release_scope": "codex/federated-completion-v3 candidate",
   "pytest_summary": {
     "passed": 262,
     "failed": 0,
     "skipped": 0,
-    "duration_seconds": 152.65
+    "duration_seconds": 234.57
   },
   "source_verification": {
     "verified_source_files": 3,
@@ -50,6 +50,19 @@
     "docker_no_cache_build": "PASS",
     "docker_restart_health": "PASS"
   },
+  "checks": [
+    {"command": "scripts/verify_sources.py", "status": "PASS"},
+    {"command": "scripts/build_data.py --no-parquet", "status": "PASS"},
+    {"command": "python -m ruff check app deploy etl eval scripts tests", "status": "PASS"},
+    {"command": "python -m pytest -q", "status": "PASS"},
+    {"command": "python -m eval.run_eval", "status": "PASS"},
+    {"command": "python -m eval.metamorphic", "status": "PASS"},
+    {"command": "python -m eval.federated_eval", "status": "PASS"},
+    {"command": "scripts/scan_runtime_compliance.py", "status": "PASS"},
+    {"command": "scripts/e2e_smoke.py --base-url <local>", "status": "PASS"},
+    {"command": "scripts/load_smoke.py --requests 100 --concurrency 10", "status": "PASS"},
+    {"command": "docker build --no-cache and restart health", "status": "PASS"}
+  ],
   "external_gates": [
     "HCX 20-question one/two live A/B report",
     "CLOVA Embedding credential, 1024-dimensional cache, and live smoke",

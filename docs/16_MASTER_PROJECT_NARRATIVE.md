@@ -15,6 +15,32 @@
 최신**이다(이 문서는 서사이지 실시간으로 갱신되는 상태판이 아니다) — 단,
 "왜 이렇게 결정했는가"는 이 문서에만 있다.
 
+## 0. v3 완성 부록 — 2026-08-08 `codex/federated-completion-v3`
+
+사용자가 후속으로 “외부 키·인프라·사람 승인만 남기고 직접 해결 가능한 것은 전부
+개발하라”고 확정했다. 이에 따라 이 문서 아래쪽의 두 과거 결정은 더 이상 현재
+상태가 아니다.
+
+1. **2단계 플래너를 운영 기본값으로 승격했다.** 집계 스키마와 grounder에
+   `count/sum/avg/min/max` 및 `group_by`를 추가했고 mock HCX 단일·교차·집계 E2E,
+   640 회귀, 100 고정 holdout을 통과했다. 1단계는 자동 fallback이 없는 수동
+   롤백 옵션으로만 남았다.
+2. **Federated 모듈을 실제 실행 경로에 연결했다.** `RetrievalPlan`이 Exact/Alias,
+   SQL, Graph, BM25, 선택적 Vector 후보를 끝까지 유지하고 최종 상품·숫자·필터·정렬은
+   SQL 공식 행으로 다시 검증한다. party resolver와 1-hop traversal, 자산유형·지역·
+   위험등급·벤치마크 관계가 실제 호출된다. 전략/벤치마크와 퍼지명은 BM25, Vector
+   cache가 있으면 1,024차원 검색과 RRF를 사용한다.
+
+검증은 구현 전에 고정한 SHA-256
+`0c7de9a9c98378a0d44c47e289c4ef7b9fb577cf3cebbd473b421066e5f823a8`
+holdout 100/100, Graph 120/120, BM25 20/20, A~E 절제실험 PASS, 기존 640/640·
+교차 거절 0%·metamorphic 137/137이다. Vector는 fixture 검증, F(HCX composer)는
+실 credential 대기 상태다. 따라서 §5의 “기본 one”, §6의 “Graph/BM25/RRF 실 경로
+미연결” 표는 당시 결정을 설명하는 역사 기록이며 현재 상태 판단에는 사용하지 않는다.
+
+외부 작업은 HCX 20문항 A/B live gate, CLOVA Embedding key/cache/live smoke,
+NCP VPC·서버·방화벽·도메인/TLS 공개 배포, 사람의 제출 승인/freeze뿐이다.
+
 ---
 
 ## 1. 이 프로젝트가 무엇인가

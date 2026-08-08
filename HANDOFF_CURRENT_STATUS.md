@@ -1,7 +1,7 @@
 # 인계 문서 — 다른 AI 에이전트/세션이 이어받을 때 가장 먼저 읽을 파일
 
-기준: 2026-08-08, branch **`briefing-rebaseline-v2`** (기본 브랜치 아님 — `main`이
-아니라 이 브랜치를 체크아웃해야 최신 상태입니다)
+기준: 2026-08-08, branch **`codex/federated-completion-v3`** (기본 브랜치 아님 —
+`main`이나 `briefing-rebaseline-v2`가 아니라 이 브랜치를 체크아웃해야 최신 상태입니다)
 저장소: `https://github.com/pollmap/mirae-financial-agent` (**private**)
 
 이 문서는 이 저장소를 처음 보는 AI 에이전트가 별도 대화 맥락 없이도 "지금 뭐가
@@ -16,6 +16,38 @@
 이 파일 기준). `00_START_HERE.md`, `docs/11_IMPLEMENTATION_HANDOFF.md`,
 `artifacts/windows_docker_verification_20260803.md`는 8/3-8/4 시점(설명회 이전
 "prebrief" 상태, 태그 `prebrief-v1`)에서 멈춘 배경 문서입니다.
+
+## v3 완료 상태 — 이 절이 아래의 과거 미연결 서술을 대체함
+
+- **기본 플래너**: `PLANNER_STAGE=two`. HCX는 의도·스코프·개념·조건·정렬·
+  집계만 만들고 서버 grounder가 허용 필드에 결속한다. `count/sum/avg/min/max`,
+  `group_by`, 교차 스코프를 지원한다. `one`은 수동 롤백 전용이며 자동 폴백은 없다.
+- **실행 중 Federated Retrieval**: 코드/정확명 Exact/Alias, SQL, 운용사·발행사·
+  지역·자산유형·위험등급·벤치마크 Graph, 전략·벤치마크·퍼지명 BM25, 선택적
+  Vector가 실제 `DuckDBEngine.execute()`에서 라우팅된다. Graph 후보는 동일 SQL
+  조건과 일치할 때만 제약으로 쓰고 불일치·KG 부재 시 SQL을 유지하며 이유를 trace한다.
+- **Vector 경계**: query embedder와 cache가 모두 있을 때만 활성화한다. 정확히
+  1,024차원만 허용하고 zero-padding은 없다. 현재는 결정적 fixture/RRF까지 검증,
+  실 CLOVA Embedding credential·cache는 외부 gate다.
+- **근거/공개 계약**: 내부 `RetrievalTrace`는 채널·사유·후보수·fallback·검증·
+  row/data hash 참조·지연만 담는다. 공개 응답은 `question_id`, `question`,
+  `retrieved_context`, `think_trace`, `answer` 5개 필드를 그대로 유지하며 원문
+  prompt나 비공개 추론은 내보내지 않는다.
+- **최신 실측**: source 8/8, 재빌드 60,903 serving·KG 71,683/206,274/249,874·
+  lexical 80,670/1,288,698/43,935, Vector 0. 전체 eval 640/640, 교차 거절 0%,
+  metamorphic 137/137, 고정 holdout 100/100, Graph 전용 120/120, BM25 20/20,
+  A~E 절제실험 PASS, pytest 262/262(최종 재실행 234.57초), Ruff PASS, compliance 88/0.
+  실제 HCX F만 credential 대기다.
+- **부하/Docker**: 로컬 warm 100요청·동시10에서 실패 0, p95 115.89ms
+  (이전 131.75ms 대비 개선). ETL 직후 cold 657.22ms와 Windows Docker p95
+  491.21ms도 별도 기록해 숨기지 않는다. fresh `--no-cache` image
+  `sha256:39902a...0ae0`, smoke 15/15, restart 후 healthy를 확인했다.
+- **운영 release gate**: `deploy/live_hcx_plan_smoke.py --confirm-live-calls 40`이
+  20문항을 1단계/2단계로 각각 호출하고, 질문·plan·key를 저장하지 않은 일치 보고서를
+  만든다. `scripts/production_preflight.py`는 이 PASS 보고서와 `PLANNER_STAGE=two`가
+  없으면 운영 배포를 거부한다.
+
+아래 §2-3의 “Graph traversal 미연결”, “기본 one” 같은 문장은 v3 이전 이력이다.
 
 ## 0. 한 줄 요약
 

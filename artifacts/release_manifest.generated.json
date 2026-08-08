@@ -1,28 +1,28 @@
 {
-  "release_id": "prebrief-mvp-0.2.0",
+  "release_id": "federated-completion-v3-draft",
   "release_status": "DRAFT",
-  "built_at": "2026-08-08T21:57:48+09:00",
+  "built_at": "2026-08-08T23:41:13+09:00",
   "freeze_at": "2026-09-05T00:00:00+09:00",
-  "git_sha": "c9efb677f48b5aae3a303f8ba457ff5c90bff0e1",
-  "container_image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "git_sha": "762fac48802c4f071d6b88963a19ec77e08f99b3",
+  "container_image_digest": "sha256:39902aeb5213603d45ef147f3f33db9f285d7dc9d35e40ea4268a38639bc0ae0",
   "source_sha256": {
     "official_task_pdf": "3717441e091958b7214db710e0e4b9b8ae15ac6c205cad6e51721214798eb3de",
     "official_data_zip": "c3809aca73396f57242ded0188fa06a3d271bd4ad65010e53d5533efc7c18163"
   },
   "data_model_version": "canonical-v1",
   "etl_version": "etl-v1",
-  "serving_database_sha256": "88e9a98ae24ca1d73457f4a31e881a8df133eecff19e435c1a847e8249c0e4c1",
+  "serving_database_sha256": "8d221384543fd6a9b14da2f55de79de65b2c7b4bdd3149cdfdf6cde8afcf0977",
   "metric_registry_sha256": "36ae63b077908aeb13d4497bda49669fe5e91226f3b906670cccf509885542b5",
   "canonical_registry_sha256": "a97ebd0914698f2bb82921c3d8bcbea83cde5a9323552132619168261770fce5",
   "query_plan_schema_sha256": "a3a77b0eded7326bad2d763a65eb60ba9488191e85a163f3ee3e5860ec03fb39",
   "planner_prompt_sha256": "9b04360aaed258230cf164fd75487fa9eef8c10b7b355f0d3eee0b1feac158f6",
   "hcx_runtime_schema_sha256": "98c04a4e7e024c92a29bafe58de00415dc163cb45177fd560fc5b514fd1cbeda",
-  "evidence_bundle_schema_sha256": "58bcce8e23876fcf3bb9a13f802728868971f72f63b00a988059fd1167d80782",
+  "evidence_bundle_schema_sha256": "72af509dc8e41124d0fc4fa1b880d7aa83baf64a81baeb51af3a2d8990a4ca5f",
   "etl_source_sha256": "71ad81f486e18ec19c192dcb71a4139ca2ac626ac9275b544810f87eef034967",
-  "application_source_sha256": "db2cb3f3a1875dc36dbe7955b3d8ab6397686e0180b3f96971a55f4d7faa02cb",
-  "semantic_registry_sha256": "dcaa4e40726e34e574f8bac1ec1a96a754506df10bf762347690ae09a6134eb6",
-  "hcx_semantic_schema_sha256": "c485112487eb9deed4436a744ee4950ea49186517278350a827e00b1f74f09bd",
-  "semantic_planner_prompt_sha256": "a9a0994349d40214f5dfcb54da300534060939cff0d4e673c7eb69d48bcef327",
+  "application_source_sha256": "99ad98aa8623d921b654f8e0d5add5ed7a9307a4799c575350984d47cee7c4bd",
+  "semantic_registry_sha256": "b465403b02690bcd8cf56ad5715cc8f2e129422916584cd4d172ef0e26cb34d0",
+  "hcx_semantic_schema_sha256": "76182a040d7a98ce58cdc087ea5350b433a38c372beb5595df3ef37066e576ff",
+  "semantic_planner_prompt_sha256": "69eacf7009fb289ad66d03a05f8c3157d6fdfa2a05d9d826eb57f5f6f64b79ba",
   "runtime_lock_sha256": "e3cda72184d7fdbbb1cdeb8c0007f317bc441d7aff8147cc181982ba15a4111a",
   "build_lock_sha256": "d9412193876a09aba92471a68c924bd7a67f1289545d5977047a03517dd3c7dc",
   "renderer_sha256": "1b5fc41eb8a0d788169793d9a033dd435bd1894423ad4ead2a4fb09601d68d1c",
@@ -33,10 +33,10 @@
   "hcx_model_id": "HCX-007",
   "config_digest": "sha256:64f923d541de4b6c619c0b0f69104d28537eab7277ed279a9a4c0947349ab680",
   "test_summary": {
-    "passed": 246,
+    "passed": 262,
     "failed": 0,
     "skipped": 0,
-    "report_sha256": "a10f6781515fdd4eeffc699ce022e42e02675db1418e757cd0ce882b11c6a584"
+    "report_sha256": "e1d7b1d967337949608177e7c54d73d16e8aea899e718f74232dda4ec8c0c18e"
   },
   "post_freeze_policy": "NO_COMMIT_PUSH_DEPLOY_OR_ARTIFACT_CHANGES"
 }
