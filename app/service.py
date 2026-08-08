@@ -417,6 +417,23 @@ class AgentService:
         )
         return ordered[:4]
 
+    def _preferred_return_periods_cross_scope(self, scopes: list[str]) -> list[str]:
+        """Union of each scope's preferred periods, in a stable overall order.
+
+        A scope with no return-period metric at all (e.g. overseas_etp for
+        long horizons) contributes nothing and does not block the others: the
+        chosen period only binds the scopes that have it, and the cross-scope
+        executor reports the rest as an absent-scope alternative rather than
+        refusing.
+        """
+
+        seen: list[str] = []
+        for scope in scopes:
+            for period in self._preferred_return_periods(scope):
+                if period not in seen:
+                    seen.append(period)
+        return seen[:4]
+
     def _comparison_metric_options(self, scopes: list[str]) -> list[ClarificationOption]:
         if len(scopes) != 1:
             return []
@@ -1140,25 +1157,23 @@ class AgentService:
         )
         explicit_return_period = bool(self._explicit_return_periods(original_question))
         if needs_return_period and not explicit_return_period:
-            if len(plan.scopes) == 1:
-                preferred = self._preferred_return_periods(plan.scopes[0])
-                if len(preferred) < 2:
-                    return self._unavailable_return_plan(plan.scopes)
-                return self._clarification_plan(
-                    original_question=original_question,
-                    scopes=plan.scopes,
-                    question="어느 기간의 수익률을 사용할까요?",
-                    missing_slot="return_period",
-                    options=[
-                        ClarificationOption(value=suffix, label=RETURN_LABELS[suffix])
-                        for suffix in preferred
-                    ],
-                    plan=plan,
-                )
-            return QueryPlan(
-                intent="unsupported",
+            preferred = (
+                self._preferred_return_periods(plan.scopes[0])
+                if len(plan.scopes) == 1
+                else self._preferred_return_periods_cross_scope(plan.scopes)
+            )
+            if len(preferred) < 2:
+                return self._unavailable_return_plan(plan.scopes)
+            return self._clarification_plan(
+                original_question=original_question,
                 scopes=plan.scopes,
-                assumptions=["policy_reason=CROSS_PRODUCT_LOCKED_PENDING_BASIS"],
+                question="어느 기간의 수익률을 사용할까요?",
+                missing_slot="return_period",
+                options=[
+                    ClarificationOption(value=suffix, label=RETURN_LABELS[suffix])
+                    for suffix in preferred
+                ],
+                plan=plan,
             )
         if plan.intent == "compare" and len(plan.entities) < 2:
             return QueryPlan(

@@ -461,8 +461,40 @@ class DuckDBEngine:
                         params,
                     ).fetchall()
                 )
+                if not entity.code and not matches and label:
+                    matches = self._lexical_entity_fallback(connection, label, plan.scopes[0])
                 resolutions.append((label, matches))
         return resolutions
+
+    def _lexical_entity_fallback(
+        self, connection: Any, label: str, scope: str
+    ) -> tuple[str, ...]:
+        """Federated retrieval fallback when exact alias and LIKE both miss.
+
+        Consulted only once both stronger channels
+        (``resolve_product_nodes_by_name`` exact KG alias, then the LIKE
+        substring match above) already found nothing: BM25 tolerates typos,
+        reordering, and partial-token matches neither of those do. Results
+        are still exact ``product_uid``s re-joined against the catalog, so
+        they flow through the same "not exactly one match -> clarify"
+        contract as any other resolution -- a fuzzy hit is never silently
+        promoted to a chosen answer.
+        """
+
+        from app.retrieval.router import route_entity_fallback
+
+        # vector_enabled is hardcoded False here (not threaded from Settings):
+        # DuckDBEngine has no settings handle, and vector search has no
+        # committed embeddings cache yet everywhere else in this codebase
+        # either (config.py's own default is False). Once a real cache
+        # exists, extending this call to accept the flag is a one-line change.
+        decision = route_entity_fallback(exact_match_count=0, vector_enabled=False)
+        if "lexical" not in decision.channels:
+            return ()
+        from app.retrieval.lexical_retriever import search as lexical_search
+
+        hits = lexical_search(connection, label, field="name", scope=scope, limit=5)
+        return tuple(hit.product_uid for hit in hits)
 
     def resolve_entities(self, plan: QueryPlan) -> list[tuple[str, int]]:
         """Return match cardinality per declared entity without applying limits."""
