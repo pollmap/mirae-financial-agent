@@ -6,9 +6,14 @@
 
 이 문서는 이 저장소를 처음 보는 AI 에이전트가 별도 대화 맥락 없이도 "지금 뭐가
 되어 있고, 뭐가 안 되어 있고, 다음에 뭘 해야 하는지"를 정확히 파악하도록 쓴
-단일 진입점입니다. **내용이 다른 문서와 상충하면 이 파일 →
+단일 진입점입니다. **"왜 지금 이 모습인지"(설계 결정의 이유, 사용자의 협상
+불가 원칙, 기각된 대안)는 이 파일이 아니라
+`docs/16_MASTER_PROJECT_NARRATIVE.md`가 담당합니다 — 다른 코드 에이전트
+계정이 처음 이어받는다면 그 문서부터 읽으세요.** 내용이 다른 문서와
+상충하면 이 파일 → `docs/16_MASTER_PROJECT_NARRATIVE.md` →
 `docs/15_REBASELINE_VALIDATION_REPORT.md` → `docs/14_BRIEFING_REBASELINE_PLAN.md`
-순으로 최신입니다.** `00_START_HERE.md`, `docs/11_IMPLEMENTATION_HANDOFF.md`,
+순으로 최신입니다(이 파일이 실시간 상태, 16은 서사이므로 상태 판단은 항상
+이 파일 기준). `00_START_HERE.md`, `docs/11_IMPLEMENTATION_HANDOFF.md`,
 `artifacts/windows_docker_verification_20260803.md`는 8/3-8/4 시점(설명회 이전
 "prebrief" 상태, 태그 `prebrief-v1`)에서 멈춘 배경 문서입니다.
 
@@ -225,8 +230,12 @@ manager_code 전용·구조적 invariant, `test_lexical.py`와 같은 in-memory
 
 ## 5. 이 문서를 쓰는 법 (다른 에이전트에게)
 
-- 이 파일 → `docs/15_REBASELINE_VALIDATION_REPORT.md`(실측 수치) →
+- **완전히 새로 이어받는다면** `docs/16_MASTER_PROJECT_NARRATIVE.md`(전체
+  서사·사용자의 협상불가 원칙·설계 결정 이유)부터. 그 다음 이 파일(현재
+  상태) → `docs/15_REBASELINE_VALIDATION_REPORT.md`(실측 수치) →
   `docs/14_BRIEFING_REBASELINE_PLAN.md`(설계 원안+진행상황) 순으로 읽어라.
+  **이미 현재 상태만 빠르게 확인하면 되는 경우**엔 이 파일부터 시작해도
+  된다.
 - `git log --oneline briefing-rebaseline-v2` 상위 12개 커밋이 이번 재설계의
   전체 diff다(각 커밋 메시지가 상세 변경 근거를 담고 있음). `5c85af5`가
   최종 적대적 리뷰 수정분, `e577107`이 그 다음 종합 점검(Docker 실검증+

@@ -1,5 +1,15 @@
 # Codex Project Rules - 미래에셋증권 금융상품 Agent
 
+> **Read `HANDOFF_CURRENT_STATUS.md` and `docs/16_MASTER_PROJECT_NARRATIVE.md`
+> first, before anything below.** This file predates the 2026-08-06 briefing
+> and the federated-semantic-rebaseline that followed it (branch
+> `briefing-rebaseline-v2`). Most of it is still binding project policy, but
+> §5's "do not start with ... GraphDB" line is now stale -- the project
+> *did* add a Knowledge Graph (`etl/kg.py`) once the briefing made it a
+> required tech-spec item, and §10's paths/commands predate that work too.
+> Where this file and the two documents above disagree, they are newer and
+> win.
+
 ## 1. Source of truth
 
 Apply sources in this order.
@@ -80,8 +90,19 @@ Priority order:
 7. Technical proposal and demo materials
 8. UI and optional enrichment only after the API passes the release gate
 
-Do not start with multi-agent orchestration, GraphDB, a large UI, portfolio optimization,
-or live-market integration.
+Do not start with multi-agent orchestration, a large UI, portfolio optimization, or
+live-market integration.
+
+**(2026-08-08 update)** The "do not start with ... GraphDB" clause that used to
+be here no longer applies: the 2026-08-06 briefing made Ontology/Knowledge
+Graph/Federated Retrieval/two-stage planning required tech-spec items, and
+the project implemented them (`etl/kg.py`, `app/retrieval/`,
+`app/semantics/`) rather than treating the MVP priority order above as a
+reason to skip them. The distinction that still holds is "graph database
+*product*" (Neo4j etc., genuinely unneeded at this data scale) versus "graph
+*relationship model*" (needed once the briefing required it, implemented
+inside the same single DuckDB file). See `docs/16_MASTER_PROJECT_NARRATIVE.md`
+for why and `docs/04_PRODUCT_ARCHITECTURE_SPEC.md`'s 2026-08-08 correction.
 
 ## 6. Contract discipline
 
@@ -134,15 +155,31 @@ No feature is complete until all applicable checks pass:
 
 ## 10. Current executable baseline
 
-- The repository now contains an implemented MVP. Read `CODEX_MASTER_PROMPT.md` and
-  `docs/11_IMPLEMENTATION_HANDOFF.md`; do not treat it as a design-only scaffold.
-- Reuse `app/`, `etl/`, `registry/`, and the existing tests before adding parallel systems.
-- Standard local gate:
-  `make verify -> make build-data -> make test-fast -> make compliance`.
-- Full-source ETL gate: `.venv/bin/python -m pytest -q tests/test_etl.py`.
-- Real HTTP gate: start with `make run`, then run
-  `.venv/bin/python scripts/e2e_smoke.py --base-url http://127.0.0.1:8080`.
+- The repository now contains a fully implemented, federated-semantic-rebaselined MVP on
+  branch `briefing-rebaseline-v2` (not `main`). Read `HANDOFF_CURRENT_STATUS.md` and
+  `docs/16_MASTER_PROJECT_NARRATIVE.md` first; `CODEX_MASTER_PROMPT.md` and
+  `docs/11_IMPLEMENTATION_HANDOFF.md` describe the pre-rebaseline (2026-08-03) state only.
+- Reuse `app/`, `etl/`, `registry/`, `app/semantics/`, `app/retrieval/`, and the existing
+  tests before adding parallel systems.
+- **On Windows**, the Makefile's `PYTHON ?= .venv/bin/python` targets assume WSL/Linux and
+  do not resolve from plain Windows Git Bash/PowerShell -- call
+  `.venv/Scripts/python.exe -m ...` directly instead (e.g.
+  `.venv/Scripts/python.exe -m pytest -q`, `.venv/Scripts/python.exe -m ruff check ...`).
+- Standard local gate: source verify -> `scripts/build_data.py --no-parquet` (now also
+  builds the KG and lexical index stages) -> full pytest -> `scripts/scan_runtime_compliance.py`.
+- Full-source ETL gate: `pytest -q tests/test_etl.py` (and `tests/unit/test_kg.py` for the
+  Knowledge Graph build stage specifically).
+- Real HTTP gate: start the app, then run `scripts/e2e_smoke.py --base-url http://127.0.0.1:8080`.
+- **Also run** (added by the rebaseline, not optional): `python -m eval.run_eval` (640-question
+  independent-oracle harness) and `python -m eval.metamorphic` (paraphrase-invariance check).
+  `eval/` is excluded from the Docker runtime image but is part of the git repo and the
+  required local gate.
 - Development/test may use the deterministic non-LLM parser. Production must fail unless
   `APP_ENV=production`, `PLANNER_MODE=hcx`, an HCX key, and a non-default clarification signing
-  key are present.
+  key are present -- verified empirically this session (the runtime image genuinely refuses to
+  start without a key rather than silently degrading).
 - Any new gold or policy expectation must become an executable assertion, not only prose.
+- **Trust nothing without executing it.** This project's own history is the argument for this
+  rule: an eval harness that silently under-graded cross-scope correctness reported a false
+  100% for weeks before an adversarial review caught it by re-deriving the check instead of
+  trusting its output. See `docs/16_MASTER_PROJECT_NARRATIVE.md` for the full account.
