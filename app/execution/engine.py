@@ -425,12 +425,28 @@ class DuckDBEngine:
                     entity_params = [entity.code, entity.code, entity.code]
                     label = entity.code
                 else:
-                    predicate = "(LOWER(c.name) LIKE LOWER(?) OR LOWER(c.short_name) LIKE LOWER(?))"
-                    entity_params = [
-                        f"%{entity.name}%",
-                        f"%{entity.name}%",
-                    ]
                     label = entity.name or ""
+                    # Exact KG alias match (official name/short name) is more
+                    # precise than the substring LIKE; fall back when the KG
+                    # stage is absent or nothing matches exactly.
+                    from app.retrieval.graph_retriever import (
+                        resolve_product_nodes_by_name,
+                    )
+
+                    exact_uids = resolve_product_nodes_by_name(connection, label)
+                    if exact_uids:
+                        uid_placeholders = ", ".join("?" for _ in exact_uids)
+                        predicate = f"c.product_uid IN ({uid_placeholders})"
+                        entity_params = list(exact_uids)
+                    else:
+                        predicate = (
+                            "(LOWER(c.name) LIKE LOWER(?) "
+                            "OR LOWER(c.short_name) LIKE LOWER(?))"
+                        )
+                        entity_params = [
+                            f"%{entity.name}%",
+                            f"%{entity.name}%",
+                        ]
                 params = [
                     plan.scopes[0],
                     *catalog_filter_params,

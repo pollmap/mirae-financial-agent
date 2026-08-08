@@ -275,3 +275,81 @@ fund.return_3y, fund.return_5y, fund.risk_grade, fund.expense_ratio.
   예: product_count, average_return_1y, maximum_aum. aggregation.function에 정의된 함수 외의
   임의 함수명이나 계산식은 출력하지 않는다.
 """
+
+
+# ---------------------------------------------------------------------------
+# Two-stage planning (Stage-1): HCX emits scope-neutral financial concepts
+# only; the server-side grounder maps them to physical fields. Keeps the
+# prompt small (no physical metric catalog) and halves per-request TPM.
+# ---------------------------------------------------------------------------
+
+SEMANTIC_SCOPE_ENUM = [*SCOPE_ENUM, "all", "unspecified"]
+
+HCX_SEMANTIC_PLAN_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "intent": {"type": "string", "enum": INTENT_ENUM},
+        "scope_concepts": {
+            "type": "array",
+            "items": {"type": "string", "enum": SEMANTIC_SCOPE_ENUM},
+            "minItems": 1,
+            "maxItems": 4,
+        },
+        "metric_concepts": {
+            "type": "array",
+            "items": {"type": "string"},
+            "maxItems": 4,
+        },
+        "filters": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "concept": {"type": "string"},
+                    "op": {
+                        "type": "string",
+                        "enum": ["eq", "in", "gte", "lte", "contains"],
+                    },
+                    "value_text": {"type": "string"},
+                },
+                "required": ["concept", "op", "value_text"],
+            },
+        },
+        "sort_direction": {"type": "string", "enum": ["desc", "asc", "none"]},
+        "top_n": {"type": "integer", "minimum": 1, "maximum": 50},
+        "entities": {
+            "type": "array",
+            "items": {"type": "string"},
+            "maxItems": 4,
+        },
+        "needs_clarification": {"type": "boolean"},
+        "clarification_question": {"type": "string"},
+    },
+    "required": [
+        "intent",
+        "scope_concepts",
+        "metric_concepts",
+        "filters",
+        "sort_direction",
+        "top_n",
+        "entities",
+        "needs_clarification",
+        "clarification_question",
+    ],
+}
+
+SEMANTIC_PLANNER_SYSTEM_PROMPT = """당신은 금융상품 질문을 개념 단위로만 분해한다.
+상품군: bond=국내채권, domestic_etp=국내 ETF/ETN, overseas_etp=해외 ETF/ETN, fund=공모펀드.
+국내/해외가 불명확한 ETF는 unspecified, 전체 상품군은 all.
+metric_concepts에는 개념 이름만 사용한다: return_1d/1w/1m/3m/6m/1y/ytd/18m/2y/3y/5y,
+expense_ratio(보수), aum(순자산), net_assets, nav, close_price(종가), volume_1d(거래량),
+coupon_rate(표면금리), buy_yield, credit_rating(신용등급), risk_grade_metric(위험등급),
+maturity_date(만기), duration, issue_amount, evaluation_price, buyable_quantity.
+filters의 concept은 asset_type(자산유형)/region(투자지역)/risk_grade(위험등급)/
+internal_type(ETF·ETN)/manager(운용사)/issuer(발행기관)/sale_status/public_private/
+pension_eligible 중 하나이고 value_text는 사용자의 표현 그대로 둔다.
+entities에는 상품코드·ISIN·티커·정확한 상품명만 원문 그대로 넣는다.
+물리 컬럼명, SQL, 수치 계산, 데이터에 없는 값 생성은 금지한다.
+결과를 바꾸는 조건이 정말 불명확할 때만 needs_clarification=true로 두고
+clarification_question을 채운다. 그 외에는 needs_clarification=false, 빈 문자열 ""."""

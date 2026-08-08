@@ -51,14 +51,55 @@ MODE_LABELS_KO = {
 _MAX_LIMITATIONS = 30
 
 
+_CURRENCY_PARTITIONED_METRICS = {
+    "domestic_etp.aum_last": ("product.currency", "CURR_CD_KRW"),
+    "domestic_etp.net_assets": ("product.currency", "CURR_CD_KRW"),
+    "domestic_etp.nav_last": ("product.currency", "CURR_CD_KRW"),
+    "domestic_etp.close_price": ("product.currency", "CURR_CD_KRW"),
+    "overseas_etp.aum_last": ("product.trading_currency", None),
+    "overseas_etp.nav_last": ("product.trading_currency", None),
+    "overseas_etp.close_price": ("product.trading_currency", None),
+}
+
+
+def _dominant_currency(
+    engine: DuckDBEngine, scope: str, field_column: str
+) -> tuple[str, float] | None:
+    """The single currency value covering the largest share of the scope.
+
+    Real serving data is overwhelmingly single-currency per scope (overseas
+    trading_currency is 100% USD; domestic currency is 99.9%+ KRW). Rather
+    than refuse a currency-partitioned rank whenever no filter is given, the
+    cross-scope executor infers and discloses the dominant value; a plan that
+    explicitly names a different currency is never overridden.
+    """
+
+    column = "trading_currency" if field_column == "product.trading_currency" else "currency"
+    with engine._connect() as connection:  # noqa: SLF001 - same execution package
+        rows = connection.execute(
+            f"SELECT {column}, COUNT(*) AS n FROM product_catalog "
+            f"WHERE scope = ? AND {column} IS NOT NULL "
+            "GROUP BY 1 ORDER BY n DESC",
+            [scope],
+        ).fetchall()
+    if not rows:
+        return None
+    total = sum(row[1] for row in rows)
+    top_value, top_count = rows[0]
+    return str(top_value), top_count / total if total else 0.0
+
+
 def _subplan(
-    plan: QueryPlan, scope: str, metrics: list[str]
-) -> tuple[QueryPlan, list[str]]:
+    engine: DuckDBEngine, plan: QueryPlan, scope: str, metrics: list[str]
+) -> tuple[QueryPlan, list[str], list[str]]:
     """Rebind one scope's physical metrics onto a single-scope copy.
 
     Conditions that do not exist for the target scope (e.g. ETF/ETN type on
-    funds) are dropped and reported so the disclosure block can state which
-    constraints applied to which scope.
+    funds) are dropped and reported. A currency-partitioned metric without an
+    explicit currency filter gets the scope's dominant currency auto-applied
+    (see ``_dominant_currency``); this is reported separately so the
+    disclosure block can state it as an inferred assumption, not a silent
+    default.
     """
 
     from app.execution.registry import CATALOG_SCOPE_FIELDS
@@ -70,6 +111,7 @@ def _subplan(
     scope_fields = CATALOG_SCOPE_FIELDS.get(scope, frozenset())
     dropped: list[str] = []
     kept_groups = []
+    has_explicit_currency: dict[str, bool] = {}
     for group in payload["filter_groups"]:
         kept_conditions = []
         for condition in group["conditions"]:
@@ -81,12 +123,36 @@ def _subplan(
             )
             if field_name == "product.scope":
                 continue
+            if field_name in ("product.currency", "product.trading_currency"):
+                has_explicit_currency[field_name] = True
             if applicable:
                 kept_conditions.append(condition)
             else:
                 dropped.append(f"{field_name}={condition.get('value')}")
         if kept_conditions:
             kept_groups.append({**group, "conditions": kept_conditions})
+
+    inferred_currency: list[str] = []
+    for metric in metrics:
+        spec = _CURRENCY_PARTITIONED_METRICS.get(metric)
+        if spec is None or has_explicit_currency.get(spec[0]):
+            continue
+        dominant = _dominant_currency(engine, scope, spec[0])
+        if dominant is None:
+            continue
+        value, share = dominant
+        kept_groups.append(
+            {
+                "join": "AND",
+                "conditions": [{"field": spec[0], "op": "eq", "value": value}],
+            }
+        )
+        has_explicit_currency[spec[0]] = True
+        inferred_currency.append(
+            f"{SCOPE_LABELS_KO.get(scope, scope)} {metric}: 실측 통화의 "
+            f"{share * 100:.1f}%가 {value}이어서 이를 기준으로 자동 적용"
+        )
+
     payload["filter_groups"] = kept_groups
     if plan.intent == "rank" and metrics:
         direction = plan.sort[0].direction if plan.sort else "desc"
@@ -112,7 +178,7 @@ def _subplan(
     ]
     payload["group_by"] = [key for key in plan.group_by if key != "product.scope"]
     payload["preserved_plan"] = None
-    return QueryPlan.model_validate(payload), dropped
+    return QueryPlan.model_validate(payload), dropped, inferred_currency
 
 
 def _item_value(item: ProductEvidence, metric_ids: list[str]) -> Decimal | None:
@@ -158,13 +224,15 @@ def execute_cross_scope(engine: DuckDBEngine, plan: QueryPlan) -> EvidenceBundle
     sub_bundles: dict[str, EvidenceBundle] = {}
     failed_scopes: dict[str, str] = {}
     dropped_by_scope: dict[str, list[str]] = {}
+    inferred_currency: list[str] = []
     for scope in plan.scopes:
         metrics = decision.per_scope_metrics.get(scope)
         if metrics is None:
             continue
-        sub, dropped = _subplan(plan, scope, metrics)
+        sub, dropped, currency_notes = _subplan(engine, plan, scope, metrics)
         if dropped:
             dropped_by_scope[scope] = dropped
+        inferred_currency.extend(currency_notes)
         bundle = engine.execute(sub)
         if bundle.answerability in {
             Answerability.FULL,
@@ -185,6 +253,7 @@ def execute_cross_scope(engine: DuckDBEngine, plan: QueryPlan) -> EvidenceBundle
             f"{SCOPE_LABELS_KO.get(scope, scope)}에 적용할 수 없는 조건은 해당 "
             f"상품군에서만 제외했습니다: {', '.join(dropped)}"
         )
+    disclosure.extend(inferred_currency)
 
     if not sub_bundles:
         limitation = " / ".join(

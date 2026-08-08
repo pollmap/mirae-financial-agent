@@ -11,7 +11,12 @@ from app.config import Settings
 from app.domain.models import QueryPlan
 from app.planner.deterministic import DeterministicPlanner
 from app.planner.hcx import HCXStructuredPlanner, HCXTransportError
-from app.planner.schema import HCX_QUERY_PLAN_SCHEMA, QUERY_PLANNER_SYSTEM_PROMPT
+from app.planner.schema import (
+    HCX_QUERY_PLAN_SCHEMA,
+    HCX_SEMANTIC_PLAN_SCHEMA,
+    QUERY_PLANNER_SYSTEM_PROMPT,
+    SEMANTIC_PLANNER_SYSTEM_PROMPT,
+)
 
 
 class HcxQueryPlanner:
@@ -32,11 +37,18 @@ class HcxQueryPlanner:
         self._tpm_budget = settings.hcx_tpm_budget
         self._token_reservations: deque[tuple[float, int]] = deque()
         self._token_lock = asyncio.Lock()
+        self._stage = settings.planner_stage
+        if self._stage == "two":
+            self._system_prompt = SEMANTIC_PLANNER_SYSTEM_PROMPT
+            self._schema = HCX_SEMANTIC_PLAN_SCHEMA
+        else:
+            self._system_prompt = QUERY_PLANNER_SYSTEM_PROMPT
+            self._schema = HCX_QUERY_PLAN_SCHEMA
         self._base_token_reservation = (
-            len(QUERY_PLANNER_SYSTEM_PROMPT.encode("utf-8"))
+            len(self._system_prompt.encode("utf-8"))
             + len(
                 json.dumps(
-                    HCX_QUERY_PLAN_SCHEMA,
+                    self._schema,
                     ensure_ascii=False,
                     separators=(",", ":"),
                 ).encode("utf-8")
@@ -106,16 +118,38 @@ class HcxQueryPlanner:
                 await self._acquire_rate_slot()
                 await self._acquire_token_slot(question)
                 async with self._semaphore:
+                    if self._stage == "two":
+                        return await self._client.create_plan(
+                            question=question,
+                            schema=self._schema,
+                            validator=self._ground_semantic_payload(question),
+                            system_prompt=self._system_prompt,
+                            max_completion_tokens=1_024,
+                            before_attempt=before_attempt,
+                        )
                     return await self._client.create_plan(
                         question=question,
-                        schema=HCX_QUERY_PLAN_SCHEMA,
+                        schema=self._schema,
                         validator=QueryPlan,
-                        system_prompt=QUERY_PLANNER_SYSTEM_PROMPT,
+                        system_prompt=self._system_prompt,
                         max_completion_tokens=1_024,
                         before_attempt=before_attempt,
                     )
         except TimeoutError as exc:
             raise HCXTransportError("HCX total request deadline exceeded") from exc
+
+    def _ground_semantic_payload(self, question: str):
+        """Validator callback: Stage-1 concept JSON -> physical QueryPlan.
+
+        The HCX adapter wraps any exception raised inside a validator
+        callback as ``HCXValidationError``, so a ``GroundingError`` here
+        (unknown concept, absent binding, missing entity) fails exactly like
+        a schema-invalid response: no plan reaches execution.
+        """
+
+        from app.semantics.grounder import ground_semantic
+
+        return lambda payload: ground_semantic(payload, question=question)
 
     async def aclose(self) -> None:
         await self._client.aclose()

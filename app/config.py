@@ -27,6 +27,9 @@ class Settings:
     environment: str = "development"
     database_path: Path = PROJECT_ROOT / "data" / "serving" / "mirae_agent.duckdb"
     planner_mode: str = "deterministic"
+    # "one" = full physical QueryPlan from HCX; "two" = HCX emits concepts
+    # only and the server-side grounder maps them to physical fields.
+    planner_stage: str = "one"
     hcx_model_id: str = "HCX-007"
     hcx_base_url: str = "https://clovastudio.stream.ntruss.com"
     clova_studio_api_key: str | None = None
@@ -54,6 +57,7 @@ class Settings:
                 )
             ),
             planner_mode=os.getenv("PLANNER_MODE", "deterministic").strip().lower(),
+            planner_stage=os.getenv("PLANNER_STAGE", "one").strip().lower(),
             hcx_model_id=os.getenv("HCX_MODEL_ID", "HCX-007").strip(),
             hcx_base_url=os.getenv("HCX_BASE_URL", "https://clovastudio.stream.ntruss.com").rstrip(
                 "/"
@@ -82,6 +86,8 @@ class Settings:
             raise ValueError("APP_ENV must be development, test, or production")
         if self.planner_mode not in {"hcx", "deterministic"}:
             raise ValueError("PLANNER_MODE must be hcx or deterministic")
+        if self.planner_stage not in {"one", "two"}:
+            raise ValueError("PLANNER_STAGE must be one or two")
         if self.environment == "production" and self.planner_mode != "hcx":
             raise ValueError("production requires PLANNER_MODE=hcx")
         if self.planner_mode == "hcx" and not self.clova_studio_api_key:

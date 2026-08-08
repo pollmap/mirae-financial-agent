@@ -845,7 +845,7 @@ def _create_database(
     connection = duckdb.connect(str(database_path))
     try:
         connection.execute("PRAGMA threads=4")
-        for schema in ("raw", "clean", "canonical", "serving", "metadata"):
+        for schema in ("raw", "clean", "canonical", "serving", "metadata", "kg"):
             connection.execute(f"CREATE SCHEMA {schema}")
 
         for dataset_id in EXPECTED_DATASETS:
@@ -945,6 +945,10 @@ def _create_database(
             "CREATE INDEX fund_attribute_idx ON serving.fund_attribute(product_uid, attribute_code)"
         )
 
+        from etl.kg import build_kg
+
+        kg_counts = build_kg(connection, package_root)
+
         for view_name in ("product_catalog", "product_metrics", "fund_attribute", "quarantine"):
             connection.execute(f"CREATE VIEW {view_name} AS SELECT * FROM serving.{view_name}")
         connection.execute(
@@ -976,6 +980,8 @@ def _create_database(
             raise RuntimeError("Fund attribute reconciliation failed")
         if connection.execute("SELECT COUNT(*) FROM serving.quarantine").fetchone()[0] != 10:
             raise RuntimeError("Quarantine reconciliation failed")
+        if min(kg_counts.values()) <= 0:
+            raise RuntimeError(f"KG reconciliation failed: {kg_counts}")
 
         if parquet_dir is not None:
             parquet_dir.mkdir(parents=True, exist_ok=True)
