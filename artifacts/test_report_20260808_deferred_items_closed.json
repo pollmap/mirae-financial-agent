@@ -1,0 +1,110 @@
+{
+  "report_version": "6.0",
+  "as_of": "2026-08-08T17:30:00+09:00",
+  "status": "LOCAL_PASS_ALL_DEFERRED_ITEMS_CLOSED",
+  "release_scope": "briefing-rebaseline-v2 (federated semantic rebaseline + 2 review rounds + deferred-item closure)",
+  "git_sha": "c9efb67",
+  "pytest_summary": {
+    "passed": 246,
+    "failed": 0,
+    "skipped": 0
+  },
+  "eval_summary": {
+    "question_total": 640,
+    "accuracy": 1.0,
+    "cross_scope_refusal_rate": 0.0,
+    "disclosure_rate": 0.9855,
+    "rank_position_match_mean": 1.0
+  },
+  "metamorphic_summary": {
+    "groups_evaluated": 137,
+    "groups_invariant": 137,
+    "invariance_rate": 1.0
+  },
+  "kg_lexical_summary": {
+    "kg_nodes": 71683,
+    "kg_edges": 206274,
+    "kg_aliases": 249874,
+    "lex_docs": 80670,
+    "lex_terms": 1288698,
+    "lex_vocab": 43935,
+    "vec_embeddings": 0,
+    "note": "kg_nodes/kg_aliases changed from the previous round's 71671/249857 after fixing scope-blind party-name merging in etl/kg.py -- +12 nodes / +17 aliases reflects 12 real cross-scope name collisions that existed in the actual 60,903-product dataset and were being silently merged before this fix. kg_edges unchanged (206274): edge count and type distribution don't change, only which party node some edges point to."
+  },
+  "two_stage_planner_summary": {
+    "stage_one_tpm_reservation_bytes": 13013,
+    "stage_two_tpm_reservation_bytes": 5383,
+    "reduction_pct": 58.6
+  },
+  "checks": [
+    {
+      "command": ".venv/Scripts/python.exe scripts/verify_sources.py",
+      "status": "PASS"
+    },
+    {
+      "command": ".venv/Scripts/python.exe scripts/build_data.py --no-parquet",
+      "status": "PASS",
+      "note": "rebuilt against the scope-aware kg.py fix; counts above are from this rebuild"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m ruff check app deploy etl scripts tests eval",
+      "findings": 0,
+      "status": "PASS"
+    },
+    {
+      "command": ".venv/Scripts/python.exe scripts/scan_runtime_compliance.py",
+      "files_scanned": 84,
+      "non_hcx_findings": 0,
+      "status": "PASS"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q",
+      "passed": 246,
+      "failed": 0,
+      "skipped": 0,
+      "status": "PASS",
+      "note": "238 baseline + 8 new tests/unit/test_kg.py covering role assignment, same-scope merge, cross-scope non-merge regression, alias-kind tagging, benchmark-sentinel exclusion, fund manager-code-only path, structural invariants"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m eval.run_eval",
+      "question_total": 640,
+      "failures": 0,
+      "status": "PASS",
+      "note": "unchanged from the prior round -- expected, since the KG graph traversal/party path is not in the live request path yet, so this fix cannot change any answer"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m eval.metamorphic",
+      "groups_evaluated": 137,
+      "violations": 0,
+      "status": "PASS"
+    }
+  ],
+  "this_round_summary": "User instruction: '보류한 것도 마저 해!!! 다만 불가능한건 어쩔수없고' (finish what was deferred too, except what's genuinely impossible). The two items the prior round (e577107/434120c) had deliberately left as low-priority (zero live callers meant zero behavioral risk today) were closed: (1) etl/kg.py's party-name merge grouped only by normalized(name), not (scope, normalized) -- a bond issuer and a domestic-ETP manager that normalize to the same string (normalize_party treats Ltd/LLC/Inc/㈜/주식회사 as interchangeable suffixes) would collapse into one KG party node despite being different real-world entities in different product scopes. Fixed: groupby now includes scope, node_id changed from party:<normalized> to party:<scope>:<normalized>, with edge dst_node_id and alias node_id updated to match. Rebuilding the real database against the fix changed the actual counts (+12 nodes, +17 aliases) -- confirming this was a real, not just theoretical, data-correctness bug: 12 genuine cross-scope name collisions existed in the live 60,903-product dataset. (2) etl/kg.py had zero dedicated tests for its own role-assignment/merge/alias-kind logic (only coarse structural invariants). Added tests/unit/test_kg.py, 8 tests, in-memory synthetic DuckDB (same style as test_lexical.py) -- including a direct regression test for the scope-collision fix. Writing that test caught a second, real bug before it could ever bite: a synthetic fixture with zero bond/ETP rows left the intermediate parties frame empty, and DuckDB mis-inferred kg_edge's edge_id column as INT32 from that empty CREATE TABLE AS SELECT, breaking on the next real-string INSERT. Cannot happen against the actual 145K-row source (bonds/ETPs are never universally absent an issuer/manager), but cheap to guard against with explicit CAST(...AS VARCHAR); fixed. Full re-verification after both fixes and a real database rebuild: pytest 246/246, eval 640/640 (100%, unchanged as expected since this path isn't live yet), metamorphic 137/137, ruff clean, compliance 84/0. No deferred items remain from either review round.",
+  "external_gates": [
+    {
+      "gate": "HyperCLOVA X live credential E2E",
+      "status": "NOT_RUN",
+      "reason": "Team CLOVA Studio API key unavailable"
+    },
+    {
+      "gate": "Vector embeddings cache generation",
+      "status": "NOT_RUN",
+      "reason": "Requires live CLOVA_STUDIO_API_KEY"
+    },
+    {
+      "gate": "PLANNER_STAGE=two full 640-question A/B",
+      "status": "NOT_RUN",
+      "reason": "eval harness calls DeterministicPlanner directly; flagship-query parity proven via mock-HCX contract test instead"
+    },
+    {
+      "gate": "Public TLS deployment",
+      "status": "NOT_RUN",
+      "reason": "No deployment target provided"
+    },
+    {
+      "gate": "Organizer final API contract and briefing incorporation",
+      "status": "WAITING_FOR_BRIEFING",
+      "reason": "2026-08-06 briefing outcome not yet incorporated into this package"
+    }
+  ]
+}

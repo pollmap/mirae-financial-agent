@@ -4,13 +4,16 @@
 `docs/14_BRIEFING_REBASELINE_PLAN.md`에서 정의한 게이트의 실측 결과다. 측정하지 않은
 항목은 "미측정"으로 명시하고 추정치를 대신 적지 않는다.
 
-**중요 — §0, §0-2를 먼저 읽을 것.** 이 문서의 최초 버전(W1-W3 시점)이 보고한
-"640/640 100%, cross_scope 69/69 정답"은 사후 적대적 리뷰(§0)에서 **채점 로직
-자체의 결함**으로 밝혀졌다. 거절률 0% 측정치는 그때도 지금도 유효하지만,
-"순위·값이 정확하다"는 부분은 당시 검증되지 않은 채로 통과 처리되고 있었다.
-그 리뷰로 앱 코드를 고친 뒤, 사용자가 한 번 더 종합 점검을 지시했고(§0-2),
-이번엔 제출 문서(기술제안서·README·다이어그램)가 재설계 이전 내용을 그대로
-담고 있었던 것과 requirements traceability의 과장을 발견·수정했다. §0·§0-2에
+**중요 — §0, §0-2, §0-3을 먼저 읽을 것.** 이 문서의 최초 버전(W1-W3 시점)이
+보고한 "640/640 100%, cross_scope 69/69 정답"은 사후 적대적 리뷰(§0)에서
+**채점 로직 자체의 결함**으로 밝혀졌다. 거절률 0% 측정치는 그때도 지금도
+유효하지만, "순위·값이 정확하다"는 부분은 당시 검증되지 않은 채로 통과
+처리되고 있었다. 그 리뷰로 앱 코드를 고친 뒤, 사용자가 한 번 더 종합 점검을
+지시했고(§0-2), 이번엔 제출 문서(기술제안서·README·다이어그램)가 재설계 이전
+내용을 그대로 담고 있었던 것과 requirements traceability의 과장을 발견·
+수정했다. 마지막으로 §0-2가 낮은 우선순위로 남겼던 두 항목(`normalize_party`
+scope-blind 병합, `etl/kg.py` 단위테스트 부재)도 마저 처리했고, 그 과정에서
+실 데이터에 존재하던 진짜 병합 버그를 발견·수정했다(§0-3). §0·§0-2·§0-3에
 전체 경위를 기록한다.
 
 ## 0. 사후 적대적 리뷰에서 발견·수정한 것 (2026-08-08, W1-W3 완료 직후)
@@ -185,6 +188,50 @@ node_id 구성과 edge의 dst_node_id 참조도 함께 바꿔야 하고 재빌�
 실행값 재사용 아님) — pytest 238/238, eval 640/640(100%, 거절률 0%, 공시율
 98.55%), metamorphic 137/137, ruff clean, compliance 84 files/0 findings.
 
+## 0-3. 보류 항목 마무리 (2026-08-08, 커밋 `c9efb67`)
+
+사용자가 §0-2에서 낮은 우선순위로 남긴 두 항목("보류한 것도 마저 해!!!")을
+마저 처리하라고 재지시했다. 둘 다 그래프 party 함수의 실 호출자가 0건이라
+지금까지는 리스크가 0이었지만, 방치할 이유는 없었다.
+
+**`normalize_party` scope-blind 병합 수정**: `etl/kg.py`의 party 노드 병합이
+`groupby("normalized")`만 사용해 스코프를 무시하고 있었다 — 채권 발행사와
+국내 ETP 운용사가 우연히 같은 정규화 문자열로 귀결되면(예: "Value Partners
+Ltd"와 "Value Partners LLC" — `normalize_party`가 Ltd/LLC를 같은 접미사로
+취급) 서로 다른 두 실제 법인이 party 노드 하나로 병합될 수 있었다.
+`groupby(["scope", "normalized"])`로 수정하고 `node_id`를
+`party:<normalized>`에서 `party:<scope>:<normalized>`로 바꿨다(연쇄적으로
+edge의 `dst_node_id`, alias의 `node_id` 구성도 함께 수정 — 세 곳 다 고쳐야
+일관성이 유지됨을 확인하고 진행). **실 데이터로 재빌드한 결과 kg_node
+71,671→71,683(+12), kg_alias 249,857→249,874(+17)로 실제로 바뀌었다** —
+즉 이론적 위험이 아니라 60,903개 실 상품 데이터 안에 스코프간 이름충돌이
+12건 실재했고, 지금까지 조용히 잘못 병합되고 있었다는 뜻이다. kg_edge 총
+206,274건은 변화 없음(어떤 party 노드를 가리키는지만 바뀌었을 뿐 edge 자체
+개수·타입 분포는 무관).
+
+**`etl/kg.py` 전용 단위테스트 추가**: `tests/unit/test_kg.py` 8개 — 스코프별
+역할 배정(채권/ETN→issuedBy, ETF→managedBy), 동일 스코프 내 표기변형 병합,
+서로 다른 이름은 병합 안 됨(`한국투자` vs `한국투자증권`), **위 수정의 회귀
+테스트**(동일 정규화명이 스코프가 다르면 병합되지 않음을 직접 검증), OFFICIAL/
+NORMALIZED alias 태깅, 해외 benchmark sentinel 제외, 펀드는 manager_code
+전용 노드(이름 발명 안 함), 구조적 invariant. `test_lexical.py`와 같은
+스타일로 `duckdb.connect(":memory:")` 합성 데이터를 써서 14.5만행 실 ETL을
+매번 돌릴 필요 없이 이 스테이지 자체의 로직만 빠르게 검증한다.
+
+**테스트 작성 중 실제로 두 번째 버그를 잡았다**: 펀드 전용(채권/ETP 0건) 합성
+데이터로 `build_kg`를 호출했더니 `kg_edge`를 만드는 첫 `CREATE TABLE ... AS
+SELECT`가 빈 결과셋이라 DuckDB가 텍스트 컬럼 하나를 INT32로 잘못 추론했고,
+바로 다음 INSERT(실제 문자열 데이터)가 변환 에러로 죽었다. 14.5만행 실
+데이터에서는 채권·ETP가 issuer/manager 없이 전부 비는 일이 있을 수 없어 절대
+발생하지 않지만, 원인 규명 후 해당 CREATE TABLE의 모든 텍스트 표현식에
+`CAST(... AS VARCHAR)`를 명시해 방어했다(비용 거의 0, 실 데이터 경로는
+동작 무변화 — 전체 스위트 재실행으로 확인).
+
+**재검증**: pytest **246/246**(238 + 신규 kg 테스트 8개), eval 640/640(100%,
+KG graph 경로는 아직 live 요청 경로 밖이라 이 결과는 무변화 — 예상된 결과),
+metamorphic 137/137, ruff clean. 이걸로 §0-2의 두 보류 항목이 모두
+해소됐다 — 남은 "낮은 우선순위" 항목은 없다.
+
 ## 1. 핵심 지표 (eval/run_eval.py, 640문항, 독립 SQL oracle, 채점 로직 수정 후 재측정)
 
 ```text
@@ -270,11 +317,11 @@ Stage-1 실제 전송 스키마         HCX_SEMANTIC_PLAN_SCHEMA (물리 필드�
 ## 5. Knowledge Graph / Lexical / Vector 실측
 
 ```text
-kg_node                    71,671
+kg_node                    71,683   (scope-aware party 병합 수정 후, §0-3 — 이전 71,671)
 kg_edge                   206,274   (managedBy 6,782 · issuedBy 42,145 · hasAssetType 60,895
                                       · hasRiskGrade 52,692 · inRegion 18,501 · tracksBenchmark 14,129
                                       · managedByCode 11,130)
-kg_alias                  249,857
+kg_alias                  249,874   (scope-aware party 병합 수정 후 — 이전 249,857)
 lex_doc                    80,670   (상품명 전체 스코프 + 해외 전략문 5,638 + 비-sentinel benchmark)
 lex_term(posting)       1,288,698
 lex_vocab                  43,935

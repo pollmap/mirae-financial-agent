@@ -1,9 +1,9 @@
 {
   "release_id": "prebrief-mvp-0.2.0",
   "release_status": "DRAFT",
-  "built_at": "2026-08-08T19:52:58+09:00",
+  "built_at": "2026-08-08T21:57:48+09:00",
   "freeze_at": "2026-09-05T00:00:00+09:00",
-  "git_sha": "e57710774b61a3591671d21a9217ea68dc3c4caa",
+  "git_sha": "c9efb677f48b5aae3a303f8ba457ff5c90bff0e1",
   "container_image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
   "source_sha256": {
     "official_task_pdf": "3717441e091958b7214db710e0e4b9b8ae15ac6c205cad6e51721214798eb3de",
@@ -11,14 +11,14 @@
   },
   "data_model_version": "canonical-v1",
   "etl_version": "etl-v1",
-  "serving_database_sha256": "725d7a2f01b5cabc49a6476d91cc3d6711da74c1829557a67499d90f4151754e",
+  "serving_database_sha256": "88e9a98ae24ca1d73457f4a31e881a8df133eecff19e435c1a847e8249c0e4c1",
   "metric_registry_sha256": "36ae63b077908aeb13d4497bda49669fe5e91226f3b906670cccf509885542b5",
   "canonical_registry_sha256": "a97ebd0914698f2bb82921c3d8bcbea83cde5a9323552132619168261770fce5",
   "query_plan_schema_sha256": "a3a77b0eded7326bad2d763a65eb60ba9488191e85a163f3ee3e5860ec03fb39",
   "planner_prompt_sha256": "9b04360aaed258230cf164fd75487fa9eef8c10b7b355f0d3eee0b1feac158f6",
   "hcx_runtime_schema_sha256": "98c04a4e7e024c92a29bafe58de00415dc163cb45177fd560fc5b514fd1cbeda",
   "evidence_bundle_schema_sha256": "58bcce8e23876fcf3bb9a13f802728868971f72f63b00a988059fd1167d80782",
-  "etl_source_sha256": "f97d7c465fb107f3d440314251b0faa8a1d8a66d72189fead07e0efae12ae155",
+  "etl_source_sha256": "71ad81f486e18ec19c192dcb71a4139ca2ac626ac9275b544810f87eef034967",
   "application_source_sha256": "db2cb3f3a1875dc36dbe7955b3d8ab6397686e0180b3f96971a55f4d7faa02cb",
   "semantic_registry_sha256": "dcaa4e40726e34e574f8bac1ec1a96a754506df10bf762347690ae09a6134eb6",
   "hcx_semantic_schema_sha256": "c485112487eb9deed4436a744ee4950ea49186517278350a827e00b1f74f09bd",
@@ -33,10 +33,10 @@
   "hcx_model_id": "HCX-007",
   "config_digest": "sha256:64f923d541de4b6c619c0b0f69104d28537eab7277ed279a9a4c0947349ab680",
   "test_summary": {
-    "passed": 238,
+    "passed": 246,
     "failed": 0,
     "skipped": 0,
-    "report_sha256": "ec6a6888c0d3ed384bc8598eaf016a959dfe7ba8faa0b50d15f9cecb3b381cb2"
+    "report_sha256": "a10f6781515fdd4eeffc699ce022e42e02675db1418e757cd0ce882b11c6a584"
   },
   "post_freeze_policy": "NO_COMMIT_PUSH_DEPLOY_OR_ARTIFACT_CHANGES"
 }

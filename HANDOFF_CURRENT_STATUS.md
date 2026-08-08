@@ -26,8 +26,11 @@ typed QueryPlan(또는 2단계 모드에서는 개념 plan → 서버 grounding)
 "남은 것·미흡한 것" 종합 점검을 거쳐 Docker fresh build/restart를 실제로
 검증했고(§2-6), 제출 기술제안서가 낡은/거짓 아키텍처 서술을 담고 있던 것과
 requirements traceability의 Federated Retrieval 과장 등을 찾아 고쳤다(§2-7).
-남은 것은 여전히 "진짜 HCX API 키·설명회 확정사항·배포 인프라가 있어야만
-되는" 외부 gate뿐이다.**
+그 라운드가 낮은 우선순위로 남긴 두 항목(KG party 병합의 scope 누락,
+`etl/kg.py` 단위테스트 부재)도 마저 처리했고, 그 과정에서 실 데이터 안의
+진짜 병합 버그(스코프간 이름충돌 12건)를 발견·수정했다(§2-8). **남은 것은
+이제 전부 코드로 해결할 수 없는 외부 gate뿐이다** — 진짜 HCX API 키·설명회
+확정사항·배포 인프라가 있어야만 되는 항목들.
 
 ## 1. 왜 재설계가 있었는가 (8/3 → 8/8 사이 일어난 일)
 
@@ -59,9 +62,10 @@ Graph/Federated Retrieval/2단계 플래닝이 없었다. 8/6 설명회 요지�
 ### 2-3. 설명회 기술스펙 (W2-W3)
 - **Ontology**: concept catalog(59개 물리 metric→~40개 스코프중립 개념) +
   grounder.py가 런타임 통제 계층 역할.
-- **Knowledge Graph**: `etl/kg.py`가 `kg_node`(71,671)/`kg_edge`(206,274)/
-  `kg_alias`(249,857) materialize. ETF→managedBy, ETN→issuedBy 역할 구분,
-  entity resolution은 정규화 후 완전일치만(오병합 방지).
+- **Knowledge Graph**: `etl/kg.py`가 `kg_node`(71,683)/`kg_edge`(206,274)/
+  `kg_alias`(249,874) materialize. ETF→managedBy, ETN→issuedBy 역할 구분,
+  entity resolution은 정규화 후 완전일치만(오병합 방지) **+ scope 일치까지
+  요구**(2-8, 커밋 `c9efb67`) — 스코프가 다르면 이름이 같아도 병합 안 함.
 - **Federated Retrieval**: `app/retrieval/`의 graph_retriever(exact
   alias+traversal) + lexical_retriever(순수 SQL BM25, 확장 불필요) +
   vector_retriever(코드 완성, 캐시 대기) + router.py/fusion.py(RRF).
@@ -126,7 +130,8 @@ py -3.12 -m venv .venv
 `5c85af5` 직후 Docker Desktop 데몬이 이 PC에서 살아났고, W2-W4 신규 ETL
 스테이지(KG·lexical build)를 포함한 fresh `--no-cache` 빌드/실행/재시작
 검증을 실제로 완료했다: 컨테이너 내부 ETL이 §2-3과 동일한 카운트를 재현
-(71,671 node/206,274 edge/249,857 alias, 80,670 lexical doc), production
+(71,671 node/206,274 edge/249,857 alias, 80,670 lexical doc — 이 카운트는
+`c9efb67`의 scope-aware 병합 수정 이전 값, 최신 값은 2-8 참고), production
 기본값(`APP_ENV=production`+`PLANNER_MODE=hcx`)은 실 키 없이 fail-closed로
 즉시 종료(의도된 동작), deterministic 모드로 재실행 시 smoke 15/15가
 `docker restart` 전후 동일. 상세: `docs/15` §0, 커밋 `e577107`.
@@ -164,15 +169,32 @@ py -3.12 -m venv .venv
   바꿈(단일 채널이라 순서엔 수학적으로 no-op임을 증명 후 적용) — "Federated
   Retrieval" 주장을 열망이 아니라 실제로 참이게 만듦.
 
-낮은 우선순위로 확인만 하고 보류한 것(이유 포함, `docs/15` §0에 상세):
-`etl/kg.py`의 role/merge 로직 자체를 검증하는 전용 단위테스트 부재(구조적
-invariant만 검증 중); `normalize_party`가 scope 구분 없이 정규화명만으로
-병합(현재 그래프 party 함수 호출자가 0이라 실 위험은 0, 라이브 배선 전
-scope-aware groupby로 고치는 게 맞음).
+낮은 우선순위로 확인만 하고 보류했던 것(2-8에서 마저 처리 완료):
+`etl/kg.py`의 role/merge 로직 자체를 검증하는 전용 단위테스트 부재; `normalize_party`가
+scope 구분 없이 정규화명만으로 병합.
 
 최종 재검증(이 세션에서 직접 재실행): pytest 238/238, eval 640/640(100%,
 거절률 0%, 공시율 98.55%), metamorphic 137/137, ruff clean, compliance
 84 files/0 findings.
+
+### 2-8. 보류 항목 마무리 (2026-08-08, 커밋 `c9efb67`)
+사용자가 "보류한 것도 마저 해!!!"로 재지시. `etl/kg.py`의 party 병합을
+`groupby(["scope", "normalized"])`로 바꾸고 `node_id`를
+`party:<scope>:<normalized>`로 변경(edge dst_node_id·alias node_id도 동일
+스킴으로 갱신). **재빌드하니 실제로 카운트가 바뀜**: kg_node 71,671→71,683
+(+12), kg_alias 249,857→249,874(+17) — 즉 실 60,903개 상품 데이터 안에
+스코프간 이름충돌이 12건 실재했고 지금까지 조용히 병합되고 있었다(이론적
+리스크가 아니었음). `tests/unit/test_kg.py` 8개 신규(역할배정·동일스코프
+병합·스코프간 미병합 회귀·alias종류·benchmark sentinel 제외·fund
+manager_code 전용·구조적 invariant, `test_lexical.py`와 같은 in-memory
+합성 데이터 스타일). 테스트 작성 중 실제 버그를 하나 더 발견: fund만 있고
+채권/ETP가 0건인 합성 데이터에서 `CREATE TABLE kg_edge AS SELECT`가 빈
+결과셋이라 DuckDB가 텍스트 컬럼을 INT32로 오추론해 다음 INSERT가
+깨졌음(실 14.5만행 데이터에서는 절대 발생 못 하지만 방어 비용이 거의 0이라
+`CAST(... AS VARCHAR)` 명시로 수정). 재검증: pytest **246/246**(238+kg
+8개), eval 640/640(100%, KG graph 경로는 아직 live request path 밖이라
+무변화 — 예상된 결과), metamorphic 137/137, ruff clean. 상세: `docs/15`
+§0-3. **이걸로 낮은 우선순위 보류 항목은 더 이상 없다.**
 
 ## 3. 아직 안 된 것
 
@@ -184,10 +206,11 @@ scope-aware groupby로 고치는 게 맞음).
 | 공식 HCX model ID·API 계약 확정 | ❌ | `HCX-007`은 팀 baseline. 8/6 설명회 확정 대기 |
 | Public HTTPS 배포 | ❌ | `deploy/compose.yaml` 준비됨, 실제 서버 없음 |
 | GitHub **Organization** push | ⚠️ | 개인 private repo에만 있음 |
-| FINAL release manifest | ❌ | 여전히 `DRAFT`(2-7에서 최신 SHA로 재생성은 완료, FINAL 전환엔 image digest·public 배포 등 다른 외부 gate 필요) |
+| FINAL release manifest | ❌ | 여전히 `DRAFT`(2-7·2-8에서 최신 SHA로 재생성은 완료, FINAL 전환엔 image digest·public 배포 등 다른 외부 gate 필요) |
 | one-shot 기본값(모호시 추측 응답) | 🔵 의도적 보류 | 공식 요구사항이 역질문을 명시적으로 요구해서 재검토 후 보류. `docs/14` §W3 참고 |
-| `etl/kg.py` role/merge 전용 단위테스트 | 🔵 의도적 보류 | 2-7 참고. 실 호출자 0건이라 리스크 0, 그래프 기능 라이브 배선 전에 하면 됨 |
-| `normalize_party` scope-aware 병합 | 🔵 의도적 보류 | 2-7 참고. 같은 이유로 리스크 0 |
+
+낮은 우선순위 보류 항목(`etl/kg.py` 단위테스트, `normalize_party` scope-aware
+병합)은 2-8에서 전부 처리 완료 — 아래 표에는 더 이상 남아있지 않다.
 
 ## 4. 다음 AI 에이전트가 할 일 우선순위
 
@@ -199,18 +222,16 @@ scope-aware groupby로 고치는 게 맞음).
 3. **배포·제출**: `docs/10_RELEASE_FREEZE_RUNBOOK.md` 순서. FINAL manifest는
    freeze 직전 최종 커밋 기준으로 다시 한번 재생성할 것(매 커밋마다 자동
    갱신되지 않음 — 2-7에서 이걸 놓쳤던 사례 참고).
-4. **여유가 있다면**: `etl/kg.py` role/merge 단위테스트, `normalize_party`
-   scope-aware groupby(§3의 두 보류 항목) — 그래프 기능을 실제로 라이브
-   배선하기 전 선행 조건.
 
 ## 5. 이 문서를 쓰는 법 (다른 에이전트에게)
 
 - 이 파일 → `docs/15_REBASELINE_VALIDATION_REPORT.md`(실측 수치) →
   `docs/14_BRIEFING_REBASELINE_PLAN.md`(설계 원안+진행상황) 순으로 읽어라.
-- `git log --oneline briefing-rebaseline-v2` 상위 9개 커밋이 이번 재설계의
+- `git log --oneline briefing-rebaseline-v2` 상위 12개 커밋이 이번 재설계의
   전체 diff다(각 커밋 메시지가 상세 변경 근거를 담고 있음). `5c85af5`가
   최종 적대적 리뷰 수정분, `e577107`이 그 다음 종합 점검(Docker 실검증+
-  제출문서 정확성+보안/배포 하드닝) 수정분.
+  제출문서 정확성+보안/배포 하드닝) 수정분, `c9efb67`이 그 라운드가 남긴
+  보류 항목 마무리(KG scope-aware 병합+단위테스트) 수정분.
 - `eval/`은 runtime 이미지에 안 들어가지만 저장소에는 포함돼 있다(오라클이
   `app/`을 import하지 않는 독립 검증 도구이기 때문). `eval/README.md` 참고.
 - `devtools/`는 여전히 로컬에만 있고 저장소에는 없다.
