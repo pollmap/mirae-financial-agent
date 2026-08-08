@@ -1,0 +1,23 @@
+concept_id,scope_a,scope_b,comparability,warning_codes,basis_note_ko
+return_1d,domestic_etp,overseas_etp,SCOPE_ABSENT,UNUSABLE_CONSTANT,해외 ETP의 1일 수익률 원본값이 전부 0으로 사용 불가하여 국내 ETP 결과만 제시
+return_1m,domestic_etp,fund,UNIFIED_RANK,UNIT_STATUS_PENDING|ZERO_POLICY_DIVERGENT|AS_OF_DIVERGENT,두 상품군 모두 퍼센트포인트 단위 확정 전이며 원본 수치 기준으로 통합 순위를 계산
+return_3m,domestic_etp,fund,UNIFIED_RANK,UNIT_STATUS_PENDING|ZERO_POLICY_DIVERGENT|AS_OF_DIVERGENT,두 상품군 모두 퍼센트포인트 단위 확정 전이며 원본 수치 기준으로 통합 순위를 계산
+return_6m,domestic_etp,fund,UNIFIED_RANK,UNIT_STATUS_PENDING|ZERO_POLICY_DIVERGENT|AS_OF_DIVERGENT,두 상품군 모두 퍼센트포인트 단위 확정 전이며 원본 수치 기준으로 통합 순위를 계산
+return_1y,domestic_etp,fund,UNIFIED_RANK,UNIT_STATUS_PENDING|ZERO_POLICY_DIVERGENT|AS_OF_DIVERGENT|SENTINEL_EXCLUDED,두 상품군 모두 퍼센트포인트 단위 확정 전이며 원본 수치 기준으로 통합 순위를 계산. 국내 ETP의 -100 sentinel 값은 제외
+return_1y,domestic_etp,overseas_etp,SCOPE_ABSENT,SOURCE_FIELD_ABSENT,해외 ETP에는 1년 수익률 원본 필드가 없어 해당 상품군은 대안 지표(AUM·종가·거래량)를 안내
+return_1y,fund,overseas_etp,SCOPE_ABSENT,SOURCE_FIELD_ABSENT,해외 ETP에는 1년 수익률 원본 필드가 없어 해당 상품군은 대안 지표(AUM·종가·거래량)를 안내
+return_1y,bond,domestic_etp,SCOPE_ABSENT,SOURCE_FIELD_ABSENT,국내채권에는 기간 수익률 필드가 없어 표면금리·매수수익률 등 대안 지표를 안내
+return_1y,bond,fund,SCOPE_ABSENT,SOURCE_FIELD_ABSENT,국내채권에는 기간 수익률 필드가 없어 표면금리·매수수익률 등 대안 지표를 안내
+expense_ratio,domestic_etp,overseas_etp,UNIFIED_RANK,UNIT_STATUS_PENDING|ZERO_MEANING_UNKNOWN,동일 원본 컬럼(cu_charge_rt)의 원문 수치 기준 통합 순위. 0값의 의미는 확정 전이며 개수를 함께 공시
+expense_ratio,domestic_etp,fund,SCOPE_ABSENT,SOURCE_FIELD_ABSENT,공모펀드에는 보수 원본 필드가 없어 해당 상품군은 제외하고 안내
+expense_ratio,overseas_etp,fund,SCOPE_ABSENT,SOURCE_FIELD_ABSENT,공모펀드에는 보수 원본 필드가 없어 해당 상품군은 제외하고 안내
+aum,domestic_etp,overseas_etp,SPLIT_PRESENTATION,CURRENCY_MIXED|UNIT_STATUS_PENDING,국내(KRW 추정)와 해외(거래통화)의 통화가 달라 통합 순위 대신 상품군별 분리 제시
+net_assets,domestic_etp,fund,UNIFIED_RANK,UNIT_STATUS_PENDING|AS_OF_DIVERGENT,두 상품군 모두 KRW 추정 단위 확정 전이며 원본 수치 기준으로 통합 순위를 계산
+nav,domestic_etp,overseas_etp,SPLIT_PRESENTATION,CURRENCY_MIXED,기준가 통화가 달라 상품군별 분리 제시
+close_price,domestic_etp,overseas_etp,SPLIT_PRESENTATION,CURRENCY_MIXED,종가 통화가 달라 상품군별 분리 제시
+volume_1d,domestic_etp,overseas_etp,UNIFIED_RANK,AS_OF_DIVERGENT|VENUE_DIFFERENT,거래량(주 수) 기준 통합 순위. 거래소·기준일이 달라 함께 공시
+discrepancy_rate,domestic_etp,overseas_etp,SCOPE_ABSENT,UNUSABLE_CONSTANT|SEVERELY_PARTIAL,국내는 전부 0·해외는 3건뿐이라 실질 비교 불가
+risk_grade_metric,bond,fund,EXPLAIN_ONLY,RISK_SCALE_MISMATCH,채권(0-6 정수)과 펀드(8단계 라벨)의 위험 척도가 달라 통합 정렬 없이 나란히 설명
+risk_grade,bond,domestic_etp,EXPLAIN_ONLY,RISK_SCALE_MISMATCH,채권(0-6 정수)과 국내 ETP(6단계 라벨)의 척도가 달라 나란히 설명
+risk_grade,bond,fund,EXPLAIN_ONLY,RISK_SCALE_MISMATCH,채권(0-6 정수)과 펀드(8단계 라벨)의 척도가 달라 나란히 설명
+risk_grade,domestic_etp,fund,EXPLAIN_ONLY,RISK_SCALE_MISMATCH,국내 ETP(6단계)와 펀드(8단계)의 척도가 달라 나란히 설명

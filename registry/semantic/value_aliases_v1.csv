@@ -1,0 +1,40 @@
+alias,canonical_value,field,scope,alias_kind,is_inferred,evidence_note
+주식형,주식,product.asset_type,domestic_etp,SYNONYM,false,serving 실측값 주식 1068건
+주식형,Equity,product.asset_type,overseas_etp,TRANSLATION,true,KO-EN 개념 매핑(공식 데이터에 한글 라벨 없음)
+주식형,주식형,product.asset_type,fund,OFFICIAL,false,serving 실측값 주식형 4280건
+주식,주식,product.asset_type,domestic_etp,OFFICIAL,false,
+주식,Equity,product.asset_type,overseas_etp,TRANSLATION,true,KO-EN 개념 매핑
+채권형,채권,product.asset_type,domestic_etp,SYNONYM,false,serving 실측값 채권 261건
+채권형,Bond,product.asset_type,overseas_etp,TRANSLATION,true,KO-EN 개념 매핑
+채권형,채권형,product.asset_type,fund,OFFICIAL,false,serving 실측값 채권형 1182건
+원자재,원자재,product.asset_type,domestic_etp,OFFICIAL,false,
+원자재,Commodity,product.asset_type,overseas_etp,TRANSLATION,true,KO-EN 개념 매핑
+혼합자산,혼합자산,product.asset_type,domestic_etp,OFFICIAL,false,
+혼합자산,Mixed Assets,product.asset_type,overseas_etp,TRANSLATION,true,KO-EN 개념 매핑
+미국,미국,product.region,domestic_etp,OFFICIAL,false,serving 실측값 미국 453건
+미국,United States of America,product.region,overseas_etp,TRANSLATION,true,KO-EN 개념 매핑(공식 데이터 표기)
+글로벌,글로벌,product.region,domestic_etp,OFFICIAL,false,
+글로벌,Global,product.region,overseas_etp,TRANSLATION,true,KO-EN 개념 매핑
+글로벌,글로벌,product.region,fund,OFFICIAL,false,serving 실측값 글로벌 4387건
+중국,중국,product.region,domestic_etp,OFFICIAL,false,
+중국,China,product.region,overseas_etp,TRANSLATION,true,KO-EN 개념 매핑
+유럽,Europe,product.region,overseas_etp,TRANSLATION,true,KO-EN 개념 매핑
+유럽,유럽,product.region,fund,OFFICIAL,false,
+아시아,아시아,product.region,domestic_etp,OFFICIAL,false,
+아시아,아시아,product.region,fund,OFFICIAL,false,
+일본,일본,product.region,domestic_etp,OFFICIAL,false,
+국내,국내,product.region,domestic_etp,OFFICIAL,false,
+국내,국내,product.region,fund,OFFICIAL,false,
+1등급,매우높은위험(1등급),product.risk_grade,domestic_etp,SYNONYM,false,실측 라벨
+2등급,높은위험(2등급),product.risk_grade,domestic_etp,SYNONYM,false,실측 라벨
+3등급,다소높은위험(3등급),product.risk_grade,domestic_etp,SYNONYM,false,실측 라벨
+4등급,보통위험(4등급),product.risk_grade,domestic_etp,SYNONYM,false,실측 라벨
+5등급,낮은위험(5등급),product.risk_grade,domestic_etp,SYNONYM,false,실측 라벨
+6등급,매우낮은위험(6등급),product.risk_grade,domestic_etp,SYNONYM,false,실측 라벨
+공모,공모,product.public_private,fund,OFFICIAL,false,
+사모,사모,product.public_private,fund,OFFICIAL,false,
+판매중,판매중,product.sale_status,fund,OFFICIAL,false,
+ETF,ETF,product.internal_type,domestic_etp,OFFICIAL,false,
+ETF,ETF,product.internal_type,overseas_etp,OFFICIAL,false,
+ETN,ETN,product.internal_type,domestic_etp,OFFICIAL,false,
+ETN,ETN,product.internal_type,overseas_etp,OFFICIAL,false,

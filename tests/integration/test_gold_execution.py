@@ -25,6 +25,7 @@ HANDLED_ASSERTIONS = {
     "excluded_zero_count",
     "missing_count",
     "must_cite",
+    "must_include_text",
     "must_count_distinct",
     "must_not_double_count_products",
     "must_not_estimate",
@@ -181,7 +182,7 @@ def _assert_one(
         raise AssertionError("handled above")
     elif kind == "serving_note":
         assert "serving" in text and "1,201" in text
-    elif kind == "quarantine_excel_row":
+    elif kind in {"must_include_text", "quarantine_excel_row"}:
         assert str(assertion["value"]) in text
     elif kind in {"excluded_zero_count", "zero_values"}:
         assert f"{assertion['value']:,}" in text

@@ -1661,7 +1661,11 @@ class DuckDBEngine:
                 )
             return bundle
         if len(plan.scopes) > 1:
-            return self._execute_cross_scope_count(plan)
+            if self.registry._is_safe_cross_scope_count(plan):
+                return self._execute_cross_scope_count(plan)
+            from app.execution.cross_scope import execute_cross_scope
+
+            return execute_cross_scope(self, plan)
         if len(plan.scopes) != 1:
             raise ValueError("a validated executable plan requires at least one scope")
         scope = plan.scopes[0]

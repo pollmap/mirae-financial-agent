@@ -1,0 +1,51 @@
+concept_id,concept_kind,label_ko,direction,scope_bindings,unit_concept,default_terms,notes
+return_1d,METRIC,1일 수익률,HIGHER_BETTER,domestic_etp:domestic_etp.return_1d|overseas_etp:overseas_etp.return_1d|bond:ABSENT|fund:ABSENT,PCT_POINT_PENDING,1일 수익률|일간 수익률,overseas values constant zero (unusable)
+return_1w,METRIC,1주 수익률,HIGHER_BETTER,fund:fund.return_1w|bond:ABSENT|domestic_etp:ABSENT|overseas_etp:ABSENT,PCT_POINT_PENDING,1주 수익률|주간 수익률,
+return_1m,METRIC,1개월 수익률,HIGHER_BETTER,domestic_etp:domestic_etp.return_1m|fund:fund.return_1m|bond:ABSENT|overseas_etp:ABSENT,PCT_POINT_PENDING,1개월 수익률|한달 수익률,
+return_3m,METRIC,3개월 수익률,HIGHER_BETTER,domestic_etp:domestic_etp.return_3m|fund:fund.return_3m|bond:ABSENT|overseas_etp:ABSENT,PCT_POINT_PENDING,3개월 수익률|분기 수익률,
+return_6m,METRIC,6개월 수익률,HIGHER_BETTER,domestic_etp:domestic_etp.return_6m|fund:fund.return_6m|bond:ABSENT|overseas_etp:ABSENT,PCT_POINT_PENDING,6개월 수익률|반기 수익률,
+return_1y,METRIC,1년 수익률,HIGHER_BETTER,domestic_etp:domestic_etp.return_1y|fund:fund.return_1y|bond:ABSENT|overseas_etp:ABSENT,PCT_POINT_PENDING,1년 수익률|연간 수익률|작년 수익률,overseas source field absent; bond has yields not returns
+return_ytd,METRIC,연초 이후 수익률,HIGHER_BETTER,domestic_etp:domestic_etp.return_ytd|bond:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PCT_POINT_PENDING,YTD 수익률|연초 이후,
+return_18m,METRIC,18개월 수익률,HIGHER_BETTER,fund:fund.return_18m|bond:ABSENT|domestic_etp:ABSENT|overseas_etp:ABSENT,PCT_POINT_PENDING,18개월 수익률,
+return_2y,METRIC,2년 수익률,HIGHER_BETTER,fund:fund.return_2y|bond:ABSENT|domestic_etp:ABSENT|overseas_etp:ABSENT,PCT_POINT_PENDING,2년 수익률,
+return_3y,METRIC,3년 수익률,HIGHER_BETTER,fund:fund.return_3y|bond:ABSENT|domestic_etp:ABSENT|overseas_etp:ABSENT,PCT_POINT_PENDING,3년 수익률,
+return_5y,METRIC,5년 수익률,HIGHER_BETTER,fund:fund.return_5y|bond:ABSENT|domestic_etp:ABSENT|overseas_etp:ABSENT,PCT_POINT_PENDING,5년 수익률,
+expense_ratio,METRIC,총보수,LOWER_BETTER,domestic_etp:domestic_etp.expense_ratio|overseas_etp:overseas_etp.expense_ratio|fund:ABSENT|bond:ABSENT,PCT_PENDING,보수|총보수|수수료|운용보수,fund source field absent; same source column cu_charge_rt both ETP scopes
+other_expense_ratio,METRIC,기타보수,LOWER_BETTER,domestic_etp:domestic_etp.other_expense_ratio|bond:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PCT_PENDING,기타보수,all present values zero
+aum,METRIC,순자산(AUM),HIGHER_BETTER,domestic_etp:domestic_etp.aum_last|overseas_etp:overseas_etp.aum_last|bond:ABSENT|fund:ABSENT,MIXED_CURRENCY,AUM|운용규모|순자산 규모,domestic KRW pending vs overseas trading currency
+net_assets,METRIC,순자산총액,HIGHER_BETTER,domestic_etp:domestic_etp.net_assets|fund:fund.net_assets|bond:ABSENT|overseas_etp:ABSENT,KRW_PENDING,순자산총액|설정액,
+nav,METRIC,기준가(NAV),NONE,domestic_etp:domestic_etp.nav_last|overseas_etp:overseas_etp.nav_last|bond:ABSENT|fund:ABSENT,MIXED_CURRENCY,NAV|기준가,
+close_price,METRIC,종가,NONE,domestic_etp:domestic_etp.close_price|overseas_etp:overseas_etp.close_price|bond:ABSENT|fund:ABSENT,MIXED_CURRENCY,종가|주가|가격,snapshot not realtime
+volume_1d,METRIC,1일 거래량,HIGHER_BETTER,domestic_etp:domestic_etp.volume_1d|overseas_etp:overseas_etp.volume_1d|bond:ABSENT|fund:ABSENT,COUNT,거래량,
+tracking_error,METRIC,추적오차,LOWER_BETTER,domestic_etp:domestic_etp.tracking_error|bond:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PCT_POINT_PENDING,추적오차,all present values zero
+discrepancy_rate,METRIC,괴리율,NONE,domestic_etp:domestic_etp.discrepancy_rate|overseas_etp:overseas_etp.discrepancy_rate|bond:ABSENT|fund:ABSENT,PCT_POINT_PENDING,괴리율,domestic constant zero; overseas coverage 0.05%
+coupon_rate,METRIC,표면금리,HIGHER_BETTER,bond:bond.coupon_rate|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PCT_POINT_PENDING,표면금리|쿠폰,
+buy_yield,METRIC,매수수익률,HIGHER_BETTER,bond:bond.buy_yield|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PCT_POINT_PENDING,매수수익률,coverage 2.08%
+applied_yield,METRIC,적용수익률,HIGHER_BETTER,bond:bond.applied_yield|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PCT_POINT_PENDING,적용수익률,
+after_tax_yield,METRIC,세후수익률,HIGHER_BETTER,bond:bond.after_tax_yield|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PCT_POINT_PENDING,세후수익률,
+corporate_pretax_yield,METRIC,법인세전수익률,HIGHER_BETTER,bond:bond.corporate_pretax_yield|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PCT_POINT_PENDING,법인 세전 수익률,
+corporate_after_tax_yield,METRIC,법인세후수익률,HIGHER_BETTER,bond:bond.corporate_after_tax_yield|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PCT_POINT_PENDING,법인 세후 수익률,
+preferential_tax_yield,METRIC,세금우대수익률,HIGHER_BETTER,bond:bond.preferential_tax_yield|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PCT_POINT_PENDING,세금우대 수익률,
+avg_annual_tax_yield,METRIC,연평균세후수익률,HIGHER_BETTER,bond:bond.avg_annual_tax_yield|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PCT_POINT_PENDING,연평균 세후,all present values zero
+deposit_equivalent_yield,METRIC,예금환산수익률,HIGHER_BETTER,bond:bond.deposit_equivalent_yield_154|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PCT_POINT_PENDING,예금환산,154 semantics OPEN
+issue_amount,METRIC,발행잔액,HIGHER_BETTER,bond:bond.issue_amount|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PENDING,발행잔액|발행금액,
+issue_date,METRIC,발행일,NONE,bond:bond.issue_date|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,DATE,발행일,
+maturity_date,METRIC,만기일,NONE,bond:bond.maturity_date|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,DATE,만기일|만기,
+remaining_days,METRIC,잔존일수,NONE,bond:bond.remaining_days_raw|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,DAYS,잔존일수|잔존만기,
+duration,METRIC,듀레이션,NONE,bond:bond.duration|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,YEARS_PENDING,듀레이션,
+convexity,METRIC,컨벡시티,NONE,bond:bond.convexity|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PENDING,컨벡시티,
+evaluation_price,METRIC,평가가격,NONE,bond:bond.evaluation_price|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,PRICE_PENDING,평가가격,
+buyable_quantity,METRIC,매수가능수량,HIGHER_BETTER,bond:bond.buyable_quantity|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,COUNT,매수가능수량,
+credit_rating,METRIC,신용등급,NONE,bond:bond.credit_rating|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,RATING,신용등급,rating order OPEN
+risk_grade_metric,METRIC,위험등급(지표),NONE,bond:bond.risk_grade|fund:fund.risk_grade|domestic_etp:ABSENT|overseas_etp:ABSENT,SCALE_PER_SCOPE,위험등급,bond 0-6 int vs fund 8-label; scales differ
+base_index,METRIC,기초지수,NONE,domestic_etp:domestic_etp.base_index|bond:ABSENT|overseas_etp:ABSENT|fund:ABSENT,TEXT,기초지수,coverage 3.35%
+asset_type,DIMENSION,자산유형,NONE,bond:product.asset_class|domestic_etp:product.asset_type|overseas_etp:product.asset_type|fund:product.asset_type,CATEGORY,자산유형|자산군,per-scope vocabularies differ (KO/EN/fund-specific)
+region,DIMENSION,투자지역,NONE,domestic_etp:product.region|overseas_etp:product.region|fund:product.region|bond:ABSENT,CATEGORY,투자지역|지역,
+risk_grade,DIMENSION,위험등급,NONE,bond:product.risk_grade|domestic_etp:product.risk_grade|fund:product.risk_grade|overseas_etp:ABSENT,SCALE_PER_SCOPE,위험등급,overseas has no risk grade
+internal_type,DIMENSION,상품유형,NONE,bond:product.internal_type|domestic_etp:product.internal_type|overseas_etp:product.internal_type|fund:product.internal_type,CATEGORY,ETF|ETN|상품유형,
+manager,ENTITY_ROLE,운용사,NONE,domestic_etp:product.manager|overseas_etp:product.manager|bond:ABSENT|fund:ABSENT,ENTITY,운용사|자산운용사,ETN rows hold issuer; fund has code only
+issuer,ENTITY_ROLE,발행기관,NONE,bond:product.issuer|domestic_etp:ABSENT|overseas_etp:ABSENT|fund:ABSENT,ENTITY,발행기관|발행사,
+benchmark,DIMENSION,벤치마크,NONE,domestic_etp:product.benchmark|overseas_etp:product.benchmark|fund:product.benchmark|bond:ABSENT,TEXT,벤치마크|기초지수,overseas has 2 sentinel non-values
+sale_status,DIMENSION,판매상태,NONE,bond:product.sale_status|domestic_etp:product.sale_status|overseas_etp:product.sale_status|fund:product.sale_status,CATEGORY,판매중|판매상태,
+public_private,DIMENSION,공모·사모,NONE,fund:product.public_private|bond:ABSENT|domestic_etp:ABSENT|overseas_etp:ABSENT,CATEGORY,공모|사모,
+pension_eligible,DIMENSION,연금거래 가능,NONE,domestic_etp:product.pension_trade_eligible|bond:ABSENT|overseas_etp:ABSENT|fund:ABSENT,CATEGORY,연금,

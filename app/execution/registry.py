@@ -517,23 +517,22 @@ class MetricRegistry:
         if len(plan.scopes) > 1:
             if self._is_safe_cross_scope_count(plan):
                 return PlanPolicyDecision(True, Answerability.FULL)
-            joined_metrics = " ".join(plan.metrics)
-            if "expense_ratio" in joined_metrics:
-                reason = "ZERO_AND_UNIT_POLICY_PENDING"
-            elif "aum_last" in joined_metrics:
-                reason = "CURRENCY_CONVERSION_NOT_DEFINED"
-            elif "coupon_rate" in joined_metrics:
-                reason = "METRIC_BASIS_MISMATCH"
-            elif "credit_rating" in joined_metrics or "risk_grade" in joined_metrics:
-                reason = "RISK_SCALE_MISMATCH"
-            else:
-                reason = "CROSS_PRODUCT_LOCKED_PENDING_BASIS"
-            return PlanPolicyDecision(
-                False,
-                Answerability.INCOMPARABLE,
-                reason,
-                "서로 다른 상품군의 단위·기준일·통화·위험척도 정책이 확정되지 않아 혼합 순위를 만들지 않습니다.",
-            )
+            # Cross-scope plans are never refused for scope count alone: the
+            # comparability matrix chooses unified/split/side-by-side
+            # presentation, and per-scope policy checks run on the
+            # single-scope subplans inside the cross-scope executor.
+            from app.semantics.capability import evaluate_cross_scope
+
+            decision = evaluate_cross_scope(plan)
+            if plan.metrics and not decision.concept_ids:
+                return PlanPolicyDecision(
+                    False,
+                    Answerability.UNAVAILABLE,
+                    "METRIC_UNKNOWN",
+                    "요청 지표를 등록된 금융 개념으로 해석할 수 없습니다: "
+                    + ", ".join(decision.unresolved_metrics),
+                )
+            return PlanPolicyDecision(True, Answerability.FULL)
         scope = plan.scopes[0]
         if plan.intent != "aggregate" and (plan.aggregations or plan.group_by):
             return PlanPolicyDecision(

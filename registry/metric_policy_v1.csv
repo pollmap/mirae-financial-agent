@@ -20,7 +20,7 @@ bond.evaluation_price,bond,PRBD01N001,EVAL_PRICE,42394,31823,OPEN,42394,31823,bo
 bond.applied_yield,bond,PRBD01N001,APPLIED_YIELD,42394,31823,OPEN,42394,31823,bond_with_value,31823,31823,OPEN,PERCENTAGE_POINT_PENDING,FIELD_POLICY_REQUIRED,ALLOWED_WITH_OUTLIER_REVIEW,BLOCKED,OPEN,max 787.327 and exclusion threshold OPEN
 domestic_etp.other_expense_ratio,domestic_etp,PREF01N001,cu_charge_etc_rt,1734,1553,0,1733,1553,serving_etp,1733,1553,0,PERCENTAGE_POINT_PENDING,UNUSABLE_CONSTANT,BLOCKED_CONSTANT,BLOCKED,LOCKED,all present values zero
 domestic_etp.base_index,domestic_etp,PREF01N001,cu_base_index,1734,58,58,1733,58,serving_etp,1733,58,0,TEXT,NOT_APPLICABLE,BLOCKED_LOW_COVERAGE,BLOCKED,LOCKED,coverage 3.35 percent
-domestic_etp.expense_ratio,domestic_etp,PREF01N001,cu_charge_rt,1734,217,OPEN,1733,217,serving_etf,1201,217,0,PERCENTAGE_POINT_PENDING,ZERO_UNKNOWN,BLOCKED_PENDING_ZERO_POLICY,BLOCKED,OPEN,150 zeros and ETN has no values
+domestic_etp.expense_ratio,domestic_etp,PREF01N001,cu_charge_rt,1734,217,OPEN,1733,217,serving_etf,1201,217,67,PERCENTAGE_POINT_PENDING,ZERO_UNKNOWN,ALLOWED_SOURCE_LITERAL,BLOCKED,OPEN,source-literal rank; 150 zeros excluded pending zero policy and ETN has no values
 domestic_etp.tracking_error,domestic_etp,PREF01N001,du_chas_errt,1734,1551,0,1733,1551,serving_etp,1733,1551,0,PERCENTAGE_POINT_PENDING,UNUSABLE_CONSTANT,BLOCKED_CONSTANT,BLOCKED,LOCKED,all present values zero
 domestic_etp.discrepancy_rate,domestic_etp,PREF01N001,du_diff_rt,1734,1517,0,1733,1517,serving_etp,1733,1517,0,PERCENTAGE_POINT_PENDING,UNUSABLE_CONSTANT,BLOCKED_CONSTANT,BLOCKED,LOCKED,all present values zero
 domestic_etp.return_1d,domestic_etp,PREF01N001,du_er_1d,1734,1562,OPEN,1733,1562,serving_etf,1201,1148,1148,PERCENTAGE_POINT_PENDING,ZERO_VALID_PENDING,ALLOWED_WITH_COVERAGE,BLOCKED,OPEN,ETN present 414
@@ -34,7 +34,7 @@ domestic_etp.nav_last,domestic_etp,PREF01N001,du_last_nav,1734,1551,1551,1733,15
 domestic_etp.net_assets,domestic_etp,PREF01N001,pd_net_tamt,1734,1551,1551,1733,1551,serving_etf,1201,1142,1142,KRW_PENDING,FIELD_POLICY_REQUIRED,ALLOWED_WITH_COVERAGE,BLOCKED,OPEN,AUM canonical priority OPEN
 domestic_etp.close_price,domestic_etp,PREF01N001,du_clpr,1734,1729,OPEN,1733,1729,serving_etf,1201,1198,1198,KRW_PRICE_PENDING,ZERO_UNKNOWN,ALLOWED_WITH_DATE,BLOCKED,OPEN,not realtime
 domestic_etp.volume_1d,domestic_etp,PREF01N001,du_vol_1d,1734,1729,1729,1733,1729,serving_etf,1201,1198,1198,COUNT,ZERO_VALID_PENDING,ALLOWED_WITH_DATE,BLOCKED,OPEN,
-overseas_etp.expense_ratio,overseas_etp,PREF02N001,cu_charge_rt,5646,5646,OPEN,5638,5638,serving_etf,5579,5579,0,PERCENTAGE_POINT_PENDING,ZERO_UNKNOWN,BLOCKED_PENDING_ZERO_POLICY,BLOCKED,OPEN,serving ETF has 304 zeros and ETN has 51
+overseas_etp.expense_ratio,overseas_etp,PREF02N001,cu_charge_rt,5646,5646,OPEN,5638,5638,serving_etf,5579,5579,5275,PERCENTAGE_POINT_PENDING,ZERO_UNKNOWN,ALLOWED_SOURCE_LITERAL,BLOCKED,OPEN,source-literal rank; serving ETF has 304 zeros and ETN has 51 excluded pending zero policy
 overseas_etp.return_1d,overseas_etp,PREF02N001,du_er_1d,5646,5388,0,5638,5388,serving_etf,5579,5329,0,PERCENTAGE_POINT_PENDING,UNUSABLE_CONSTANT,BLOCKED_CONSTANT,BLOCKED,LOCKED,all present values zero
 overseas_etp.return_1m,overseas_etp,PREF02N001,NONE,5646,0,0,5638,0,serving_etf,5579,0,0,UNAVAILABLE,NOT_APPLICABLE,UNAVAILABLE,BLOCKED,LOCKED,source field absent
 overseas_etp.return_3m,overseas_etp,PREF02N001,NONE,5646,0,0,5638,0,serving_etf,5579,0,0,UNAVAILABLE,NOT_APPLICABLE,UNAVAILABLE,BLOCKED,LOCKED,source field absent

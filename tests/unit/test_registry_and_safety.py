@@ -29,12 +29,14 @@ def test_metric_registry_blocks_absent_and_uncertain_metrics() -> None:
     )
     assert absent.answerability == "UNAVAILABLE"
     assert absent.reason_code == "SOURCE_FIELD_ABSENT"
-    assert uncertain.answerability == "DATA_QUALITY_BLOCKED"
-    assert uncertain.reason_code == "PENDING_ZERO_POLICY"
+    # Briefing rebaseline: fee ranking is source-literal with zero-exclusion
+    # disclosure instead of a quality refusal.
+    assert uncertain.allowed is True
 
 
-def test_registry_blocks_cross_product_ranking() -> None:
-    decision = MetricRegistry.load().evaluate(
+def test_registry_delegates_cross_product_ranking_to_capability() -> None:
+    registry = MetricRegistry.load()
+    decision = registry.evaluate(
         QueryPlan(
             intent="rank",
             scopes=["domestic_etp", "fund"],
@@ -42,7 +44,19 @@ def test_registry_blocks_cross_product_ranking() -> None:
             sort=[{"field": "cross.return_1y", "direction": "desc", "nulls": "last"}],
         )
     )
-    assert decision.answerability == "INCOMPARABLE"
+    # Cross-scope plans are never refused for scope count; the executor
+    # chooses unified/split/side-by-side presentation with disclosure.
+    assert decision.allowed is True
+    unknown = registry.evaluate(
+        QueryPlan(
+            intent="rank",
+            scopes=["domestic_etp", "fund"],
+            metrics=["cross.made_up_metric"],
+            sort=[{"field": "cross.made_up_metric", "direction": "desc", "nulls": "last"}],
+        )
+    )
+    assert unknown.allowed is False
+    assert unknown.reason_code == "METRIC_UNKNOWN"
 
 
 def test_registry_allows_only_separately_grouped_cross_scope_product_count() -> None:
@@ -91,8 +105,9 @@ def test_registry_allows_only_separately_grouped_cross_scope_product_count() -> 
         )
     )
     assert safe.allowed is True
-    assert unsafe.allowed is False
-    assert unsafe.answerability == "INCOMPARABLE"
+    # A cross-scope SUM now executes per scope with an absent-scope note for
+    # funds (no AUM binding) instead of a blanket INCOMPARABLE refusal.
+    assert unsafe.allowed is True
 
 
 def test_registry_accepts_explicit_scope_routing_for_cross_scope_count_only() -> None:
@@ -134,7 +149,9 @@ def test_registry_accepts_explicit_scope_routing_for_cross_scope_count_only() ->
             "filter_groups": routed.model_dump(mode="json")["filter_groups"][:-1],
         }
     )
-    assert registry.evaluate(missing_route).allowed is False
+    # No longer refused: an incompletely-routed count falls through to the
+    # cross-scope executor, which counts per scope with disclosure.
+    assert registry.evaluate(missing_route).allowed is True
 
 
 def test_special_count_bases_are_a_closed_policy_matrix() -> None:
