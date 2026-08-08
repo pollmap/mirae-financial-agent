@@ -71,7 +71,7 @@
    4회 반복 개선; 그 과정에서 실제 planner 버그 4건 발견·수정)**.
    상세: `docs/15_REBASELINE_VALIDATION_REPORT.md`.
 
-## W4 (~9/6): Vector 배선 + freeze 준비 — 진행 중
+## W4 완료 내역 (cf40740, 2026-08-08)
 
 1. `etl/vectors.py`+`app/retrieval/vector_retriever.py`+
    `scripts/build_embeddings.py` **코드 완성**(23 unit test). 실 임베딩
@@ -79,13 +79,40 @@
    유지 중. **컷라인 이미 선반영됨(지연 아님, 설계상 키 의존).**
 2. 남은 항목: Docker fresh build/restart parity를 W2-W4 신규 스테이지(KG/
    lexical 빌드 포함) 대상으로 재검증 → FINAL manifest 준비 → 실 HCX 키
-   수령 시 smoke → 9/4-9/6 수정만.
+   수령 시 smoke. (Docker Desktop 데몬 기동 불가로 이 세션에서 미완료 —
+   다음 에이전트가 이어받을 것.)
 
 컷라인 순서(원안 유지, 현재까지 전부 유지 중): ①vector→BM25만(이미 기본)
 ②2단계→축소프롬프트 1단계(이미 기본, `two`는 검증되었으나 미승격)
 ③KG 재귀→alias 평면 lookup ④eval 500→200(불필요, 640 완주).
 **불가침 원칙 — 전부 실측 확인됨: 교차 답변(거절률 0%)·공시 계약(98.55%)·
 증거 규율(FieldEvidence 경로 무변경).**
+
+## 최종 적대적 리뷰 완료 내역 (5c85af5, 2026-08-08 — "최종 개발 점검" 지시 반영)
+
+W1-W4를 "완료"로 표시한 뒤, 사용자 지시로 코드를 읽기만 하는 게 아니라
+실제로 실행해 검증하는 3-agent 적대적 리뷰(교차상품군/시맨틱 안전성,
+federated retrieval 코드, 데이터정책+eval 신뢰성)를 별도로 수행했다.
+
+- 실제 크래시 버그 1건(교차상품군 결과 200건이 50건 캡을 우회), 무공시 오답
+  버그 1건(스코프 1개짜리 개념을 통합순위 시도 → 빈 답변), 랭크/비교 키워드
+  충돌 1건, minor 4건 — 전부 수정·재검증.
+- **eval 하네스 자체의 채점 결함**을 발견: `cross_rank`가 정답 여부를
+  계산만 하고 판정에 반영 안 함, `behavior`가 "공시문구만 있으면 통과"로
+  새고 있었음. 고치자 정확도가 100%→95.78%로 떨어짐 — 이는 그동안
+  가려져 있던 실측치가 드러난 것으로, 채점 로직 결함이지 앱 회귀가 아님.
+  27건 전수조사 결과 앱 버그는 0건, 전부 오라클이 앱의 기존 정책(ascending
+  sentinel 차단, AUM 국내+해외 통화차이로 인한 SPLIT_PRESENTATION) 2가지를
+  반영 못 하고 있었던 오라클 결함으로 확인 → 오라클 수정 → 100% 재수렴.
+- 최종 재측정(전부 이 세션에서 직접 재실행해 확인, 이전 실행값 재사용 아님):
+  pytest 238/238, eval 640/640(100%, 거절률 0%, 공시율 98.55%),
+  metamorphic 137/137, ruff clean, compliance 44 files/0 findings.
+- 상세: `docs/15_REBASELINE_VALIDATION_REPORT.md` §0.
+- 리뷰에서 발견했으나 우선순위상 보류: `etl/kg.py` 전용 단위테스트 부재,
+  `normalize_party`의 이론적 오병합 가능성(현재 실 데이터 32개 병합 노드
+  전수조사 결과 오탐 0건), `app/retrieval/`의 graph party 함수·fusion.py·
+  vector 경로는 아직 실 호출자 없는 향후용 scaffold(현재 실제 요청 경로는
+  exact-alias 조회 + lexical fallback만 사용).
 
 ## 리스크
 
