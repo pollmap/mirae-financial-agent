@@ -1,0 +1,58 @@
+name: Verify mainline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirae-financial-agent-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend and official-data verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Verify immutable organizer sources
+        run: python scripts/verify_sources.py
+      - name: Lint runtime and tests
+        run: python -m ruff check app deploy etl scripts tests eval qa_chat
+      - name: Run Python regression suite
+        run: python -m pytest -q
+      - name: Scan runtime compliance
+        run: python scripts/scan_runtime_compliance.py
+
+  qa-web:
+    name: QA web tests and production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: qa_web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: qa_web/package-lock.json
+      - name: Install locked frontend dependencies
+        run: npm ci
+      - name: Run frontend tests
+        run: npm test -- --run
+      - name: Build production frontend
+        run: npm run build

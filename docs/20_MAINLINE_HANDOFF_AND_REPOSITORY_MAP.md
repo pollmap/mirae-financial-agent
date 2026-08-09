@@ -125,6 +125,11 @@ Pop-Location
 [`deploy/qa/README.md`](../deploy/qa/README.md)를 따른다. 예제 환경 파일만
 사용하고 실제 키를 `.env`, Git, 테스트 fixture, 로그에 넣지 않는다.
 
+GitHub의 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)은 `main` push와
+PR에서 비밀 없이 공식 원본 검증, Ruff, Python 회귀·compliance, QA 웹 테스트와
+production build를 다시 실행한다. HCX·Embedding·NCP gate는 secret과 인프라가
+필요하므로 이 CI가 통과해도 `PENDING_EXTERNAL` 상태는 바뀌지 않는다.
+
 ## 7. 다음 에이전트의 작업 규칙
 
 - `AGENTS.md`와 위 읽는 순서를 지킨 뒤, 변경 전후 실제 테스트를 다시 실행한다.
