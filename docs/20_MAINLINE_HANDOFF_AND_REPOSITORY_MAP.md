@@ -126,9 +126,10 @@ Pop-Location
 사용하고 실제 키를 `.env`, Git, 테스트 fixture, 로그에 넣지 않는다.
 
 GitHub의 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)은 `main` push와
-PR에서 비밀 없이 공식 원본 검증, Ruff, Python 회귀·compliance, QA 웹 테스트와
-production build를 다시 실행한다. HCX·Embedding·NCP gate는 secret과 인프라가
-필요하므로 이 CI가 통과해도 `PENDING_EXTERNAL` 상태는 바뀌지 않는다.
+PR에서 비밀 없이 Linux의 공식 원본 검증·ETL·Ruff·Python 회귀·compliance, QA 웹
+테스트·production build, Windows의 QA ACL·deployment preflight script 검증을 다시
+실행한다. HCX·Embedding·NCP gate는 secret과 인프라가 필요하므로 이 CI가 통과해도
+`PENDING_EXTERNAL` 상태는 바뀌지 않는다.
 
 ## 7. 다음 에이전트의 작업 규칙
 

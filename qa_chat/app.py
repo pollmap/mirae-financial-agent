@@ -17,6 +17,7 @@ from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from qa_chat.config import QASettings
 from qa_chat.crypto import CipherBox, TokenHasher
@@ -189,6 +190,12 @@ def create_app(
     @app.exception_handler(RequestValidationError)
     async def validation_error(_: Request, __: RequestValidationError) -> JSONResponse:
         return JSONResponse(status_code=400, content={"error": "INVALID_REQUEST"})
+
+    @app.exception_handler(StarletteHTTPException)
+    async def framework_http_error(_: Request, exc: StarletteHTTPException) -> JSONResponse:
+        if exc.status_code == 404:
+            return JSONResponse(status_code=404, content={"error": "NOT_FOUND"})
+        return JSONResponse(status_code=exc.status_code, content={"error": "HTTP_ERROR"})
 
     @app.exception_handler(InvalidInvite)
     async def invalid_invite(_: Request, __: InvalidInvite) -> JSONResponse:

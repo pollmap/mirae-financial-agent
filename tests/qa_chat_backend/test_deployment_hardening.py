@@ -22,8 +22,8 @@ def _quote(path: Path) -> str:
 
 
 def _powershell(command: str) -> subprocess.CompletedProcess[str]:
-    if POWERSHELL is None:
-        pytest.skip("PowerShell deployment tests require Windows PowerShell or pwsh")
+    if sys.platform != "win32" or POWERSHELL is None:
+        pytest.skip("QA deployment ACL tests require Windows PowerShell on a Windows host")
     return subprocess.run(
         [
             POWERSHELL,
