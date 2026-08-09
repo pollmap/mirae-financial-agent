@@ -22,12 +22,13 @@
 
 - 공식 PDF·FAQ·녹취의 권위를 재분리한 최신 기준은 `docs/17`이다. PDF가 요구한
   정보부족 역질문은 실제 API/화면에 있고, 주입·임의 SQL·미래예측은 안전 차단한다.
-- source/ETL/KG/lexical을 새로 만들고 전체 pytest **272/272**, Ruff PASS,
-  compliance **91 files/0**, eval **640/640**, metamorphic **137/137**, holdout
+- source/ETL/KG/lexical을 새로 만들고 전체 pytest **275/275**, Ruff PASS,
+  compliance **93 files/0**, eval **640/640**, metamorphic **137/137**, holdout
   **100/100**, Graph **120/120**, BM25 **20/20**, A–E PASS를 재실행했다.
-- 20은 주최 측 평가 문항 수가 아니라 one/two planner parity smoke다. production은
-  그 40-call report와 새 100-case HCX two-stage E2E report를 모두 요구한다. 둘 다
-  key 대기이며 실제 HCX 정확도/운영 완료라고 주장하면 안 된다.
+- 20은 주최 측 평가 문항 수가 아니라 one/two planner parity smoke다. 100은 빠른 HCX
+  E2E smoke이며, 새 강화 gate는 1,000 direct HCX 질의와 100개 2회·100개 3회 재질문
+  (총 API 요청 1,700)을 요구한다. production은 세 sanitized PASS report를 모두 요구한다.
+  모두 key 대기이며 실제 HCX 정확도/운영 완료라고 주장하면 안 된다.
 - fresh Docker build는 Docker Desktop builder의 `auth.docker.io` DNS 실패로 두 번
   중단됐다. 기존 과거 image 성공을 재사용하지 않았으며, DNS 복구 뒤 fresh build/run/
   restart smoke가 남아 있다.
@@ -51,16 +52,20 @@
 - **최신 실측**: source 8/8, 재빌드 60,903 serving·KG 71,683/206,274/249,874·
   lexical 80,670/1,288,698/43,935, Vector 0. 전체 eval 640/640, 교차 거절 0%,
   metamorphic 137/137, 고정 holdout 100/100, Graph 전용 120/120, BM25 20/20,
-  A~E 절제실험 PASS, pytest 262/262(최종 재실행 234.57초), Ruff PASS, compliance 88/0.
-  실제 HCX F만 credential 대기다.
+  A~E 절제실험 PASS, pytest 275/275, Ruff PASS, compliance 93/0. 추가로 local extensive
+  gate의 1,000 direct SQL-oracle·200 signed multi-turn flow도 1,000/1,000·200/200이다.
+  실제 HCX F와 extensive gate만 credential 대기다.
 - **부하/Docker**: 로컬 warm 100요청·동시10에서 실패 0, p95 115.89ms
   (이전 131.75ms 대비 개선). ETL 직후 cold 657.22ms와 Windows Docker p95
   473.98ms도 별도 기록해 숨기지 않는다. 최종 HEAD fresh `--no-cache --pull=false`
   image `sha256:bdce35e5...68445`, smoke 15/15, restart 후 healthy를 확인했다.
 - **운영 release gate**: `deploy/live_hcx_plan_smoke.py --confirm-live-calls 40`이
-  20문항을 1단계/2단계로 각각 호출하고, 질문·plan·key를 저장하지 않은 일치 보고서를
-  만든다. `scripts/production_preflight.py`는 이 PASS 보고서와 `PLANNER_STAGE=two`가
-  없으면 운영 배포를 거부한다.
+  20문항을 1단계/2단계로 각각 호출하고, 100-case E2E와
+  `deploy/live_hcx_extensive_e2e_gate.py --confirm-direct-hcx-calls 1000
+  --confirm-api-requests 1700`은 질문·plan·answer·token·key를 저장하지 않는 추가
+  보고서를 만든다. 마지막 gate는 1,000 direct를 SQL oracle로 채점하고 200개 다단계
+  재질문을 실제 API contract까지 검증한다. `scripts/production_preflight.py`는 세 PASS
+  보고서와 `PLANNER_STAGE=two`가 없으면 운영 배포를 거부한다.
 
 아래 §2-3의 “Graph traversal 미연결”, “기본 one” 같은 문장은 v3 이전 이력이다.
 

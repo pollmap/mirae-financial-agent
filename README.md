@@ -7,9 +7,9 @@
 > `docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`,
 > `HANDOFF_CURRENT_STATUS.md`의 v3 절과 `docs/16_MASTER_PROJECT_NARRATIVE.md`의
 > v3 부록을 우선한다.
-> 2026-08-09 재실행 기준 최신 자동 검증은 pytest 272/272, eval 640/640,
+> 2026-08-09 재실행 기준 최신 자동 검증은 pytest 275/275, eval 640/640,
 > metamorphic 137/137, holdout 100/100, Federated Graph 120/120, BM25 20/20,
-> 교차질의 거부 0%, runtime compliance 91 files/0 findings다. fresh Docker build는
+> 교차질의 거부 0%, runtime compliance 93 files/0 findings다. fresh Docker build는
 > Docker Desktop builder DNS 장애로 재실행 대기이며 통과로 표시하지 않는다.
 
 > **다른 AI 에이전트/세션이 이어받는 경우**: 가장 먼저
@@ -241,6 +241,21 @@ make production-preflight     # secret 비출력 production env/DB/budget gate
 make production-readiness     # public HTTPS live/ready만 확인; HCX 호출 없음
 make release-manifest         # source/data/prompt/config fingerprint
 ```
+
+실제 HCX key가 발급된 뒤에는 20문항 parity, 100문항 two-stage smoke에 이어 아래 강화
+gate를 실행해야 production preflight가 통과합니다. `1,000`은 주최 측 공식 평가 문항
+수가 아니라 팀의 release 검증량이며, 500개 독립 의미 명세의 두 표현과 200개 2·3회
+후속 재질문을 검사합니다.
+
+```bash
+.venv/Scripts/python.exe deploy/live_hcx_extensive_e2e_gate.py `
+  --confirm-direct-hcx-calls 1000 `
+  --confirm-api-requests 1700
+```
+
+명령은 실제 HCX quota를 쓰며 결과물에는 digest·집계만 남긴다. 질문·prompt·답·token·상품 ID·
+secret은 저장하지 않는다. 정확한 실행 순서와 비용/키 취급은
+[`docs/13_HCX_AND_LOW_COST_DEPLOYMENT.md`](docs/13_HCX_AND_LOW_COST_DEPLOYMENT.md)를 따른다.
 
 로컬 기계 판독 증빙 파일은 `artifacts/test_report_20260803.json`입니다. 이 파일은 사용 전에
 `docs/06_TEST_REPORT.md`의 158-pass 결과와 현재 DB SHA-256이 일치하는지 확인해야 합니다.

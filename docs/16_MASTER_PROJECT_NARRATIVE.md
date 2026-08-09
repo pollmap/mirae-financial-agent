@@ -36,12 +36,36 @@
 검증은 구현 전에 고정한 SHA-256
 `0c7de9a9c98378a0d44c47e289c4ef7b9fb577cf3cebbd473b421066e5f823a8`
 holdout 100/100, Graph 120/120, BM25 20/20, A~E 절제실험 PASS, 기존 640/640·
-교차 거절 0%·metamorphic 137/137이다. Vector는 fixture 검증, F(HCX composer)는
-실 credential 대기 상태다. 따라서 §5의 “기본 one”, §6의 “Graph/BM25/RRF 실 경로
+교차 거절 0%·metamorphic 137/137이다. Vector는 fixture 검증, F(live HCX two-stage
+E2E)는 실 credential 대기 상태다. 따라서 §5의 “기본 one”, §6의 “Graph/BM25/RRF 실 경로
 미연결” 표는 당시 결정을 설명하는 역사 기록이며 현재 상태 판단에는 사용하지 않는다.
 
-외부 작업은 HCX 20문항 A/B live gate, CLOVA Embedding key/cache/live smoke,
-NCP VPC·서버·방화벽·도메인/TLS 공개 배포, 사람의 제출 승인/freeze뿐이다.
+외부 작업은 HCX 20문항 A/B·100문항 smoke·1,000 direct+200 multi-turn live gate,
+CLOVA Embedding key/cache/live smoke, NCP VPC·서버·방화벽·도메인/TLS 공개 배포,
+사람의 제출 승인/freeze뿐이다.
+
+### v3 live 검증 확장 — 2026-08-09
+
+사용자가 “실제 HCX 키 입력 후 실행할 문항을 1,000개 이상 만들고, 2차·3차 질문도
+반드시 넣으라”고 추가로 확정했다. 이 숫자는 주최 측의 공개 평가 문항 수가 아니라,
+비공개 평가량이 공지되지 않은 상태에서 팀이 정한 **강화 release gate**다.
+
+- `deploy/live_hcx_extensive_e2e_gate.py`는 기존 640의 HCX-eligible 의미 명세 중
+  rank/filter/aggregate/cross 500개를 원문과 “공식 제공 데이터·근거” 표현으로 각각
+  실행해 **1,000 direct HCX** 결과를 독립 SQL oracle로 채점한다. 단순한 문자열 복제라고
+  과장하지 않도록 500은 독립 의미 명세, 2는 surface 표현 수로 report에 분리 기록한다.
+- 같은 gate는 시장→수익률 기간의 **2회 후속** 100개, 시장→수익률 기간→정렬 우선순위의
+  **3회 후속** 100개를 실제 GET `/answer`와 signed clarification token으로 끝까지
+  수행한다. 총 API request는 1,700개이며, 최종 evidence row signature를 결정론 baseline과
+  비교한다. 질문·prompt·plan·answer·token·상품 ID·secret은 결과 보고서에 저장하지 않는다.
+- 구현 과정에서 (a) server가 생성한 canonical `1y` historical return 선택이 forecast로
+  오인될 수 있는 false positive, (b) `return_period` 뒤 HCX/결정론 planner의
+  `ranking_priority` envelope가 보존 metric을 비웠다고 오인해 state conflict가 나는 문제를
+  발견·수정했다. 이 두 수정이 없으면 진짜 3회 후속 흐름은 안전하게 끝까지 갈 수 없었다.
+- 키 없이도 direct 1,000/1,000은 deterministic planner+독립 SQL oracle로, 다단계 200/200은
+  public API+signed state+source-row evidence로 재실행해 먼저 고정했다. **실제 HCX 호출은
+  아직 key 대기**이며, production preflight는 기존 20 parity·100 smoke에 더해 이 강화
+  report까지 없으면 fail closed한다.
 
 ---
 

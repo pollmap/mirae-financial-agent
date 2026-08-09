@@ -85,8 +85,13 @@ def _items_have_evidence(context: dict[str, Any]) -> bool:
     items = context.get("items") or []
     return all(
         isinstance(item, dict)
-        and bool(item.get("source_row_hash"))
-        and bool(item.get("source_file"))
+        and isinstance(item.get("fields"), list)
+        and any(
+            isinstance(field, dict)
+            and bool(field.get("source_row_hash"))
+            and bool(field.get("source_file"))
+            for field in item["fields"]
+        )
         for item in items
     )
 

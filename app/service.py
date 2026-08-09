@@ -321,6 +321,20 @@ class AgentService:
 
         base_metrics = list(base.get("metrics") or [])
         candidate_metrics = list(payload.get("metrics") or [])
+        # Stage-two planners can return a clarification envelope whose
+        # executable concepts live in ``preserved_plan.metrics`` instead of
+        # the envelope's empty physical ``metrics`` array.  Treat those
+        # allow-listed metric ids as the candidate for reconciliation.  This
+        # is needed for a legitimate chain such as market -> return period ->
+        # ranking priority; without it, the server mistakes the next
+        # clarification for an attempt to delete the already-preserved metric.
+        if candidate.needs_clarification and not candidate_metrics:
+            semantic_metrics = (candidate.preserved_plan or {}).get("metrics")
+            if isinstance(semantic_metrics, list) and all(
+                isinstance(metric, str) for metric in semantic_metrics
+            ):
+                candidate_metrics = list(semantic_metrics)
+                payload["metrics"] = candidate_metrics
         metric_slots = slots.intersection(_METRIC_CLARIFICATION_SLOTS)
         if base_metrics and not metric_slots:
             base_metric_set = set(base_metrics)
@@ -1545,7 +1559,26 @@ class AgentService:
                 clarification_token, clarification_response
             )
 
-        safety = evaluate_question(execution_question)
+        # ``resolve_follow_up`` turns a canonical return-period button such as
+        # ``1y`` into Korean planner text ("1년 수익률").  The forecast
+        # detector intentionally treats an unqualified "N년 ... 수익" claim
+        # conservatively, but that combination is a historical *measurement*
+        # when it was supplied by our own signed return-period choice.  Check
+        # the original question in this one narrow case so a valid third turn
+        # (for example, return period -> ranking priority) is not mistaken for
+        # a forecast.  Free-text follow-ups still go through the full composed
+        # safety scan; this does not create an injection bypass.
+        safety_question = execution_question
+        canonical_return_values = {suffix for _, suffix in RETURN_PERIODS}
+        if (
+            follow_up_state is not None
+            and set(follow_up_state.missing_slots).intersection(
+                {"return_period", "return_period_priority"}
+            )
+            and clarification_response in canonical_return_values
+        ):
+            safety_question = follow_up_state.original_question
+        safety = evaluate_question(safety_question)
         if safety.blocked:
             plan = QueryPlan(
                 intent="unsupported",

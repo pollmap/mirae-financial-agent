@@ -25,6 +25,7 @@ APPROVED_HCX_MODEL_ID = "HCX-007"
 EXPECTED_SNAPSHOT_DATE = "2026-07-11"
 EXPECTED_LIVE_HCX_GATE = "HCX_20_QUESTION_ONE_VS_TWO_STAGE"
 EXPECTED_LIVE_HCX_E2E_GATE = "HCX_100_QUESTION_TWO_STAGE_E2E"
+EXPECTED_LIVE_HCX_EXTENSIVE_GATE = "HCX_EXTENSIVE_1000_DIRECT_PLUS_MULTITURN_E2E"
 IMAGE_PATTERN = re.compile(r"^[^\s@]+@sha256:[a-f0-9]{64}$")
 PLACEHOLDER_SECRET_MARKERS = (
     "at-least-",
@@ -272,6 +273,94 @@ def _validate_live_hcx_e2e_gate(report_path: Path, errors: list[str]) -> None:
         errors.append("LIVE_HCX_E2E_GATE_REPORT has an invalid category mix or category result")
 
 
+def _validate_live_hcx_extensive_gate(report_path: Path, errors: list[str]) -> None:
+    """Require the 1,000-direct plus multi-turn live HCX release evidence."""
+
+    if not report_path.is_file() or report_path.stat().st_size == 0:
+        errors.append("LIVE_HCX_EXTENSIVE_GATE_REPORT must reference a non-empty JSON file")
+        return
+    try:
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        errors.append("LIVE_HCX_EXTENSIVE_GATE_REPORT must be valid UTF-8 JSON")
+        return
+    if not isinstance(payload, dict):
+        errors.append("LIVE_HCX_EXTENSIVE_GATE_REPORT must contain a JSON object")
+        return
+
+    required_matches = {
+        "status": "PASS",
+        "gate": EXPECTED_LIVE_HCX_EXTENSIVE_GATE,
+        "model_id": APPROVED_HCX_MODEL_ID,
+        "approved_planner_stage": "two",
+        "direct_case_count": 1_000,
+        "direct_semantic_spec_count": 500,
+        "direct_surface_count_per_spec": 2,
+        "minimum_accuracy": 0.98,
+        "direct_hcx_planned_case_count": 1_000,
+        "direct_evidence_linked_case_count": 1_000,
+        "direct_contract_valid_response_count": 1_000,
+        "cross_scope_refusal_count": 0,
+        "two_follow_up_flow_count": 100,
+        "three_follow_up_flow_count": 100,
+        "baseline_flow_passed_count": 200,
+        "two_follow_up_flow_passed_count": 100,
+        "three_follow_up_flow_passed_count": 100,
+        "two_follow_up_final_hcx_count": 100,
+        "three_follow_up_final_hcx_count": 100,
+        "two_follow_up_final_evidence_count": 100,
+        "three_follow_up_final_evidence_count": 100,
+        "two_follow_up_signature_match_count": 100,
+        "three_follow_up_signature_match_count": 100,
+        "flow_contract_valid_response_count": 700,
+        "flow_live_api_request_count": 700,
+        "live_api_request_count": 1_700,
+        "secret_values_recorded": False,
+        "questions_recorded": False,
+        "prompts_recorded": False,
+        "plans_recorded": False,
+        "answers_recorded": False,
+        "clarification_tokens_recorded": False,
+        "product_identifiers_recorded": False,
+    }
+    if any(payload.get(key) != value for key, value in required_matches.items()):
+        errors.append(
+            "LIVE_HCX_EXTENSIVE_GATE_REPORT did not pass the required "
+            "1,000-direct plus multi-turn HCX gate"
+        )
+    passed_count = payload.get("direct_passed_count")
+    accuracy = payload.get("direct_accuracy")
+    if (
+        not isinstance(passed_count, int)
+        or passed_count < 980
+        or not isinstance(accuracy, int | float)
+        or float(accuracy) < 0.98
+    ):
+        errors.append("LIVE_HCX_EXTENSIVE_GATE_REPORT did not meet the 98% direct accuracy threshold")
+    suite_hash = payload.get("question_suite_sha256")
+    if not isinstance(suite_hash, str) or not re.fullmatch(r"[a-f0-9]{64}", suite_hash):
+        errors.append("LIVE_HCX_EXTENSIVE_GATE_REPORT is missing a valid question-suite hash")
+    completed_at = payload.get("completed_at_utc")
+    if not isinstance(completed_at, str) or not completed_at.endswith(("Z", "+00:00")):
+        errors.append("LIVE_HCX_EXTENSIVE_GATE_REPORT is missing its UTC completion time")
+    expected_mix = {
+        "rank_single": 468,
+        "filter_search": 228,
+        "count_aggregate": 166,
+        "cross_scope": 138,
+    }
+    by_kind = payload.get("direct_by_kind")
+    if not isinstance(by_kind, dict) or any(
+        not isinstance(by_kind.get(kind), dict)
+        or by_kind[kind].get("total") != count
+        or by_kind[kind].get("passed", 0) < int(count * 0.98)
+        for kind, count in expected_mix.items()
+    ):
+        errors.append(
+            "LIVE_HCX_EXTENSIVE_GATE_REPORT has an invalid direct category mix or result"
+        )
+
+
 def validate_environment(
     environ: Mapping[str, str],
     *,
@@ -315,6 +404,9 @@ def validate_environment(
     live_e2e_gate_raw = _required_text(environ, "LIVE_HCX_E2E_GATE_REPORT", errors)
     if live_e2e_gate_raw:
         _validate_live_hcx_e2e_gate(Path(live_e2e_gate_raw), errors)
+    live_extensive_gate_raw = _required_text(environ, "LIVE_HCX_EXTENSIVE_GATE_REPORT", errors)
+    if live_extensive_gate_raw:
+        _validate_live_hcx_extensive_gate(Path(live_extensive_gate_raw), errors)
 
     image_ref = _required_text(environ, "MIRAE_IMAGE", errors)
     if image_ref and (
