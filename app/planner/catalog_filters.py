@@ -37,6 +37,18 @@ _DOMESTIC_RISK_GRADE = {
     "5": "낮은위험(5등급)",
     "6": "매우낮은위험(6등급)",
 }
+# Verified PRFD01N001 code/name pairs.  The source contains two spacing
+# variants for grades 2 and 4, so those grades must use an explicit ``in``
+# filter instead of silently choosing one spelling.  The numeric grade is the
+# user-facing source code; these labels are the literal serving values.
+_FUND_RISK_GRADE = {
+    "1": ("매우 높은 위험",),
+    "2": ("높은 위험", "높은위험"),
+    "3": ("다소 높은 위험",),
+    "4": ("보통 위험", "보통위험"),
+    "5": ("낮은 위험",),
+    "6": ("매우 낮은 위험",),
+}
 
 _EQUITY_PATTERN = re.compile(r"(?:주식형|주식\s*(?:에|으로)?\s*투자)")
 _BOND_FUND_PATTERN = re.compile(r"(?:채권형\s*(?:공모|사모)?\s*펀드|채권\s*펀드)")
@@ -100,14 +112,24 @@ def resolve_catalog_filters(question: str, scopes: list[str]) -> CatalogFilterRe
             return CatalogFilterResolution(reason_code="CATALOG_VALUE_UNAVAILABLE")
         conditions.append(Condition(field="product.pension_eligible", op="eq", value="Y"))
     if risk_match:
-        if scope != "domestic_etp":
-            return CatalogFilterResolution(reason_code="CATALOG_VALUE_UNAVAILABLE")
         grade = risk_match.group(1)
-        conditions.append(
-            Condition(
-                field="product.risk_grade",
-                op="eq",
-                value=_DOMESTIC_RISK_GRADE[grade],
+        if scope == "domestic_etp":
+            conditions.append(
+                Condition(
+                    field="product.risk_grade",
+                    op="eq",
+                    value=_DOMESTIC_RISK_GRADE[grade],
+                )
             )
-        )
+        elif scope == "fund":
+            values = _FUND_RISK_GRADE[grade]
+            conditions.append(
+                Condition(
+                    field="product.risk_grade",
+                    op="eq" if len(values) == 1 else "in",
+                    value=values[0] if len(values) == 1 else list(values),
+                )
+            )
+        else:
+            return CatalogFilterResolution(reason_code="CATALOG_VALUE_UNAVAILABLE")
     return CatalogFilterResolution(conditions=tuple(conditions))

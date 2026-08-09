@@ -922,7 +922,55 @@ class AgentService:
                 "거래량",
             )
         )
-        return "각각" in question and count_request and not metric_request
+        grouped_by_scope = "각각" in question or "상품군별" in question
+        return grouped_by_scope and count_request and not metric_request
+
+    @staticmethod
+    def _scope_count_plan(question: str, limit: int) -> QueryPlan | None:
+        """Preserve an unscoped product-count request across clarification.
+
+        Both deterministic and HCX planners may emit a generic search or a
+        clarification envelope before a product family is known.  The server
+        can still prove the user's aggregate intent from a small, audited
+        phrase set.  Persisting that intent in signed state prevents a later
+        scope answer from degrading the request into a ten-row listing.
+        """
+
+        count_request = bool(
+            re.search(r"(?:몇\s*(?:개|건)|개수|상품\s*수|수는)", question)
+        )
+        metric_request = any(
+            token in question.upper()
+            for token in (
+                "수익률",
+                "성과",
+                "퍼포먼스",
+                "보수",
+                "AUM",
+                "NAV",
+                "금리",
+                "수익",
+                "위험등급",
+                "가격",
+                "거래량",
+            )
+        )
+        if not count_request or metric_request:
+            return None
+        return QueryPlan(
+            intent="aggregate",
+            scopes=[],
+            aggregations=[
+                {
+                    "function": "count",
+                    "field": "product.id",
+                    "alias": "product_count",
+                    "distinct": True,
+                }
+            ],
+            group_by=["product.scope"] if "상품군별" in question else [],
+            limit=limit,
+        )
 
     @staticmethod
     def _cross_scope_count_plan(
@@ -1068,8 +1116,22 @@ class AgentService:
         """Apply server-side ambiguity gates even when the planner omits them."""
 
         simple_cross_count = self._is_simple_cross_scope_count_question(original_question)
-        if plan.intent == "unsupported" or (plan.intent == "clarify" and not simple_cross_count):
+        scope_count_plan = self._scope_count_plan(original_question, plan.limit)
+        if plan.intent == "unsupported":
             return plan
+        if plan.intent == "clarify" and not simple_cross_count:
+            if (
+                scope_count_plan is None
+                or plan.scopes
+                or not set(plan.missing_slots).intersection(_SCOPE_CLARIFICATION_SLOTS)
+            ):
+                return plan
+            payload = plan.model_dump(mode="json")
+            payload["preserved_plan"] = {
+                "original_question": original_question,
+                "unresolved_plan": scope_count_plan.model_dump(mode="json"),
+            }
+            return QueryPlan.model_validate(payload)
         plan = self._align_explicit_etp_scope(original_question, plan)
         required_scopes: list[str] = []
         bond_fund_phrase = re.search(r"채권\s*(?:형\s*)?펀드", original_question)
@@ -1120,6 +1182,7 @@ class AgentService:
                 limit=plan.limit,
             )
         if not plan.scopes:
+            unresolved_plan = scope_count_plan or plan
             return QueryPlan(
                 intent="clarify",
                 scopes=[],
@@ -1134,7 +1197,7 @@ class AgentService:
                 ],
                 preserved_plan={
                     "original_question": original_question,
-                    "unresolved_plan": plan.model_dump(mode="json"),
+                    "unresolved_plan": unresolved_plan.model_dump(mode="json"),
                 },
                 limit=plan.limit,
             )

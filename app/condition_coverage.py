@@ -149,7 +149,7 @@ def audit_question_conditions(question: str, plan: QueryPlan) -> CoverageAudit:
         )
 
     intent_tokens = {
-        "aggregate": ("몇 개", "몇 건", "합계", "평균"),
+        "aggregate": ("몇 개", "몇 건", "개수", "상품 수", "합계", "평균"),
         "rank": (
             "상위",
             "하위",
@@ -254,8 +254,10 @@ def audit_question_conditions(question: str, plan: QueryPlan) -> CoverageAudit:
         "product.asset_type": ("asset_type", "asset_type_filter"),
         "product.asset_class": ("asset_type", "asset_type_filter"),
         "product.internal_type": ("product_type", "product_type_filter"),
+        "product.public_private": ("product_type", "public_private_filter"),
         "product.currency": ("currency", "currency_filter"),
         "product.trading_currency": ("currency", "currency_filter"),
+        "product.risk_grade": ("risk_grade", "risk_grade_filter"),
     }
     for condition in _conditions(augmented):
         spec = catalog_kinds.get(condition.field)

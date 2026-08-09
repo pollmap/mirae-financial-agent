@@ -307,6 +307,7 @@ class ConditionLedgerEntry(StrictModel):
         "strategy",
         "benchmark",
         "currency",
+        "risk_grade",
         "comparison_basis",
     ]
     requested_text: str = Field(min_length=1, max_length=160)

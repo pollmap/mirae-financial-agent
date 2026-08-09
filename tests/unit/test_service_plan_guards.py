@@ -323,6 +323,65 @@ def test_hcx_cross_count_plan_is_canonicalized_before_subtype_injection() -> Non
     )
 
 
+def test_scope_clarification_preserves_product_family_count_intent() -> None:
+    async def scenario() -> None:
+        service = _deterministic_service()
+        question = "상품군별 상품 수를 알려줘."
+
+        first = await service.answer(question_id="SCOPE-COUNT-1", question=question)
+        first_context = json.loads(first.retrieved_context)
+        clarification = first_context["clarification"]
+
+        assert first_context["answerability"] == "NEEDS_CLARIFICATION"
+        assert clarification["missing_slots"] == ["scope"]
+
+        final = await service.answer(
+            question_id="SCOPE-COUNT-2",
+            question=question,
+            clarification_token=clarification["clarification_token"],
+            clarification_response="fund",
+        )
+        final_context = json.loads(final.retrieved_context)
+
+        assert final_context["answerability"] in {"FULL", "PARTIAL_WITH_COVERAGE"}
+        assert final_context["result_count"] == 1
+        assert len(final_context["aggregates"]) == 1
+        assert int(final_context["aggregates"][0]["value"]) == 11115
+        assert "intent=aggregate" in final.think_trace
+        assert any(
+            entry["kind"] == "intent"
+            and entry["requested_text"] == "aggregate"
+            and entry["status"] == "grounded"
+            for entry in final_context["condition_ledger"]
+        )
+
+    asyncio.run(scenario())
+
+
+def test_public_fund_numeric_risk_grade_is_mapped_to_official_source_label() -> None:
+    async def scenario() -> None:
+        service = _deterministic_service()
+        response = await service.answer(
+            question_id="FUND-RISK-GRADE-1",
+            question="위험등급이 1등급인 공모펀드는 몇 개야?",
+        )
+        context = json.loads(response.retrieved_context)
+
+        assert context["answerability"] in {"FULL", "PARTIAL_WITH_COVERAGE"}
+        assert context["reason_code"] != "CATALOG_VALUE_UNAVAILABLE"
+        assert len(context["aggregates"]) == 1
+        assert int(context["aggregates"][0]["value"]) == 670
+        risk_entry = next(
+            entry
+            for entry in context["condition_ledger"]
+            if entry["kind"] == "risk_grade"
+        )
+        assert risk_entry["status"] == "grounded"
+        assert risk_entry["requested_text"] == "매우 높은 위험"
+
+    asyncio.run(scenario())
+
+
 def test_hcx_catalog_filter_values_are_replaced_with_scope_source_labels() -> None:
     generated = QueryPlan(
         intent="search",

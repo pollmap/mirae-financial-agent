@@ -373,7 +373,16 @@ class DeterministicPlanner:
         multi_metrics = _multiple_rank_metrics(question, scopes)
 
         count_request = any(
-            k in question for k in ("몇 개인", "몇 개인가", "몇 개", "몇 건", "수는")
+            k in question
+            for k in (
+                "몇 개인",
+                "몇 개인가",
+                "몇 개",
+                "몇 건",
+                "개수",
+                "상품 수",
+                "수는",
+            )
         )
         rank_request = (
             any(
