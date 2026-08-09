@@ -145,6 +145,14 @@ def test_compose_keeps_gateway_available_and_binds_engine_revision() -> None:
     assert "LABEL org.opencontainers.image.revision=$ENGINE_GIT_SHA" in dockerfile
 
 
+def test_qa_image_switches_to_production_react_before_frontend_build() -> None:
+    dockerfile = (ROOT / "Dockerfile.qa").read_text(encoding="utf-8")
+    install = dockerfile.index("RUN npm ci --ignore-scripts")
+    production = dockerfile.index("ENV NODE_ENV=production")
+    build = dockerfile.index("RUN npm run build")
+    assert install < production < build
+
+
 def test_host_preflight_checks_actual_image_data_gate_and_secrets() -> None:
     preflight = (QA_DEPLOY / "Test-QaReleaseDeployment.ps1").read_text(encoding="utf-8")
     required_fragments = (

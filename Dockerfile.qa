@@ -13,6 +13,7 @@ COPY qa_web/package.json qa_web/package-lock.json ./
 RUN npm ci --ignore-scripts
 
 COPY qa_web/ ./
+ENV NODE_ENV=production
 RUN npm run build
 
 
