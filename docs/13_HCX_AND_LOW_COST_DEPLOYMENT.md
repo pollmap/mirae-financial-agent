@@ -5,7 +5,8 @@
 
 > **v3 운영 변경**: `PLANNER_STAGE=two`가 필수 기본값이다. production preflight는
 > 실제 HCX 20문항 one/two 40-call parity 보고서, 100문항 two-stage E2E 보고서, 그리고
-> 1,000 direct + 200 multi-turn 강화 E2E 보고서가 모두 없으면 실패한다. 20·100·1,000은
+> 1,200 independent direct + 300 multi-turn 강화 E2E 보고서가 모두 없으면 실패한다.
+> 20·100·1,200은
 > 팀 내부 gate이며 공식 평가 문항 수가 아니다.
 > Vector credential/cache는 선택 사항이며 없으면 Exact+SQL+Graph+BM25로
 > 정상 동작한다.
@@ -107,16 +108,18 @@ payload를 보내며, 응답은 local schema validation 후 DuckDB 조회와 최
 - HCX adapter real TCP mock contract E2E
 - non-HCX runtime compliance scan
 
-최신 local 증빙은 source XLSX 8/8, eval 640/640, metamorphic 137/137, holdout
-100/100, Graph 120/120, BM25 20/20, runtime scan 93 files/0 findings, real HTTP
-E2E 15/15입니다. load smoke는 100/100·concurrency 10·failure 0·p95 115.89ms이고
+최신 local 증빙은 source XLSX 8/8, eval 640/640, metamorphic 137/137, v4
+200/200, Graph 120/120, BM25 20/20, offline assurance 5,000/5,000, runtime scan
+102 files/0 findings, real HTTP E2E 15/15입니다. load smoke는
+100/100·concurrency 10·failure 0·p95 112.45ms이고
 serving DB SHA-256은
-`8d221384543fd6a9b14da2f55de79de65b2c7b4bdd3149cdfdf6cde8afcf0977`입니다.
-fresh Docker build/restart는 Docker Desktop builder의 `auth.docker.io` DNS 실패 때문에
-현재 **미통과**다. DNS 복구 뒤 새 image build/run/restart를 다시 해야 하며, 이 사실은
-live HCX·public network 검증과 별개의 외부 gate다.
+`a4110183646a691009130e4a0723a634e2e5a471677a06fc45917952363a89be`입니다.
+fresh Docker `--no-cache --pull` build, read-only start, healthcheck, smoke 15/15,
+restart 뒤 동일 답변·근거 및 smoke 15/15를 통과했습니다. 로컬 image digest는
+`sha256:f17c04b295948b87ea4cddb5d9473aa025630f5c766c01b300fb3c2eed9459a4`이며,
+immutable registry 제출 digest와 public network 검증은 여전히 `PENDING_EXTERNAL`입니다.
 
-키를 쓰기 전에 1,000 direct와 200 multi-turn corpus 자체가 현재 데이터·결정론 planner·
+키를 쓰기 전에 1,200 direct와 300 multi-turn corpus 자체가 현재 데이터·결정론 planner·
 독립 SQL oracle·signed API state에서 재현되는지도 다음 명령으로 먼저 확인한다. 이 명령은
 HCX를 호출하거나 credential을 읽지 않고, 질문 원문/답/token을 파일로 저장하지 않는다.
 
@@ -136,7 +139,9 @@ secret manager를 우선 사용하고, 임시 protected env file을 쓰면 repos
 
 ```bash
 export CLOVA_STUDIO_API_KEY='<secret-manager-injected>'
-export HCX_MODEL_ID='HCX-007'
+export APPROVED_HCX_MODEL_ID='<human-confirmed-hcx-model>'
+export HCX_MODEL_ID="$APPROVED_HCX_MODEL_ID"
+export APPROVED_HCX_BASE_URL='https://clovastudio.stream.ntruss.com'
 export HCX_BASE_URL='https://clovastudio.stream.ntruss.com'
 .venv/bin/python deploy/live_hcx_plan_smoke.py --confirm-live-calls 40
 ```
@@ -156,26 +161,25 @@ rank 35, filter 25, aggregate 20, cross-scope 20을 실제 HCX two-stage planner
 독립 SQL oracle로 검사한다. 정확도 98% 이상, HCX 계획·원천 근거 100/100, 교차질의
 거부 0, 질문·prompt·plan·answer·상품 ID·secret의 비저장을 요구한다.
 
-### Gate A2 — 1,000 direct + multi-turn live HCX API gate
+### Gate A2 — 1,200 independent direct + 300 multi-turn live HCX API gate
 
 100문항은 빠른 release smoke다. 실제 key를 받은 뒤에는 아래 강화 gate를 별도로 실행한다.
-이 gate는 500개의 독립 의미 명세를 원문/공식근거 지시 두 표현으로 검사해 **1,000개 direct
-질의가 모두 실제 HCX two-stage planner를 거쳤는지** 확인한다. 이어서 시장→수익률 기간의
-2회 후속 재질문 100개와 시장→수익률 기간→정렬 우선순위의 3회 후속 재질문 100개를 같은
-공개 GET `/answer` API로 실행한다. 총 API 요청 수는 1,700개다.
+이 gate는 문구만 바꾼 중복이 아닌 **1,200개 독립 의미 direct 질의**가 실제 HCX
+two-stage planner를 거쳤는지 확인한다. 이어서 2-turn·3-turn·4-turn 흐름을 각각 100개씩
+같은 공개 GET `/answer` API로 실행한다. 대화 API 요청은 900개, 전체 요청은 2,100개다.
 
 ```bash
 .venv/bin/python deploy/live_hcx_extensive_e2e_gate.py \
-  --confirm-direct-hcx-calls 1000 \
-  --confirm-api-requests 1700
+  --confirm-direct-hcx-calls 1200 \
+  --confirm-api-requests 2100
 ```
 
 direct 결과는 독립 SQL oracle로 98% 이상이어야 하며 HCX·근거·5-field response contract는
-각각 1,000/1,000이어야 한다. 재질문은 200/200에서 signed token, server-side monotonic
+각각 1,200/1,200이어야 한다. 재질문 흐름은 300/300에서 signed token, server-side monotonic
 state, 최종 HCX, 원천 행 근거, deterministic baseline과의 evidence signature 일치를 모두
 요구한다. 결과 보고서는 digest와 집계값만 저장하고 질문·prompt·계획·답·token·상품 ID·key는
 저장하지 않는다. provider 재시도에 따른 실제 HTTP 호출 수는 provider 측에서 별도로 확인하며,
-이 명령의 1,000은 성공 조건으로 추적하는 direct HCX-planned response 수다.
+이 명령의 1,200은 성공 조건으로 추적하는 서로 다른 direct HCX-planned response 수다.
 
 ### Gate B — production preflight
 
@@ -189,9 +193,9 @@ make production-preflight
 
 - `APP_ENV=production`, `PLANNER_MODE=hcx`, `PLANNER_STAGE=two`
 - sanitized 20문항 A/B report가 PASS이고 model/call/count/privacy contract가 일치
-- sanitized 100문항 E2E 및 1,000 direct + 200 multi-turn E2E report가 각각 PASS이며
+- sanitized 100문항 E2E 및 1,200 direct + 300 multi-turn E2E report가 각각 PASS이며
   정해진 HCX/근거/5-field contract와 privacy contract가 일치
-- `HCX_MODEL_ID=HCX-007` baseline과 공식 HTTPS base URL
+- 사람이 확인한 `APPROVED_HCX_MODEL_ID`·`APPROVED_HCX_BASE_URL`과 실제 runtime 값의 일치
 - HCX key 20 bytes 이상, clarification signing key 24 bytes 이상, placeholder 아님
 - embedded DB 파일 존재·read 가능·snapshot/source hash/schema/count readiness
 - image가 mutable tag가 아니라 non-placeholder `@sha256` reference
@@ -321,7 +325,7 @@ config나 manifest에 넣지 않는다. provider가 hard budget을 제공하면 
 리터럴이 없는 개념 전용 스키마로 보수적 요청 예약량을 13,013B→6,333B
 (**−51.3%**)로 줄였다. `two`가 운영 기본이고 `one`은 수동 롤백 전용이며 자동
 fallback은 없다. mock-HCX lookup/cross/aggregate, 640 회귀, holdout 100을 검증했고
-실 20문항 A/B·100문항 smoke·1,000 direct+200 multi-turn gate가 credential 대기다. 별도로 `scripts/build_embeddings.py`가 읽는
+실 20문항 A/B·100문항 smoke·1,200 direct+300 multi-turn gate가 credential 대기다. 별도로 `scripts/build_embeddings.py`가 읽는
 `CLOVA_EMBEDDING_URL`/`CLOVA_EMBEDDING_MODEL_ID`는 이 표의 QPM/TPM guardrail과 무관한
 오프라인 1회성 임베딩 생성 전용 변수로, 실 키 발급 후 그때만 실행한다(스크립트 자체
 docstring에 문서화됨).

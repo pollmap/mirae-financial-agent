@@ -9,16 +9,50 @@
 단일 진입점입니다. **"왜 지금 이 모습인지"(설계 결정의 이유, 사용자의 협상
 불가 원칙, 기각된 대안)는 이 파일이 아니라
 `docs/16_MASTER_PROJECT_NARRATIVE.md`가 담당합니다 — 다른 코드 에이전트
-계정이 처음 이어받는다면 **`docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`
-부터**, 이 파일과 16을 차례로 읽으세요.** 내용이 다른 문서와 상충하면
-`docs/17` → 이 파일 → `docs/16_MASTER_PROJECT_NARRATIVE.md` →
+계정이 처음 이어받는다면 **`docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`
+부터**, `docs/17`, 이 파일과 16을 차례로 읽으세요.** 내용이 다른 문서와 상충하면
+`docs/18` → `docs/17` → 이 파일 → `docs/16_MASTER_PROJECT_NARRATIVE.md` →
 `docs/15_REBASELINE_VALIDATION_REPORT.md` → `docs/14_BRIEFING_REBASELINE_PLAN.md`
 순으로 최신입니다(`docs/17`은 공식 기준/적대적 검증, 이 파일은 실시간 상태,
 16은 서사). `00_START_HERE.md`, `docs/11_IMPLEMENTATION_HANDOFF.md`,
 `artifacts/windows_docker_verification_20260803.md`는 8/3-8/4 시점(설명회 이전
-"prebrief" 상태, 태그 `prebrief-v1`)에서 멈춘 배경 문서입니다.
+"prebrief" 상태, 태그 `prebrief-v1`)에서 멈춘 `HISTORICAL` 배경 문서입니다.
 
-## 2026-08-09 최신 재검증 부록 — 현재 상태는 이 절을 우선
+## 2026-08-09 v4 최종 전수감사 — 이 절이 현재 상태
+
+- 런타임 소스 기준 커밋은 `c7c07c9`다. 전체 조건을 `ConditionLedger`로 기록하고
+  `grounded`, `clarification_required`, `unavailable`, `not_comparable` 중 하나로
+  판정한다. 중요한 조건의 무언 누락이 있으면 `FULL`을 금지한다.
+- 2단계 HCX 플래너가 기본이고 1단계는 수동 롤백 전용이다. Exact/Alias·SQL·Graph
+  실제 1–2 hop·BM25가 조건별로 실행되며, Vector/RRF는 정확히 1,024차원 cache와
+  embedder가 있을 때만 활성화된다. 현재 Vector는 `VERIFIED_FIXTURE`, live cache는 0이다.
+- 모호한 질문은 가장 판별력 높은 조건 하나를 묻고 signed state에 2·3·4턴 답변과
+  사용자 정정을 누적한다. “좋은 상품”은 범위를, 범위가 있는 “좋은 해외 ETF”는 평가
+  기준을 먼저 묻는다. 교차질의는 부족 조건을 묻되 거부하지 않는다.
+- 재실행 결과: pytest **288/288**, Ruff PASS, compliance **102 files/0**, 기존 oracle
+  **640/640**·교차거부 0, metamorphic **137/137**, 기존 holdout **100/100**, Graph
+  **120/120**, BM25 **20/20**, v4 **200/200**, offline assurance **5,000/5,000**이다.
+- 실제 서비스 경로를 쓰는 무키 local extensive gate는 독립 direct **1,200/1,200**,
+  근거·정책 연결 **1,200/1,200**, 2·3·4턴 flow **300/300**, API 요청 **900/900**이다.
+  이는 deterministic baseline이며 실제 HCX 결과가 아니다.
+- 최신 프로세스 HTTP는 15/15, 100요청·동시10·오류0·p95 **112.45ms**다. 기존 같은
+  로컬 기준 115.89ms보다 2.97% 낮다.
+- fresh Docker `--no-cache --pull` build, read-only start, health, smoke 15/15, restart,
+  동일 답·상품근거, 재-smoke 15/15를 통과했다. Docker 100×10은 오류 0·p95 447.99ms다.
+  local digest `sha256:f17c04…9459a4`는 registry 제출 digest가 아니다.
+- 공식 평가 문항 수는 공개되지 않았다. 20·100·200·300·640·1,200·1,500·2,100·
+  5,000은 모두 내부 gate다. `HCX-007`은 팀 기본값일 뿐 주최 측 확정 모델이 아니다.
+- 남은 것은 실제 HCX 20→100→1,200+300, CLOVA Embedding 1,024차원 cache/live smoke,
+  NCP public HTTPS, 사람의 제출·freeze 승인이다. 이 전에는 상태가 `PENDING_EXTERNAL`이고
+  “완벽/실서비스/제출 완료”라고 쓰지 않는다.
+
+아래의 275 테스트, 93-file compliance, 1,000 direct/200 flow, 과거 Docker digest와
+“Graph 미연결/기본 one” 서술은 모두 `HISTORICAL`이다.
+
+## HISTORICAL — 2026-08-09 v3 재검증 부록
+
+이 절의 수치와 Docker 대기 상태는 v4 전수감사 이전 기록이다. 현재 판정에는 위 v4 절과
+`docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`를 사용한다.
 
 - 공식 PDF·FAQ·녹취의 권위를 재분리한 최신 기준은 `docs/17`이다. PDF가 요구한
   정보부족 역질문은 실제 API/화면에 있고, 주입·임의 SQL·미래예측은 안전 차단한다.
@@ -33,7 +67,7 @@
   중단됐다. 기존 과거 image 성공을 재사용하지 않았으며, DNS 복구 뒤 fresh build/run/
   restart smoke가 남아 있다.
 
-## v3 완료 상태 — 이 절이 아래의 과거 미연결 서술을 대체함
+## HISTORICAL — v3 완료 상태
 
 - **기본 플래너**: `PLANNER_STAGE=two`. HCX는 의도·스코프·개념·조건·정렬·
   집계만 만들고 서버 grounder가 허용 필드에 결속한다. `count/sum/avg/min/max`,

@@ -1,0 +1,167 @@
+{
+  "evidence_version": "4.0",
+  "generated_at_utc": "2026-08-09T07:07:49.835245+00:00",
+  "release_state": "PENDING_EXTERNAL",
+  "runtime_source_git_sha": "c7c07c9bf6747affd56263e4eb1972e29e72cc56",
+  "branch": "codex/federated-completion-v3",
+  "working_tree_dirty_at_generation": true,
+  "source_sha256": {
+    "official_task_pdf": "3717441e091958b7214db710e0e4b9b8ae15ac6c205cad6e51721214798eb3de",
+    "official_data_zip": "c3809aca73396f57242ded0188fa06a3d271bd4ad65010e53d5533efc7c18163"
+  },
+  "data": {
+    "database_sha256": "a4110183646a691009130e4a0723a634e2e5a471677a06fc45917952363a89be",
+    "raw_rows": 145393,
+    "logical_products": 60913,
+    "serving_products": 60903,
+    "quarantine_rows": 10,
+    "metric_evidence_rows": 1156332,
+    "kg_nodes": 71683,
+    "kg_edges": 206274,
+    "kg_aliases": 249874,
+    "lexical_docs": 82249,
+    "lexical_terms": 1291823,
+    "lexical_vocab": 43932,
+    "vector_embeddings": 0
+  },
+  "verification": {
+    "pytest": {
+      "passed": 288,
+      "failed": 0,
+      "duration_seconds": 167.48
+    },
+    "ruff": "PASS",
+    "compliance": {
+      "files_scanned": 102,
+      "findings": 0,
+      "approved_language_model": "HyperCLOVA X only"
+    },
+    "legacy_oracle": {
+      "passed": 640,
+      "total": 640,
+      "cross_scope_refusal_rate": 0.0
+    },
+    "metamorphic": {
+      "passed": 137,
+      "total": 137
+    },
+    "federated": {
+      "status": "LOCAL_PASS_EXTERNAL_LIVE_GATES_PENDING",
+      "holdout_sha256": "0c7de9a9c98378a0d44c47e289c4ef7b9fb577cf3cebbd473b421066e5f823a8",
+      "holdout": {
+        "total": 100,
+        "passed": 100,
+        "graph_route_hits": 39
+      },
+      "federated_graph": {
+        "total": 120,
+        "passed": 120,
+        "path_evidence_hits": 28196,
+        "safe_sql_fallbacks": 10
+      },
+      "federated_lexical": {
+        "total": 20,
+        "passed": 20
+      },
+      "vector": "FIXTURE_VERIFIED_BY_PYTEST_LIVE_CACHE_PENDING",
+      "ablation": {
+        "status": "PASS",
+        "variants": [
+          "A_sql_baseline",
+          "B_typed_plan_sql",
+          "C_ontology_grounded_sql",
+          "D_graph_sql",
+          "E_full_federated_validation"
+        ],
+        "F_live_hcx_two_stage_e2e": "PENDING_EXTERNAL_CREDENTIAL"
+      }
+    },
+    "v4_holdout": {
+      "passed": 200,
+      "total": 200,
+      "sha256": "f82ec1c5790dc3dd00d69b3379c5e3d3022506f26698d187725f532fe39560ff",
+      "method_note": "The first draft corpus was invalid, the corrected frozen corpus then exposed a count-basis bug, and the final result is the post-fix regression result; it is not described as a pristine blind score."
+    },
+    "offline_assurance": {
+      "passed": 5000,
+      "total": 5000,
+      "families": 10,
+      "corpus_sha256": "291189c46bb923062021ef515cb8e61393f2208ada6ccfeab197294ffc54528b",
+      "live_provider_calls": 0
+    },
+    "local_extensive_gate": {
+      "direct": "1200/1200",
+      "direct_evidence_or_policy": "1200/1200",
+      "flows": "300/300",
+      "flow_api_requests": "900/900",
+      "suite_sha256": "b24098eba1ddd70ae8fe483919a3caff393a562b585128b1ca4eaf5eb4e2edd7",
+      "planner": "deterministic",
+      "live_provider_calls": 0
+    },
+    "http": {
+      "smoke": "15/15",
+      "load_requests": 100,
+      "concurrency": 10,
+      "failure_count": 0,
+      "p95_ms": 112.45,
+      "baseline_p95_ms": 115.89,
+      "p95_change_percent": -2.97
+    },
+    "docker": {
+      "no_cache_pull_build": "PASS",
+      "local_image_digest": "sha256:f17c04b295948b87ea4cddb5d9473aa025630f5c766c01b300fb3c2eed9459a4",
+      "read_only_container": true,
+      "health_before_and_after_restart": "PASS",
+      "smoke_before_and_after_restart": "15/15 and 15/15",
+      "same_answer_after_restart": true,
+      "same_product_evidence_after_restart": true,
+      "load_requests": 100,
+      "concurrency": 10,
+      "failure_count": 0,
+      "p95_ms": 447.99,
+      "immutable_registry_digest": "PENDING_EXTERNAL"
+    }
+  },
+  "status_ledger": [
+    {
+      "item": "code_data_http_docker",
+      "status": "VERIFIED_LOCAL"
+    },
+    {
+      "item": "vector_rrf",
+      "status": "VERIFIED_FIXTURE"
+    },
+    {
+      "item": "hcx_20_100_1200_300_live",
+      "status": "PENDING_EXTERNAL"
+    },
+    {
+      "item": "clova_embedding_cache_live",
+      "status": "PENDING_EXTERNAL"
+    },
+    {
+      "item": "ncp_public_https",
+      "status": "PENDING_EXTERNAL"
+    },
+    {
+      "item": "human_submission_freeze",
+      "status": "PENDING_EXTERNAL"
+    },
+    {
+      "item": "pre_v4_numeric_reports",
+      "status": "HISTORICAL"
+    },
+    {
+      "item": "non_hcx_runtime",
+      "status": "NOT_APPLICABLE"
+    }
+  ],
+  "official_evaluation_question_count": "NOT_PUBLISHED",
+  "internal_gate_notice": "20, 100, 200, 640, 1200, 1500, 2100 and 5000 are internal verification quantities, not organizer-published evaluation sizes.",
+  "external_gates": [
+    "User-confirmed HCX model and endpoint plus sanitized 20 -> 100 -> 1200+300 live reports",
+    "CLOVA Embedding credential, exact 1024-dimensional cache and live smoke",
+    "NCP credit, VPC/server/ACG/domain/TLS and public endpoint deployment",
+    "Organizer final runtime notice check and human submission/freeze approval"
+  ]
+}

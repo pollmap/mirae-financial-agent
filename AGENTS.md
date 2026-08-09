@@ -1,6 +1,7 @@
 # Codex Project Rules - 미래에셋증권 금융상품 Agent
 
-> **Read `docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`,
+> **Read `docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`,
+> `docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`,
 > `HANDOFF_CURRENT_STATUS.md`, and `docs/16_MASTER_PROJECT_NARRATIVE.md`
 > first, before anything below.** This file predates the 2026-08-06 briefing
 > and the federated-semantic-rebaseline that followed it (branch

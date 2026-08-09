@@ -1,5 +1,33 @@
 # 마스터 프로젝트 서사 — 왜 지금 이 모습인가 (다른 에이전트 인수인계용)
 
+## 2026-08-09 v4 최종 전수감사 부록 — 현재 판정은 이 절과 docs/18 우선
+
+현재의 정식 설계·수치·release 경계는
+`docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`와
+`artifacts/release_evidence_v4.json`이 담당한다. 이 문서 아래의 158·238·246·262·275,
+28·84·88·93 files, Graph 미연결, 기본 one, 1,000 direct/200 flow, 과거 Docker digest는
+각 시점의 개발 서사를 보존한 `HISTORICAL` 기록이다.
+
+v4에서 모든 질문에 `ConditionLedger`를 추가해 스코프·상품유형·운용사/발행사·지역·
+자산·전략·벤치마크·기간·지표·조건·정렬·집계가 설명 없이 사라지지 않게 했다. 각 조건은
+grounded/clarification_required/unavailable/not_comparable 중 하나가 아니면 `FULL`을
+허용하지 않는다. 2단계 플래너는 기본값을 유지하고, 1단계는 자동 fallback 없는 수동
+롤백으로만 남겼다.
+
+KG는 scope/role 격리된 실제 1–2 hop을 요청 경로에서 호출하고 SQL 원본행으로 재검증한다.
+전략·벤치마크·퍼지명은 BM25를 쓰고, Vector/RRF는 정확히 1,024차원 cache와 embedder가
+있을 때만 켠다. 국내 금액 통화도 필터 결과의 단일 통화를 데이터로 증명할 때만 기본값을
+적용한다.
+
+최종 재실행은 pytest 288/288, 640/640, 137/137, v4 200/200, 10군×500
+5,000/5,000, 독립 direct 1,200/1,200, 2·3·4턴 flow 300/300(총 900 API 요청), HTTP
+15/15, load 100/100·동시10·p95 112.45ms를 통과했다. 첫 v4 corpus가 invalid였던 사실과
+수정 동결 corpus가 count-basis 버그를 발견한 과정도 숨기지 않고 세 보고서로 보존했다.
+
+실 HCX·Embedding·NCP 공개 HTTPS·사람의 제출/freeze가 남았으므로 전체 상태는
+`PENDING_EXTERNAL`이다. 공식 평가 문항 수는 공개되지 않았으며 20·100·200·300·640·
+1,200·1,500·2,100·5,000은 내부 gate다.
+
 이 문서는 이 저장소를 처음 여는 AI 에이전트가 **다른 계정, 다른 대화 세션,
 사용자와의 사전 대화 없이** 프로젝트를 이어받을 때를 위해 쓴다. 목적은 "지금
 뭐가 되어 있나"(그건 `HANDOFF_CURRENT_STATUS.md`가 더 압축적으로 잘 한다)가
@@ -8,8 +36,9 @@
 겉보기에 합리적인 "개선"이 실제로는 사용자가 이미 명시적으로 거부한 방향으로
 되돌아가는 실수를 할 수 있다.
 
-**읽는 순서**: `docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`
-(공식 기준·적대적 검증의 최신 상태) → `HANDOFF_CURRENT_STATUS.md`(현재 상태
+**읽는 순서**: `docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`
+(최종 설계·수치·release 경계) → `docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`
+(공식 기준·적대적 검증) → `HANDOFF_CURRENT_STATUS.md`(현재 상태
 압축본) → 이 문서 → `docs/15_REBASELINE_VALIDATION_REPORT.md`(실측 수치와
 3번의 사후 검증 전체 경위) → `docs/14_BRIEFING_REBASELINE_PLAN.md`(원 설계안+
 주차별 진행 기록). 다섯 문서 중 내용이 상충하면 이 문서가 아니라

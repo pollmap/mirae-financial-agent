@@ -1,5 +1,10 @@
 # 실행 MVP 현황·Codex 인계서
 
+> **`HISTORICAL`**: 이 문서는 2026-08-03 prebrief 구현 상태다. 현재 인수인계는
+> `docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md` →
+> `docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md` →
+> `HANDOFF_CURRENT_STATUS.md` 순서로 읽는다.
+
 기준일: 2026-08-03  
 상태: **DRAFT — 설명회 전 실행 MVP·v1 local gate 통과; 외부 release gate 미검증**
 

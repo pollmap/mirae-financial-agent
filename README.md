@@ -1,19 +1,21 @@
 # 미래에셋증권 금융상품 Agent
 
-> **2026-08-09 최신 기준**: 기준 브랜치는 `codex/federated-completion-v3`다.
-> 2단계 HCX 개념 플래너가 기본이며, 1단계는 명시적 롤백 전용이다. Exact/Alias,
-> SQL, Graph 1-hop 관계, BM25, 선택적 1,024차원 Vector/RRF가 실제 실행 경로에서
-> 하나의 `RetrievalPlan`으로 연결된다. 아래의 과거 수치·미연결 설명과 상충하면
-> `docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`,
-> `HANDOFF_CURRENT_STATUS.md`의 v3 절과 `docs/16_MASTER_PROJECT_NARRATIVE.md`의
-> v3 부록을 우선한다.
-> 2026-08-09 재실행 기준 최신 자동 검증은 pytest 275/275, eval 640/640,
-> metamorphic 137/137, holdout 100/100, Federated Graph 120/120, BM25 20/20,
-> 교차질의 거부 0%, runtime compliance 93 files/0 findings다. fresh Docker build는
-> Docker Desktop builder DNS 장애로 재실행 대기이며 통과로 표시하지 않는다.
+> **2026-08-09 최종 전수감사 기준**: 브랜치는 `codex/federated-completion-v3`,
+> 런타임 소스 커밋은 `c7c07c9`다. 2단계 HCX 플래너가 기본이고 1단계는 수동 롤백
+> 전용이다. Exact/Alias·SQL·Graph 실제 1–2 hop·BM25·선택적 1,024차원 Vector/RRF가
+> 조건별 실행 경로에 연결되며 SQL이 최종 숫자와 근거 행의 권위 원천이다.
+>
+> 최신 로컬 증거는 pytest 288/288, Ruff PASS, compliance 102 files/0, 기존 oracle
+> 640/640·교차거부 0, metamorphic 137/137, v4 200/200, 10군×500 offline
+> 5,000/5,000, 독립 direct 1,200/1,200, 2·3·4턴 flow 300/300(900 API 요청), HTTP
+> 15/15, load 100/100·동시10·p95 112.45ms다. fresh Docker no-cache build·read-only
+> health·restart·smoke×2도 통과했다. 실제 HCX·Embedding·NCP 공개배포와
+> 사람의 제출 승인은 `PENDING_EXTERNAL`이다. 공식 평가 문항 수는 공개되지 않았고 위
+> 숫자는 모두 내부 gate다.
 
 > **다른 AI 에이전트/세션이 이어받는 경우**: 가장 먼저
-> [`docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`](docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md)를 읽으세요.
+> [`docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`](docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md)를 먼저 읽고,
+> 이어서 [`docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`](docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md)를 읽으세요.
 > 지금 뭐가 완료됐고, 뭐가 안 됐고, 다음에 뭘 해야 하는지 빠짐없이 정리돼
 > 있습니다. 과거 서술은 설계 변천 기록으로 보존돼 있습니다.
 
@@ -24,7 +26,11 @@
 Excel 행·필드까지 추적 가능한 근거와 안전한 한국어 답변을 반환합니다. 평가 runtime의
 유일한 언어모델은 HyperCLOVA X입니다. Codex는 개발 도구일 뿐 runtime에 포함되지 않습니다.
 
-## 현재 로컬 DRAFT 실증 상태
+## `HISTORICAL` — 2026-08-03 prebrief 실증 기록
+
+아래 목록은 초기 구현의 역사 기록이다. 현재 release 판단이나 테스트 수치로 사용하지
+않는다. 최신 상태는 `docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`와
+`artifacts/release_evidence_v4.json`만 따른다.
 
 - source verification에서 ZIP 내부 XLSX 8개의 SHA-256·행·열·header 검증 통과
 - 공식 raw `145,393`행·`207`필드 전수 보존
@@ -242,25 +248,25 @@ make production-readiness     # public HTTPS live/ready만 확인; HCX 호출 �
 make release-manifest         # source/data/prompt/config fingerprint
 ```
 
-실제 HCX key가 발급된 뒤에는 20문항 parity, 100문항 two-stage smoke에 이어 아래 강화
-gate를 실행해야 production preflight가 통과합니다. `1,000`은 주최 측 공식 평가 문항
-수가 아니라 팀의 release 검증량이며, 500개 독립 의미 명세의 두 표현과 200개 2·3회
-후속 재질문을 검사합니다.
+실제 HCX key가 발급된 뒤에는 20문항 parity, 100문항 two-stage canary에 이어 아래 강화
+gate를 실행해야 production preflight가 통과합니다. `1,200`과 `300`은 주최 측 공식 평가
+문항 수가 아니라 팀의 release 검증량입니다. direct는 1,200개의 독립 의미 명세이고,
+대화는 2·3·4턴 각 100개입니다.
 
 ```bash
 .venv/Scripts/python.exe deploy/live_hcx_extensive_e2e_gate.py `
-  --confirm-direct-hcx-calls 1000 `
-  --confirm-api-requests 1700
+  --confirm-direct-hcx-calls 1200 `
+  --confirm-api-requests 2100
 ```
 
 명령은 실제 HCX quota를 쓰며 결과물에는 digest·집계만 남긴다. 질문·prompt·답·token·상품 ID·
 secret은 저장하지 않는다. 정확한 실행 순서와 비용/키 취급은
 [`docs/13_HCX_AND_LOW_COST_DEPLOYMENT.md`](docs/13_HCX_AND_LOW_COST_DEPLOYMENT.md)를 따른다.
 
-로컬 기계 판독 증빙 파일은 `artifacts/test_report_20260803.json`입니다. 이 파일은 사용 전에
-`docs/06_TEST_REPORT.md`의 158-pass 결과와 현재 DB SHA-256이 일치하는지 확인해야 합니다.
-이전 v0 기록은 `artifacts/test_report_v0_historical_20260802.json`으로 분리되어 있으며 현재
-release의 통과 증빙으로 사용하지 않습니다.
+현재 로컬 기계 판독 증빙은 `artifacts/release_evidence_v4.json`입니다.
+`artifacts/test_report_20260803.json`과 `docs/06_TEST_REPORT.md`의 158-pass 기록,
+`artifacts/test_report_v0_historical_20260802.json`은 모두 `HISTORICAL`이며 현재 release의
+통과 증빙으로 사용하지 않습니다.
 
 설명회 후 공식 query set·API contract·HCX model/credit·metric unit/zero 의미가 들어오면
 `docs/08_BRIEFING_QUESTIONS_AND_DIFF_PROCESS.md` 절차로 diff를 만든 뒤 관련 registry,

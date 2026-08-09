@@ -1,5 +1,10 @@
 # 테스트·평가 대응 계획
 
+> **`HISTORICAL`**: 이 문서의 158-test·28-file·20개 holdout·concurrency 20 계획은
+> prebrief 시점 기록이다. 현재 실행 corpus와 합격 기준은
+> `docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`와
+> `artifacts/release_evidence_v4.json`을 따른다.
+
 상태: **DRAFT — 설명회 전 작성한 평가계획과 local 검증 기준선**  
 공식 테스트 수량·가중치는 공개되지 않았습니다. 아래 수량은 `TEAM_DECISION`입니다.
 

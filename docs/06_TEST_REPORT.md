@@ -1,5 +1,9 @@
 # 최신 테스트·릴리스 gate 보고서
 
+> **`HISTORICAL`**: 이 문서는 2026-08-03 prebrief의 158-test 기록이다. 현재 release
+> 판정에 사용하지 않는다. 최신 기계 판독 결과는 `artifacts/release_evidence_v4.json`,
+> 최신 해석은 `docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`를 따른다.
+
 기준일: 2026-08-03  
 상태: v1 registry·DB 기준 로컬 `DRAFT` gate 통과, 외부 gate 대기
 

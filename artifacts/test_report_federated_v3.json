@@ -1,7 +1,8 @@
 {
-  "report_version": "4.0",
+  "report_version": "3.0-historical",
   "as_of": "2026-08-08T23:51:28+09:00",
-  "status": "LOCAL_AND_DOCKER_PASS_EXTERNAL_LIVE_GATES_PENDING",
+  "status": "HISTORICAL",
+  "superseded_by": "artifacts/release_evidence_v4.json",
   "release_scope": "codex/federated-completion-v3 candidate",
   "pytest_summary": {
     "passed": 262,
