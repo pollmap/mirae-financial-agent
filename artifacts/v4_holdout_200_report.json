@@ -1,6 +1,6 @@
 {
   "status": "VERIFIED_FIXTURE",
-  "generated_at_utc": "2026-08-09T06:07:43.570259+00:00",
+  "generated_at_utc": "2026-08-09T09:31:28.639514+00:00",
   "frozen_after": "v4-corpus-validity-audit-before-release-document-consolidation",
   "holdout_sha256": "f82ec1c5790dc3dd00d69b3379c5e3d3022506f26698d187725f532fe39560ff",
   "case_count": 200,

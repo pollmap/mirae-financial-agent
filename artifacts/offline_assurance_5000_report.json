@@ -1,6 +1,6 @@
 {
   "status": "VERIFIED_FIXTURE",
-  "generated_at_utc": "2026-08-09T05:29:43.073562+00:00",
+  "generated_at_utc": "2026-08-09T09:31:16.351560+00:00",
   "seed": 20260809,
   "database": "mirae_agent.duckdb",
   "corpus_hash": "291189c46bb923062021ef515cb8e61393f2208ada6ccfeab197294ffc54528b",

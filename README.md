@@ -1,5 +1,14 @@
 # 미래에셋증권 금융상품 Agent
 
+> **2026-08-09 팀 인간검증 챗봇 추가**: 현재 작업 브랜치는
+> `codex/human-qa-chatbot-v1`이며 기준 커밋 `cef29dbe...`에서 분기했다. 기존 대회용
+> `GET /answer`와 다섯 문자열 필드는 변경하지 않고, 초대 기반 QA Gateway와
+> React 채팅·조건 원장·공식 근거·검색 경로 검사 화면을 `127.0.0.1:8090`에 별도로
+> 추가했다. 설계·보안·LAN 실행·사람 파일럿 절차는
+> [`docs/19_HCX_HUMAN_QA_CHATBOT.md`](docs/19_HCX_HUMAN_QA_CHATBOT.md)를 가장 먼저
+> 읽는다. 로컬 fixture 화면은 실제 HCX가 아니며, 실제 HCX 20→100 gate와 팀 파일럿은
+> 계속 `PENDING_EXTERNAL`이다. 이 브랜치는 아직 push·PR·병합하지 않았다.
+
 > **2026-08-09 최종 전수감사 기준**: 브랜치는 `codex/federated-completion-v3`,
 > 런타임 소스 커밋은 `c7c07c9`다. 2단계 HCX 플래너가 기본이고 1단계는 수동 롤백
 > 전용이다. Exact/Alias·SQL·Graph 실제 1–2 hop·BM25·선택적 1,024차원 Vector/RRF가

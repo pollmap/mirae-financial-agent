@@ -1,5 +1,17 @@
 # 인계 문서 — 다른 AI 에이전트/세션이 이어받을 때 가장 먼저 읽을 파일
 
+## 2026-08-09 최신 분기: 팀 인간검증 챗봇
+
+현재 로컬 최신 브랜치는 **`codex/human-qa-chatbot-v1`**이다. 대회 엔진 브랜치의
+`GET /answer`와 다섯 문자열 계약을 그대로 두고, 같은 저장소에 초대 기반 QA Gateway,
+시간순 채팅, 다중대화 상태, 조건·근거·검색경로 검사, 피드백·내보내기·즉시 삭제,
+로컬/LAN 전용 배포 패키지를 추가했다. 가장 먼저
+`docs/19_HCX_HUMAN_QA_CHATBOT.md`를 읽고, 대회 엔진의 전체 배경은 아래 기존 읽기
+순서를 따른다. 현재 변경은 로컬 커밋까지만 허용되며 push·PR·병합은 하지 않는다.
+실제 HCX 20→100 gate, 실제 Embedding, 다른 LAN 기기/NVDA/Windows 고대비 검수와
+5~10명 파일럿은 `PENDING_EXTERNAL`이다. 로컬 fixture preview를 live HCX 완료로
+간주하지 않는다.
+
 기준: 2026-08-08, branch **`codex/federated-completion-v3`** (기본 브랜치 아님 —
 `main`이나 `briefing-rebaseline-v2`가 아니라 이 브랜치를 체크아웃해야 최신 상태입니다)
 저장소: `https://github.com/pollmap/mirae-financial-agent` (**private**)
