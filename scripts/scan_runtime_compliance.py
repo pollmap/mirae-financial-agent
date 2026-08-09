@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SCAN_ROOTS = [
     ROOT / "app",
     ROOT / "etl",
+    ROOT / "qa_chat",
+    ROOT / "qa_web",
     ROOT / "scripts",
     ROOT / "tests",
     ROOT / "eval",
@@ -27,6 +29,8 @@ SCAN_FILES = [
     ROOT / "requirements-dev.txt",
     ROOT / "pyproject.toml",
     ROOT / "Dockerfile",
+    ROOT / "Dockerfile.qa",
+    ROOT / "compose.qa.yaml",
 ]
 
 # Split literal strings so this scanner can never flag its own source if its
@@ -70,7 +74,24 @@ def iter_files() -> list[Path]:
         files.extend(
             path
             for path in root.rglob("*")
-            if path.is_file() and path.suffix in {".py", ".toml", ".txt", ".yaml", ".yml"}
+            if path.is_file()
+            and "node_modules" not in path.parts
+            and "dist" not in path.parts
+            and path.suffix
+            in {
+                ".css",
+                ".html",
+                ".json",
+                ".ps1",
+                ".py",
+                ".sh",
+                ".toml",
+                ".ts",
+                ".tsx",
+                ".txt",
+                ".yaml",
+                ".yml",
+            }
         )
     return sorted(set(files))
 

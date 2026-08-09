@@ -19,14 +19,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+qa = [
+  "cryptography==45.0.6",
+]
 dev = [
+  "cryptography==45.0.6",
   "jsonschema==4.25.0",
   "pytest==8.4.1",
   "ruff==0.12.7",
 ]
 
 [tool.setuptools.packages.find]
-include = ["app*", "etl*"]
+include = ["app*", "etl*", "qa_chat*"]
 
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
