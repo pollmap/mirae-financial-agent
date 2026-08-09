@@ -129,6 +129,14 @@ def main() -> None:
     parser.add_argument("--skipped", type=int, default=0)
     parser.add_argument("--test-report", type=Path)
     parser.add_argument(
+        "--approved-hcx-model-id",
+        help="Human-confirmed HyperCLOVA X model lock; required for FINAL.",
+    )
+    parser.add_argument(
+        "--approved-hcx-base-url",
+        help="Human-confirmed official CLOVA Studio base URL; required for FINAL.",
+    )
+    parser.add_argument(
         "--image-ref",
         help=(
             "Immutable registry reference in name@sha256:<digest> form. Required for FINAL "
@@ -160,6 +168,12 @@ def main() -> None:
         raise SystemExit("--serving-database must be a non-empty file")
     if args.final and (args.test_report is None or args.passed <= 0):
         raise SystemExit("--final requires --test-report and --passed greater than zero")
+    if args.final and (
+        not args.approved_hcx_model_id or not args.approved_hcx_base_url
+    ):
+        raise SystemExit(
+            "--final requires explicit --approved-hcx-model-id and --approved-hcx-base-url"
+        )
     if args.final and (
         not args.image_ref or not args.image_ref.endswith(f"@{args.image_digest}")
     ):
@@ -221,13 +235,22 @@ def main() -> None:
         in {"1", "true", "yes", "on"},
         "secret_values_recorded": False,
     }
-    if args.final and (
-        safe_config["app_env"] != "production"
-        or safe_config["planner_mode"] != "hcx"
-        or safe_config["hcx_model_id"] != "HCX-007"
-        or safe_config["hcx_base_url"] != "https://clovastudio.stream.ntruss.com"
-    ):
-        raise SystemExit("--final requires the approved production HCX configuration")
+    if args.final:
+        approved_model = args.approved_hcx_model_id.strip()
+        approved_base = args.approved_hcx_base_url.rstrip("/")
+        if not re.fullmatch(r"HCX-[A-Za-z0-9._-]+", approved_model):
+            raise SystemExit("--approved-hcx-model-id must identify HyperCLOVA X")
+        if approved_base != "https://clovastudio.stream.ntruss.com":
+            raise SystemExit("--approved-hcx-base-url must be the confirmed official endpoint")
+        if (
+            safe_config["app_env"] != "production"
+            or safe_config["planner_mode"] != "hcx"
+            or safe_config["hcx_model_id"] != approved_model
+            or safe_config["hcx_base_url"] != approved_base
+        ):
+            raise SystemExit(
+                "--final runtime HCX configuration must match the human-confirmed lock"
+            )
     config_digest = hashlib.sha256(
         json.dumps(safe_config, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()

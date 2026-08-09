@@ -21,7 +21,6 @@ if str(ROOT) not in sys.path:
 from app.execution.engine import DuckDBEngine  # noqa: E402
 
 OFFICIAL_HCX_BASE_URL = "https://clovastudio.stream.ntruss.com"
-APPROVED_HCX_MODEL_ID = "HCX-007"
 EXPECTED_SNAPSHOT_DATE = "2026-07-11"
 EXPECTED_LIVE_HCX_GATE = "HCX_20_QUESTION_ONE_VS_TWO_STAGE"
 EXPECTED_LIVE_HCX_E2E_GATE = "HCX_100_QUESTION_TWO_STAGE_E2E"
@@ -170,7 +169,9 @@ def _validate_database(database_path: Path, errors: list[str]) -> None:
         errors.append(f"MIRAE_DATABASE_PATH failed readiness validation ({readiness_error})")
 
 
-def _validate_live_hcx_gate(report_path: Path, errors: list[str]) -> None:
+def _validate_live_hcx_gate(
+    report_path: Path, errors: list[str], *, approved_model_id: str
+) -> None:
     """Require sanitized evidence that both HCX planner stages passed 20 live cases."""
 
     if not report_path.is_file() or report_path.stat().st_size == 0:
@@ -188,7 +189,7 @@ def _validate_live_hcx_gate(report_path: Path, errors: list[str]) -> None:
     required_matches = {
         "status": "PASS",
         "gate": EXPECTED_LIVE_HCX_GATE,
-        "model_id": APPROVED_HCX_MODEL_ID,
+        "model_id": approved_model_id,
         "approved_planner_stage": "two",
         "case_count": 20,
         "provider_call_count": 40,
@@ -208,7 +209,9 @@ def _validate_live_hcx_gate(report_path: Path, errors: list[str]) -> None:
         errors.append("LIVE_HCX_GATE_REPORT is missing its UTC completion time")
 
 
-def _validate_live_hcx_e2e_gate(report_path: Path, errors: list[str]) -> None:
+def _validate_live_hcx_e2e_gate(
+    report_path: Path, errors: list[str], *, approved_model_id: str
+) -> None:
     """Require sanitized 100-case live planner-to-evidence verification."""
 
     if not report_path.is_file() or report_path.stat().st_size == 0:
@@ -226,7 +229,7 @@ def _validate_live_hcx_e2e_gate(report_path: Path, errors: list[str]) -> None:
     required_matches = {
         "status": "PASS",
         "gate": EXPECTED_LIVE_HCX_E2E_GATE,
-        "model_id": APPROVED_HCX_MODEL_ID,
+        "model_id": approved_model_id,
         "approved_planner_stage": "two",
         "case_count": 100,
         "minimum_accuracy": 0.98,
@@ -273,7 +276,9 @@ def _validate_live_hcx_e2e_gate(report_path: Path, errors: list[str]) -> None:
         errors.append("LIVE_HCX_E2E_GATE_REPORT has an invalid category mix or category result")
 
 
-def _validate_live_hcx_extensive_gate(report_path: Path, errors: list[str]) -> None:
+def _validate_live_hcx_extensive_gate(
+    report_path: Path, errors: list[str], *, approved_model_id: str
+) -> None:
     """Require the 1,000-direct plus multi-turn live HCX release evidence."""
 
     if not report_path.is_file() or report_path.stat().st_size == 0:
@@ -291,7 +296,7 @@ def _validate_live_hcx_extensive_gate(report_path: Path, errors: list[str]) -> N
     required_matches = {
         "status": "PASS",
         "gate": EXPECTED_LIVE_HCX_EXTENSIVE_GATE,
-        "model_id": APPROVED_HCX_MODEL_ID,
+        "model_id": approved_model_id,
         "approved_planner_stage": "two",
         "direct_case_count": 1_200,
         "direct_semantic_spec_count": 1_200,
@@ -384,10 +389,17 @@ def validate_environment(
         errors.append("PLANNER_MODE must be hcx")
     if _required_text(environ, "PLANNER_STAGE", errors) != "two":
         errors.append("PLANNER_STAGE must be two")
-    if _required_text(environ, "HCX_MODEL_ID", errors) != APPROVED_HCX_MODEL_ID:
-        errors.append(f"HCX_MODEL_ID must be {APPROVED_HCX_MODEL_ID}")
-    if _required_text(environ, "HCX_BASE_URL", errors).rstrip("/") != OFFICIAL_HCX_BASE_URL:
-        errors.append("HCX_BASE_URL must be the approved official HTTPS endpoint")
+    approved_model_id = _required_text(environ, "APPROVED_HCX_MODEL_ID", errors)
+    if approved_model_id and not re.fullmatch(r"HCX-[A-Za-z0-9._-]+", approved_model_id):
+        errors.append("APPROVED_HCX_MODEL_ID must identify a confirmed HyperCLOVA X model")
+    runtime_model_id = _required_text(environ, "HCX_MODEL_ID", errors)
+    if approved_model_id and runtime_model_id != approved_model_id:
+        errors.append("HCX_MODEL_ID must match APPROVED_HCX_MODEL_ID")
+    approved_base_url = _required_text(environ, "APPROVED_HCX_BASE_URL", errors).rstrip("/")
+    if approved_base_url != OFFICIAL_HCX_BASE_URL:
+        errors.append("APPROVED_HCX_BASE_URL must be the confirmed official HTTPS endpoint")
+    if _required_text(environ, "HCX_BASE_URL", errors).rstrip("/") != approved_base_url:
+        errors.append("HCX_BASE_URL must match APPROVED_HCX_BASE_URL")
 
     _validate_secret(environ, "CLOVA_STUDIO_API_KEY", 20, errors)
     clarification_enabled = _required_text(
@@ -409,13 +421,19 @@ def validate_environment(
 
     live_gate_raw = _required_text(environ, "LIVE_HCX_GATE_REPORT", errors)
     if live_gate_raw:
-        _validate_live_hcx_gate(Path(live_gate_raw), errors)
+        _validate_live_hcx_gate(
+            Path(live_gate_raw), errors, approved_model_id=approved_model_id
+        )
     live_e2e_gate_raw = _required_text(environ, "LIVE_HCX_E2E_GATE_REPORT", errors)
     if live_e2e_gate_raw:
-        _validate_live_hcx_e2e_gate(Path(live_e2e_gate_raw), errors)
+        _validate_live_hcx_e2e_gate(
+            Path(live_e2e_gate_raw), errors, approved_model_id=approved_model_id
+        )
     live_extensive_gate_raw = _required_text(environ, "LIVE_HCX_EXTENSIVE_GATE_REPORT", errors)
     if live_extensive_gate_raw:
-        _validate_live_hcx_extensive_gate(Path(live_extensive_gate_raw), errors)
+        _validate_live_hcx_extensive_gate(
+            Path(live_extensive_gate_raw), errors, approved_model_id=approved_model_id
+        )
 
     image_ref = _required_text(environ, "MIRAE_IMAGE", errors)
     if image_ref and (
