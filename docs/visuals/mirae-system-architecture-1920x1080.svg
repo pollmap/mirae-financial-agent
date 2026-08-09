@@ -80,5 +80,5 @@
   <text x="1318.5" y="927" text-anchor="middle" font-family="'Malgun Gothic','Noto Sans KR','Apple SD Gothic Neo',Arial,sans-serif" font-size="12" font-weight="720" letter-spacing="0" fill="#e47c2c">외부 live gate 대기</text>
   <line x1="68" y1="1000" x2="1852" y2="1000" stroke="#c8c0b1" stroke-width="1.4"/>
   <text x="68" y="1035" text-anchor="start" font-family="'Malgun Gothic','Noto Sans KR','Apple SD Gothic Neo',Arial,sans-serif" font-size="15" font-weight="500" letter-spacing="0" fill="#716d66">QA Gateway는 인간검증 전용 보조 서비스이며 답변을 만들거나 다른 LLM을 호출하지 않음 · 실제 HCX/Embedding 공개 운영은 PENDING_EXTERNAL</text>
-  <text x="1852" y="1035" text-anchor="end" font-family="'Malgun Gothic','Noto Sans KR','Apple SD Gothic Neo',Arial,sans-serif" font-size="15" font-weight="500" letter-spacing="0" fill="#716d66">FINANCIAL PRODUCT AGENT · MAIN · 16ebd73</text>
+  <text x="1852" y="1035" text-anchor="end" font-family="'Malgun Gothic','Noto Sans KR','Apple SD Gothic Neo',Arial,sans-serif" font-size="15" font-weight="500" letter-spacing="0" fill="#716d66">FINANCIAL PRODUCT AGENT · MAIN · VISUAL KIT</text>
 </svg>

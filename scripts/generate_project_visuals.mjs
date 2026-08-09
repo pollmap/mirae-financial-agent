@@ -6,7 +6,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
@@ -60,12 +59,6 @@ const logoRefs = Object.fromEntries(
 );
 const background = fs.existsSync(backgroundPath) ? enc(backgroundPath) : null;
 let embedAssets = true;
-let sha = "local";
-try {
-  sha = execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
-} catch {
-  // The poster remains useful in source archives that do not include .git.
-}
 
 function text(x, y, value, size, opts = {}) {
   const anchor = opts.anchor || "start";
@@ -97,7 +90,7 @@ function poster(title, subtitle, content, footerLeft, footerRight = "FINANCIAL P
   ${content}
   <line x1="68" y1="1000" x2="1852" y2="1000" stroke="${C.line}" stroke-width="1.4"/>
   ${text(68, 1035, footerLeft, 15, { fill: C.muted, weight: 500 })}
-  ${text(1852, 1035, `${footerRight} · ${sha}`, 15, { anchor: "end", fill: C.muted, weight: 500 })}
+  ${text(1852, 1035, `${footerRight} · VISUAL KIT`, 15, { anchor: "end", fill: C.muted, weight: 500 })}
 </svg>`;
 }
 

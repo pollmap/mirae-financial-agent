@@ -79,5 +79,5 @@
   <text x="70" y="957" text-anchor="start" font-family="'Malgun Gothic','Noto Sans KR','Apple SD Gothic Neo',Arial,sans-serif" font-size="17" font-weight="620" letter-spacing="0" fill="#716d66">원칙: 중요한 조건 하나라도 설명 없이 사라지면 FULL 답변을 금지 · 교차 스코프 질의는 거부하지 않고 계획을 끝까지 유지</text>
   <line x1="68" y1="1000" x2="1852" y2="1000" stroke="#c8c0b1" stroke-width="1.4"/>
   <text x="68" y="1035" text-anchor="start" font-family="'Malgun Gothic','Noto Sans KR','Apple SD Gothic Neo',Arial,sans-serif" font-size="15" font-weight="500" letter-spacing="0" fill="#716d66">비공개 추론·원문 프롬프트·비밀키는 공개 trace·응답·export에 포함하지 않음</text>
-  <text x="1852" y="1035" text-anchor="end" font-family="'Malgun Gothic','Noto Sans KR','Apple SD Gothic Neo',Arial,sans-serif" font-size="15" font-weight="500" letter-spacing="0" fill="#716d66">FINANCIAL PRODUCT AGENT · MAIN · 16ebd73</text>
+  <text x="1852" y="1035" text-anchor="end" font-family="'Malgun Gothic','Noto Sans KR','Apple SD Gothic Neo',Arial,sans-serif" font-size="15" font-weight="500" letter-spacing="0" fill="#716d66">FINANCIAL PRODUCT AGENT · MAIN · VISUAL KIT</text>
 </svg>

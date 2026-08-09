@@ -58,5 +58,5 @@
   <text x="960" y="922" text-anchor="middle" font-family="'Malgun Gothic','Noto Sans KR','Apple SD Gothic Neo',Arial,sans-serif" font-size="26" font-weight="800" letter-spacing="0" fill="#c95656">로컬 검증 통과 ≠ 실제 AI 호출·공개 운영 완료</text>
   <line x1="68" y1="1000" x2="1852" y2="1000" stroke="#c8c0b1" stroke-width="1.4"/>
   <text x="68" y="1035" text-anchor="start" font-family="'Malgun Gothic','Noto Sans KR','Apple SD Gothic Neo',Arial,sans-serif" font-size="15" font-weight="500" letter-spacing="0" fill="#716d66">내부 20·100·640·1,200·5,000 gate는 공식 평가 문항 수가 아닌 release 관리 기준 · 실제 외부 gate 전에는 ‘완료’로 표시하지 않음</text>
-  <text x="1852" y="1035" text-anchor="end" font-family="'Malgun Gothic','Noto Sans KR','Apple SD Gothic Neo',Arial,sans-serif" font-size="15" font-weight="500" letter-spacing="0" fill="#716d66">FINANCIAL PRODUCT AGENT · MAIN · 16ebd73</text>
+  <text x="1852" y="1035" text-anchor="end" font-family="'Malgun Gothic','Noto Sans KR','Apple SD Gothic Neo',Arial,sans-serif" font-size="15" font-weight="500" letter-spacing="0" fill="#716d66">FINANCIAL PRODUCT AGENT · MAIN · VISUAL KIT</text>
 </svg>
