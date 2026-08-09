@@ -2,7 +2,7 @@
 
 The adapter deliberately has no generic provider abstraction or alternate-model
 fallback.  It always calls CLOVA Studio's native v3 Chat Completions endpoint
-and requires HCX-007, the HCX model that supports Structured Outputs.
+and requires one explicitly locked HyperCLOVA X model in production.
 """
 
 from __future__ import annotations
@@ -92,7 +92,7 @@ class HCXPlanResult[PlanT]:
 
 
 class HCXStructuredPlanner:
-    """Generate and locally validate a typed QueryPlan with HCX-007.
+    """Generate and locally validate a typed plan with one locked HCX model.
 
     ``validator`` may be either a callback or a Pydantic model class exposing
     ``model_validate``.  The generated JSON is never used until that local
@@ -104,6 +104,7 @@ class HCXStructuredPlanner:
         *,
         api_key: str | None = None,
         model_id: str | None = None,
+        approved_model_id: str | None = None,
         base_url: str | None = None,
         client: httpx.AsyncClient | None = None,
         timeout: float | httpx.Timeout = 20.0,
@@ -116,10 +117,22 @@ class HCXStructuredPlanner:
         if not resolved_key or not resolved_key.strip():
             raise HCXConfigurationError("CLOVA_STUDIO_API_KEY is required")
 
-        resolved_model = model_id or os.getenv("HCX_MODEL_ID", DEFAULT_MODEL_ID)
-        if resolved_model != DEFAULT_MODEL_ID:
+        resolved_model = (model_id or os.getenv("HCX_MODEL_ID", DEFAULT_MODEL_ID)).strip()
+        resolved_approved = (
+            approved_model_id
+            if approved_model_id is not None
+            else os.getenv("APPROVED_HCX_MODEL_ID", "").strip() or None
+        )
+        if not re.fullmatch(r"HCX-[A-Za-z0-9][A-Za-z0-9._-]{0,63}", resolved_model):
+            raise HCXConfigurationError("HCX_MODEL_ID must identify a HyperCLOVA X model")
+        if resolved_approved is not None:
+            if resolved_model != resolved_approved.strip():
+                raise HCXConfigurationError(
+                    "HCX_MODEL_ID must match APPROVED_HCX_MODEL_ID"
+                )
+        elif resolved_model != DEFAULT_MODEL_ID:
             raise HCXConfigurationError(
-                "Native Structured Outputs currently require HCX_MODEL_ID=HCX-007"
+                "a non-default HCX_MODEL_ID requires APPROVED_HCX_MODEL_ID"
             )
 
         resolved_base_url = base_url or os.getenv("HCX_BASE_URL", DEFAULT_BASE_URL)

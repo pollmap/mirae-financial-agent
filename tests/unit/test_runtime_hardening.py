@@ -49,12 +49,36 @@ def test_settings_bound_public_question_and_runtime_concurrency() -> None:
             clova_studio_api_key="mock-key",
             clarification_signing_key="a" * 24,
         ).validate()
+
+
+def test_settings_require_exact_human_approved_model_lock_in_production() -> None:
+    base = {
+        "environment": "production",
+        "planner_mode": "hcx",
+        "clova_studio_api_key": "realistic-production-key-material",
+        "clarification_signing_key": "a" * 24,
+    }
+    with pytest.raises(ValueError, match="APPROVED_HCX_MODEL_ID"):
+        Settings(**base).validate()
+    with pytest.raises(ValueError, match="must match APPROVED_HCX_MODEL_ID"):
+        Settings(
+            **base,
+            hcx_model_id="HCX-RUNTIME",
+            approved_hcx_model_id="HCX-APPROVED",
+        ).validate()
+
+    Settings(
+        **base,
+        hcx_model_id="HCX-APPROVED",
+        approved_hcx_model_id="HCX-APPROVED",
+    ).validate()
     with pytest.raises(ValueError, match="24-byte-or-longer"):
         Settings(
             environment="production",
             planner_mode="hcx",
             clova_studio_api_key="realistic-production-key-material",
             clarification_signing_key="too-short",
+            approved_hcx_model_id="HCX-007",
         ).validate()
 
 

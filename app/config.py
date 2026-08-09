@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -37,6 +38,10 @@ class Settings:
     # degrades to lexical/BM25 without it.
     vector_enabled: bool = False
     hcx_model_id: str = "HCX-007"
+    # Human-approved release lock.  HCX-007 remains the development/team
+    # default, but production is not ready until an operator explicitly sets
+    # and matches this independent value.
+    approved_hcx_model_id: str | None = None
     hcx_base_url: str = "https://clovastudio.stream.ntruss.com"
     clova_studio_api_key: str | None = None
     hcx_timeout_seconds: float = 12.0
@@ -66,6 +71,9 @@ class Settings:
             planner_stage=os.getenv("PLANNER_STAGE", "two").strip().lower(),
             vector_enabled=_bool_env("VECTOR_ENABLED", False),
             hcx_model_id=os.getenv("HCX_MODEL_ID", "HCX-007").strip(),
+            approved_hcx_model_id=(
+                os.getenv("APPROVED_HCX_MODEL_ID", "").strip() or None
+            ),
             hcx_base_url=os.getenv("HCX_BASE_URL", "https://clovastudio.stream.ntruss.com").rstrip(
                 "/"
             ),
@@ -110,11 +118,8 @@ class Settings:
             "https://clovastudio.stream.ntruss.com"
         ):
             raise ValueError("production HCX_BASE_URL must be the official CLOVA Studio HTTPS host")
-        if self.hcx_model_id != "HCX-007":
-            raise ValueError(
-                "HCX-007 is the approved structured-output model for this baseline; "
-                "change only after an official briefing update"
-            )
+        if not re.fullmatch(r"HCX-[A-Za-z0-9][A-Za-z0-9._-]{0,63}", self.hcx_model_id):
+            raise ValueError("HCX_MODEL_ID must identify a HyperCLOVA X model")
         if not 1 <= self.default_limit <= self.max_limit <= 50:
             raise ValueError("result limits must satisfy 1 <= default <= max <= 50")
         if not 1 <= self.question_max_chars <= 2000:
@@ -146,3 +151,14 @@ class Settings:
                 "production clarification state requires a 24-byte-or-longer "
                 "CLARIFICATION_SIGNING_KEY"
             )
+        if self.approved_hcx_model_id is not None and not re.fullmatch(
+            r"HCX-[A-Za-z0-9][A-Za-z0-9._-]{0,63}", self.approved_hcx_model_id
+        ):
+            raise ValueError("APPROVED_HCX_MODEL_ID must identify a HyperCLOVA X model")
+        if self.environment == "production" and not self.approved_hcx_model_id:
+            raise ValueError("production requires a human-approved APPROVED_HCX_MODEL_ID")
+        if (
+            self.approved_hcx_model_id is not None
+            and self.hcx_model_id != self.approved_hcx_model_id
+        ):
+            raise ValueError("HCX_MODEL_ID must match APPROVED_HCX_MODEL_ID")

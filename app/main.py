@@ -188,7 +188,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     },
                     ensure_ascii=False,
                 ),
-                "think_trace": "planner=HCX-007; status=controlled_unavailable; fallback_llm=none",
+                "think_trace": (
+                    f"planner={service.planner.name}; "
+                    "status=controlled_unavailable; fallback_llm=none"
+                ),
                 "answer": "현재 HyperCLOVA X 질의 해석을 일시적으로 사용할 수 없습니다. 다른 언어모델로 대체하지 않았습니다.",
             }
             return JSONResponse(status_code=503, content=payload)

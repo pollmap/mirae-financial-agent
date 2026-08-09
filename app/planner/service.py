@@ -20,12 +20,12 @@ from app.planner.schema import (
 
 
 class HcxQueryPlanner:
-    name = "HCX-007"
-
     def __init__(self, settings: Settings) -> None:
+        self.name = settings.hcx_model_id
         self._client = HCXStructuredPlanner(
             api_key=settings.clova_studio_api_key,
             model_id=settings.hcx_model_id,
+            approved_model_id=settings.approved_hcx_model_id,
             base_url=settings.hcx_base_url,
             timeout=settings.hcx_timeout_seconds,
             max_retries=settings.hcx_max_retries,

@@ -5,10 +5,12 @@ import json
 from typing import Literal
 
 import httpx
+import pytest
 from pydantic import BaseModel
 
 from app.domain.models import QueryPlan
 from app.planner.hcx import (
+    HCXConfigurationError,
     HCXFinishReasonError,
     HCXRetryExhausted,
     HCXStructuredPlanner,
@@ -83,6 +85,40 @@ def test_native_hcx_success_uses_bearer_and_pydantic_validation() -> None:
     assert body["thinking"] == {"effort": "none"}
     assert body["responseFormat"] == {"type": "json", "schema": SCHEMA}
     assert body["messages"][1]["role"] == "user"
+
+
+def test_human_approved_hcx_model_lock_allows_only_exact_runtime_model() -> None:
+    seen: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        return httpx.Response(200, json=_success_body())
+
+    async def scenario() -> TinyPlan:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            planner = HCXStructuredPlanner(
+                api_key="test-secret",
+                model_id="HCX-TEST-APPROVED",
+                approved_model_id="HCX-TEST-APPROVED",
+                client=client,
+            )
+            return await planner.create_plan(
+                question="승인 모델 잠금 검증",
+                schema=SCHEMA,
+                validator=TinyPlan,
+            )
+
+    assert asyncio.run(scenario()) == TinyPlan(intent="rank", limit=5)
+    assert seen["url"] == (
+        "https://clovastudio.stream.ntruss.com/v3/chat-completions/HCX-TEST-APPROVED"
+    )
+
+    with pytest.raises(HCXConfigurationError, match="must match APPROVED_HCX_MODEL_ID"):
+        HCXStructuredPlanner(
+            api_key="test-secret",
+            model_id="HCX-RUNTIME",
+            approved_model_id="HCX-APPROVED",
+        )
 
 
 def test_length_finish_reason_is_rejected_before_validation() -> None:

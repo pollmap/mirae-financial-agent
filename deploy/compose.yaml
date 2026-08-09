@@ -25,7 +25,8 @@ services:
       VECTOR_ENABLED: ${VECTOR_ENABLED:-false}
       MIRAE_DATABASE_PATH: /app/data/serving/mirae_agent.duckdb
       CLOVA_STUDIO_API_KEY: ${CLOVA_STUDIO_API_KEY:?inject with a secret manager or protected env file}
-      HCX_MODEL_ID: ${HCX_MODEL_ID:-HCX-007}
+      HCX_MODEL_ID: ${APPROVED_HCX_MODEL_ID:?set the human-approved HCX model id}
+      APPROVED_HCX_MODEL_ID: ${APPROVED_HCX_MODEL_ID:?set the human-approved HCX model id}
       HCX_BASE_URL: ${HCX_BASE_URL:-https://clovastudio.stream.ntruss.com}
       HCX_TIMEOUT_SECONDS: ${HCX_TIMEOUT_SECONDS:-12}
       HCX_TOTAL_DEADLINE_SECONDS: ${HCX_TOTAL_DEADLINE_SECONDS:-25}
