@@ -14,7 +14,11 @@ from qa_chat import admin
 
 ROOT = Path(__file__).resolve().parents[2]
 QA_DEPLOY = ROOT / "deploy" / "qa"
-POWERSHELL = shutil.which("powershell.exe") or shutil.which("pwsh")
+# Prefer PowerShell 7 when it exists. Hosted Windows runners can expose a
+# partially loadable legacy security module through powershell.exe, whereas
+# pwsh has the supported module surface. Local Windows still falls back to
+# powershell.exe when pwsh is not installed.
+POWERSHELL = shutil.which("pwsh") or shutil.which("powershell.exe")
 
 
 def _quote(path: Path) -> str:
