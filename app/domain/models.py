@@ -287,6 +287,39 @@ class RetrievalTrace(StrictModel):
     evidence_refs: list[str] = Field(default_factory=list, max_length=8)
 
 
+class ConditionLedgerEntry(StrictModel):
+    """One material user condition and how it reached execution.
+
+    This is deliberately verification metadata, not model reasoning.  It lets
+    the server prove that a requested qualifier was grounded, explicitly
+    clarified, declared unavailable, or kept separate for comparability.
+    """
+
+    condition_id: str = Field(pattern=r"^[a-z][a-z0-9_]{0,63}$")
+    kind: Literal[
+        "scope",
+        "intent",
+        "metric",
+        "product_type",
+        "party",
+        "region",
+        "asset_type",
+        "strategy",
+        "benchmark",
+        "currency",
+        "comparison_basis",
+    ]
+    requested_text: str = Field(min_length=1, max_length=160)
+    status: Literal[
+        "grounded",
+        "clarification_required",
+        "unavailable",
+        "not_comparable",
+    ]
+    grounded_fields: list[str] = Field(default_factory=list, max_length=8)
+    note: str | None = Field(default=None, max_length=300)
+
+
 class EvidenceBundle(StrictModel):
     version: Literal["1.1"] = "1.1"
     execution_id: str = Field(min_length=1, max_length=100)
@@ -301,6 +334,7 @@ class EvidenceBundle(StrictModel):
     aggregates: list[AggregateEvidence] = Field(default_factory=list, max_length=100)
     items: list[ProductEvidence] = Field(default_factory=list, max_length=50)
     retrieval_trace: list[RetrievalTrace] = Field(default_factory=list, max_length=24)
+    condition_ledger: list[ConditionLedgerEntry] = Field(default_factory=list, max_length=40)
     limitations: list[str] = Field(default_factory=list, max_length=30)
 
 

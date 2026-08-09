@@ -67,11 +67,8 @@ def _dominant_currency(
 ) -> tuple[str, float] | None:
     """The single currency value covering the largest share of the scope.
 
-    Real serving data is overwhelmingly single-currency per scope (overseas
-    trading_currency is 100% USD; domestic currency is 99.9%+ KRW). Rather
-    than refuse a currency-partitioned rank whenever no filter is given, the
-    cross-scope executor infers and discloses the dominant value; a plan that
-    explicitly names a different currency is never overridden.
+    Only a single non-sentinel currency is safe to infer.  A merely dominant
+    value is not enough; mixed currencies must remain split or be clarified.
     """
 
     column = "trading_currency" if field_column == "product.trading_currency" else "currency"
@@ -84,7 +81,10 @@ def _dominant_currency(
         ).fetchall()
     if not rows:
         return None
+    rows = [row for row in rows if row[0] not in (None, "", "000", "CURR_CD_000")]
     total = sum(row[1] for row in rows)
+    if len(rows) != 1:
+        return None
     top_value, top_count = rows[0]
     return str(top_value), top_count / total if total else 0.0
 

@@ -17,6 +17,7 @@
     "aggregates",
     "items",
     "retrieval_trace",
+    "condition_ledger",
     "limitations"
   ],
   "properties": {
@@ -89,6 +90,11 @@
       "maxItems": 24,
       "items": {"$ref": "#/$defs/retrievalTrace"}
     },
+    "condition_ledger": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {"$ref": "#/$defs/conditionLedgerEntry"}
+    },
     "limitations": {
       "type": "array",
       "maxItems": 30,
@@ -158,6 +164,51 @@
           "maxItems": 8,
           "items": {"type": "string", "maxLength": 300}
         }
+      }
+    },
+    "conditionLedgerEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "condition_id",
+        "kind",
+        "requested_text",
+        "status",
+        "grounded_fields",
+        "note"
+      ],
+      "properties": {
+        "condition_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+        "kind": {
+          "enum": [
+            "scope",
+            "intent",
+            "metric",
+            "product_type",
+            "party",
+            "region",
+            "asset_type",
+            "strategy",
+            "benchmark",
+            "currency",
+            "comparison_basis"
+          ]
+        },
+        "requested_text": {"type": "string", "minLength": 1, "maxLength": 160},
+        "status": {
+          "enum": [
+            "grounded",
+            "clarification_required",
+            "unavailable",
+            "not_comparable"
+          ]
+        },
+        "grounded_fields": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {"type": "string", "maxLength": 100}
+        },
+        "note": {"type": ["string", "null"], "maxLength": 300}
       }
     },
     "clarificationOption": {

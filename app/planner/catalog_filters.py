@@ -39,10 +39,10 @@ _DOMESTIC_RISK_GRADE = {
 }
 
 _EQUITY_PATTERN = re.compile(r"(?:주식형|주식\s*(?:에|으로)?\s*투자)")
-_BOND_FUND_PATTERN = re.compile(r"(?:채권형\s*펀드|채권\s*펀드)")
+_BOND_FUND_PATTERN = re.compile(r"(?:채권형\s*(?:공모|사모)?\s*펀드|채권\s*펀드)")
 _US_INVESTMENT_PATTERN = re.compile(
     r"(?:미국(?:\s*(?:주식|채권|시장))?\s*(?:에\s*)?투자|"
-    r"투자\s*지역(?:이|은|는|:)?\s*미국)"
+    r"투자\s*지역(?:이|은|는|:)?\s*미국|미국\s*주식형)"
 )
 _GLOBAL_INVESTMENT_PATTERN = re.compile(
     r"(?:글로벌(?:\s*(?:주식|채권|시장))?\s*(?:에\s*)?투자|"

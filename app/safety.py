@@ -25,7 +25,7 @@ _HARD_ADVICE = re.compile(
     r"사도\s*(?:돼|될|괜찮)|살까|사는\s*(?:게|것이)\s*(?:좋아|좋을)|"
     r"매수(?:해도\s*(?:돼|될|괜찮)|하면\s*(?:돼|될)|해야|할까|하라고|해\s*줘|추천))"
 )
-_SUBJECTIVE_BEST = re.compile(r"(?:가장\s*좋은|최고의)")
+_SUBJECTIVE_BEST = re.compile(r"(?:가장\s*좋은|최고의|(?<!더\s)좋은)")
 _OBJECTIVE_BEST = re.compile(
     r"(?:수익률|보수|AUM|NAV|순자산|표면금리|매수수익률|신용등급|위험등급|"
     r"종가|거래량|괴리율)(?:이|가|은|는)?\s*(?:가장\s*좋은|최고의)",
@@ -37,8 +37,7 @@ _GENERIC_SELECTION = re.compile(
 )
 _OBJECTIVE_SCREENING = re.compile(
     r"(?:\d+\s*(?:일|주|개월|년)|수익률|보수|AUM|NAV|순자산|표면금리|매수수익률|"
-    r"신용등급|위험등급|종가|거래량|괴리율|판매중|판매완료|공모|사모|연금|"
-    r"거래통화|미국|주식형|장내|장외|높은|낮은|큰|작은|많은|적은)",
+    r"신용등급|위험등급|종가|거래량|괴리율|높은|낮은|큰|작은|많은|적은)",
     re.IGNORECASE,
 )
 _FORECAST = re.compile(
@@ -67,10 +66,19 @@ _INJECTION = re.compile(
     r"raw\s+sql|drop\s+table|"
     r"(?:이전|앞선|기존|모든)\s*(?:지시|명령|규칙|프롬프트)\s*(?:를|을)?\s*무시|"
     r"(?:시스템|개발자|운영)\s*(?:프롬프트|메시지|지시)|"
+    r"(?:원문\s*)?프롬프트.{0,24}(?:API\s*키|비밀|토큰|출력|보여|공개)|"
+    r"(?:API\s*키|비밀\s*키|인증\s*토큰).{0,24}(?:출력|보여|공개)|"
     r"(?:프롬프트|지시|명령).{0,16}(?:출력|보여|공개|무시)|"
     r"(?:원시|raw)\s*(?:sql|쿼리)|"
     r"(?:sql|쿼리).{0,16}(?:실행|출력)|"
+    r"(?:내부\s*(?:추론|생각)|사고\s*과정).{0,16}(?:노출|출력|보여|공개)|"
     r"(?:테이블|데이터베이스).{0,24}(?:삭제|수정|drop))",
+    re.IGNORECASE,
+)
+_FABRICATE_EVIDENCE = re.compile(
+    r"(?:(?:근거|공식\s*데이터)(?:가|이)?\s*(?:없어도|없이).{0,24}"
+    r"(?:만들|지어|생성|출력)|가짜.{0,16}(?:상품|ETF|수익률|근거)|"
+    r"교차\s*질의.{0,20}(?:거부|제한))",
     re.IGNORECASE,
 )
 
@@ -121,6 +129,13 @@ def evaluate_question(question: str) -> SafetyDecision:
             answerability="SAFETY_LIMITED",
             message="외부 지시나 임의 SQL 실행 요청은 처리할 수 없습니다. 금융상품 조건을 자연어로 질문해 주세요.",
         )
+    if _FABRICATE_EVIDENCE.search(normalized):
+        return SafetyDecision(
+            blocked=True,
+            reason_code="SOURCE_GROUNDING_REQUIRED",
+            answerability="UNAVAILABLE",
+            message="공식 원본에 연결되지 않은 상품·수치·근거는 생성하거나 교차질의를 임의로 제한하지 않습니다.",
+        )
     if _matches_any((_INVENT_MISSING, _ENGLISH_INVENT_MISSING), normalized):
         if "실시간" in normalized or "시세" in normalized or _ENGLISH_REALTIME.search(normalized):
             return SafetyDecision(
@@ -142,19 +157,19 @@ def evaluate_question(question: str) -> SafetyDecision:
             "DATA_QUALITY_BLOCKED",
             "결측값은 0과 다르므로 0으로 바꾸어 순위를 계산할 수 없습니다.",
         )
-    if _matches_any((_REALTIME, _ENGLISH_REALTIME), normalized) and not _EXPLICIT_SNAPSHOT_BASIS.search(normalized):
-        return SafetyDecision(
-            True,
-            "SNAPSHOT_NOT_REALTIME",
-            "UNAVAILABLE",
-            "제공된 데이터는 2026-07-11 스냅샷이므로 실시간 시세나 실시간 순위를 확인할 수 없습니다.",
-        )
     if _matches_any((_FORECAST, _ENGLISH_FORECAST, _HARD_ADVICE), normalized):
         return SafetyDecision(
             True,
             "FORECAST_OR_DEFINITIVE_RECOMMENDATION",
             "SAFETY_LIMITED",
             "미래 수익을 보장·예측하거나 특정 상품 매수를 단정할 수 없습니다. 확인 가능한 조건별 상품 정보와 비교는 제공할 수 있습니다.",
+        )
+    if _matches_any((_REALTIME, _ENGLISH_REALTIME), normalized) and not _EXPLICIT_SNAPSHOT_BASIS.search(normalized):
+        return SafetyDecision(
+            True,
+            "SNAPSHOT_NOT_REALTIME",
+            "UNAVAILABLE",
+            "제공된 데이터는 2026-07-11 스냅샷이므로 실시간 시세나 실시간 순위를 확인할 수 없습니다.",
         )
     return SafetyDecision(blocked=False)
 
@@ -175,7 +190,7 @@ def needs_selection_criteria(question: str) -> bool:
         _OBJECTIVE_SCREENING.search(normalized)
     )
     subjective_best = bool(_SUBJECTIVE_BEST.search(normalized)) and not bool(
-        _OBJECTIVE_BEST.search(normalized)
+        _OBJECTIVE_BEST.search(normalized) or _OBJECTIVE_SCREENING.search(normalized)
     )
     return unsafe_selection or subjective_best
 

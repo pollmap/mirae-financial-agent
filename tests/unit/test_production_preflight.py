@@ -169,11 +169,14 @@ def test_preflight_rejects_missing_or_failed_extensive_live_hcx_gate(tmp_path: P
 
     failed_report = tmp_path / "failed-extensive.json"
     payload = json.loads(LIVE_EXTENSIVE_GATE_REPORT.read_text(encoding="utf-8"))
-    payload["three_follow_up_flow_passed_count"] = 99
+    payload["three_turn_flow_passed_count"] = 99
     failed_report.write_text(json.dumps(payload), encoding="utf-8")
     failed = _valid_environment()
     failed["LIVE_HCX_EXTENSIVE_GATE_REPORT"] = str(failed_report)
-    assert any("1,000-direct plus multi-turn HCX gate" in error for error in validate_environment(failed))
+    assert any(
+        "1,200-distinct plus 300 multi-turn HCX gate" in error
+        for error in validate_environment(failed)
+    )
 
 
 def test_cli_never_echoes_a_rejected_secret() -> None:

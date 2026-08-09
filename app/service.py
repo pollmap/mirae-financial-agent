@@ -12,6 +12,7 @@ from app.clarification import (
     ClarificationState,
     ClarificationTokenError,
 )
+from app.condition_coverage import audit_question_conditions
 from app.config import Settings
 from app.domain.models import (
     Answerability,
@@ -85,6 +86,7 @@ SUPPORTED_POLICY_REASONS = frozenset(
         "COMPARISON_METRIC_UNAVAILABLE",
         "CLARIFICATION_STATE_CONFLICT",
         "UNSUPPORTED_REQUEST",
+        "SEMANTIC_STRATEGY_UNAVAILABLE",
     }
 )
 
@@ -363,7 +365,19 @@ class AgentService:
                 metric for metric in candidate_metrics if ".return_" not in metric
             ]
             candidate_returns = [metric for metric in candidate_metrics if ".return_" in metric]
-            if not set(candidate_non_return).issubset(base_non_return) or not candidate_returns:
+            explicitly_requested = set(base_non_return)
+            original = state.original_question
+            for metric in candidate_non_return:
+                if (
+                    (metric.endswith("net_assets") and "순자산" in original)
+                    or (metric.endswith("aum_last") and "AUM" in original.upper())
+                    or (
+                        metric.endswith("expense_ratio")
+                        and any(token in original for token in ("보수", "수수료"))
+                    )
+                ):
+                    explicitly_requested.add(metric)
+            if not set(candidate_non_return).issubset(explicitly_requested) or not candidate_returns:
                 return self._clarification_conflict_plan(base, candidate)
             payload["metrics"] = list(
                 dict.fromkeys([*candidate_metrics, *base_non_return])
@@ -632,7 +646,11 @@ class AgentService:
     def _preflight_clarification(self, question: str) -> QueryPlan | None:
         """Resolve obvious high-impact ambiguity before spending an HCX request."""
 
-        if needs_selection_criteria(question):
+        has_scope_hint = any(
+            token in question.upper()
+            for token in ("ETF", "ETN", "ETP", "채권", "펀드", "공모", "사모")
+        )
+        if needs_selection_criteria(question) and has_scope_hint:
             # Official task: ask for the missing condition instead of refusing.
             # Definitive/personal/forecast advice never reaches here — it is
             # blocked earlier by evaluate_question.
@@ -666,10 +684,10 @@ class AgentService:
                 ],
             )
 
-        return_scope = None
+        return_scopes: list[str] = []
         if any(token in question for token in ("국내 ETF", "국내 ETN", "국내 ETP")):
-            return_scope = "domestic_etp"
-        elif any(
+            return_scopes.append("domestic_etp")
+        if any(
             token in question
             for token in (
                 "해외 ETF",
@@ -679,20 +697,29 @@ class AgentService:
                 "미국 상장 ETF",
             )
         ) or (has_etp and re.search(r"NYSE|NASDAQ", upper)):
-            return_scope = "overseas_etp"
-        elif "펀드" in question:
-            return_scope = "fund"
+            return_scopes.append("overseas_etp")
+        if has_etp and not any(scope.endswith("etp") for scope in return_scopes):
+            resolved_etp_scope = self._explicit_etp_scope(question)
+            if resolved_etp_scope is not None:
+                return_scopes.append(resolved_etp_scope)
+        if "펀드" in question:
+            return_scopes.append("fund")
+        return_scopes = list(dict.fromkeys(return_scopes))
         if (
             any(token in question for token in ("수익률", "성과", "퍼포먼스"))
-            and return_scope is not None
+            and return_scopes
             and not self._explicit_return_periods(question)
         ):
-            preferred = self._preferred_return_periods(return_scope)
+            preferred = (
+                self._preferred_return_periods(return_scopes[0])
+                if len(return_scopes) == 1
+                else self._preferred_return_periods_cross_scope(return_scopes)
+            )
             if len(preferred) < 2:
-                return self._unavailable_return_plan([return_scope])
+                return self._unavailable_return_plan(return_scopes)
             return self._clarification_plan(
                 original_question=question,
-                scopes=[return_scope],
+                scopes=return_scopes,
                 question="어느 기간의 수익률을 사용할까요?",
                 missing_slot="return_period",
                 options=[
@@ -1046,9 +1073,17 @@ class AgentService:
         plan = self._align_explicit_etp_scope(original_question, plan)
         required_scopes: list[str] = []
         bond_fund_phrase = re.search(r"채권\s*(?:형\s*)?펀드", original_question)
+        explicit_bond = any(
+            token in original_question
+            for token in ("국내채권", "채권 표면금리", "채권 신용등급", "채권과", "채권·")
+        )
+        has_etp_text = any(
+            token in original_question.upper() for token in ("ETF", "ETN", "ETP")
+        )
         if "국내채권" in original_question or (
             re.search(r"(?:^|\s)채권(?:\s|$)", original_question)
             and not bond_fund_phrase
+            and (explicit_bond or not has_etp_text)
         ):
             required_scopes.append("bond")
         if "펀드" in original_question:
@@ -1474,12 +1509,23 @@ class AgentService:
 
     @staticmethod
     def _policy_validation_text(answer: str, evidence: EvidenceBundle) -> str:
-        """Mask exact source-backed names before semantic prose validation."""
+        """Mask exact source-backed text before semantic prose validation.
+
+        Official strategy descriptions can legitimately contain forecast-like
+        English (for example, ``will yield``).  They are quoted evidence, not
+        advice generated by the agent.  Mask every exact textual source value
+        while still scanning all renderer-authored prose around it.
+        """
 
         policy_text = answer
-        names = sorted({item.name for item in evidence.items}, key=len, reverse=True)
-        for name in names:
-            policy_text = policy_text.replace(name, "[근거 상품명]")
+        source_text = {item.name for item in evidence.items}
+        for item in evidence.items:
+            for field in item.fields:
+                for value in (field.raw_value, field.normalized_value):
+                    if isinstance(value, str) and len(value.strip()) >= 3:
+                        source_text.add(value)
+        for value in sorted(source_text, key=len, reverse=True):
+            policy_text = policy_text.replace(value, "[원본 근거값]")
         return policy_text
 
     async def _clarify_unresolved_compare(
@@ -1545,6 +1591,7 @@ class AgentService:
         clarification_response: str | None = None,
     ) -> OrganizerResponse:
         execution_question = question
+        condition_ledger = []
         follow_up_state: ClarificationState | None = None
         if clarification_token or clarification_response:
             if not self.settings.enable_clarification_state:
@@ -1619,6 +1666,49 @@ class AgentService:
                 # Guards may canonicalize fields; re-check that this did not
                 # replace any condition established in the previous turn.
                 plan = self._reconcile_follow_up_plan(follow_up_state, plan)
+            coverage_audit = audit_question_conditions(execution_question, plan)
+            condition_ledger = coverage_audit.ledger
+            if not plan.needs_clarification and plan.intent != "unsupported":
+                plan = coverage_audit.plan
+                if coverage_audit.unavailable_reason:
+                    plan = QueryPlan(
+                        intent="unsupported",
+                        scopes=plan.scopes,
+                        assumptions=[
+                            f"policy_reason={coverage_audit.unavailable_reason}"
+                        ],
+                    )
+                elif coverage_audit.missing_semantic_basis:
+                    plan = self._clarification_plan(
+                        original_question=execution_question,
+                        scopes=plan.scopes,
+                        question="어떤 기준의 유사성을 찾을까요?",
+                        missing_slot="semantic_similarity_basis",
+                        options=[
+                            ClarificationOption(value="운용전략", label="운용전략이 유사한 상품"),
+                            ClarificationOption(value="벤치마크", label="벤치마크가 유사한 상품"),
+                            ClarificationOption(value="운용사", label="같은 운용사 상품"),
+                            ClarificationOption(value="투자지역", label="투자지역이 같은 상품"),
+                        ],
+                        plan=plan,
+                    )
+                elif any(
+                    item.status == "clarification_required"
+                    for item in condition_ledger
+                ):
+                    plan = self._clarification_plan(
+                        original_question=execution_question,
+                        scopes=plan.scopes,
+                        question="요청 목적을 어떤 방식으로 적용할까요?",
+                        missing_slot="condition_confirmation",
+                        options=[
+                            ClarificationOption(value="조건검색", label="조건에 맞는 상품 검색"),
+                            ClarificationOption(value="순위", label="지표 기준 순위"),
+                            ClarificationOption(value="비교", label="지정 상품 비교"),
+                            ClarificationOption(value="집계", label="개수·합계·평균 집계"),
+                        ],
+                        plan=plan,
+                    )
             if plan.needs_clarification:
                 token = self._encode_clarification(
                     original_question=execution_question,
@@ -1663,6 +1753,13 @@ class AgentService:
                 elif reason == "COMPARISON_METRIC_UNAVAILABLE":
                     answerability = Answerability.UNAVAILABLE
                     limitation = "선택한 상품군에서 안전하게 비교할 수 있는 원본 지표를 확인할 수 없습니다."
+                elif reason == "SEMANTIC_STRATEGY_UNAVAILABLE":
+                    answerability = Answerability.UNAVAILABLE
+                    limitation = (
+                        "선택한 상품군의 공식 원본에는 자연어로 검색할 수 있는 운용전략이 "
+                        "제공되지 않습니다. 해외 ETF·ETN의 전략 원문은 BM25와 선택적 "
+                        "Vector 검색으로 확인할 수 있습니다."
+                    )
                 elif reason == "CLARIFICATION_STATE_CONFLICT":
                     answerability = Answerability.SAFETY_LIMITED
                     limitation = (
@@ -1704,6 +1801,7 @@ class AgentService:
                         evidence=evidence,
                     )
 
+        evidence.condition_ledger = [*condition_ledger, *evidence.condition_ledger]
         evidence = self._bounded_response_evidence(evidence)
         answer = render_answer(plan, evidence)
         if evidence.answerability in {

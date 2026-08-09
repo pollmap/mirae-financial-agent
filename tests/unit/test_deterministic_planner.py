@@ -312,3 +312,77 @@ def test_cross_scope_metric_ids_preserve_specific_policy_reason() -> None:
 
     assert (expense.intent, expense.metrics) == ("rank", ["cross.expense_ratio"])
     assert (aum.intent, aum.metrics) == ("rank", ["cross.aum_last"])
+
+
+def test_party_name_fund_word_does_not_add_fund_scope() -> None:
+    plan = asyncio.run(
+        DeterministicPlanner().plan(
+            "BlackRock Fund Advisors가 운용하는 해외 ETF를 공식 관계 기준으로 1개 보여줘."
+        )
+    )
+
+    assert plan.scopes == ["overseas_etp"]
+    assert plan.intent == "search"
+    assert plan.entities == []
+
+
+def test_strategy_similarity_is_search_not_product_name_lookup() -> None:
+    plan = asyncio.run(
+        DeterministicPlanner().plan("배당 인컴 전략과 비슷한 해외 ETF를 3개 찾아줘.")
+    )
+
+    assert plan.intent == "search"
+    assert plan.scopes == ["overseas_etp"]
+    assert plan.entities == []
+
+
+def test_bond_theme_inside_overseas_etf_strategy_does_not_add_bond_scope() -> None:
+    plan = asyncio.run(
+        DeterministicPlanner().plan("채권 인컴 전략과 비슷한 해외 ETF를 3개 찾아줘.")
+    )
+
+    assert plan.scopes == ["overseas_etp"]
+
+
+def test_punctuated_manager_name_does_not_become_ticker_entity() -> None:
+    plan = asyncio.run(
+        DeterministicPlanner().plan(
+            "Grantham, Mayo, Van Otterloo & Co. LLC가 운용하는 해외 ETF를 1개 보여줘."
+        )
+    )
+
+    assert plan.intent == "search"
+    assert plan.entities == []
+
+
+def test_source_word_does_not_add_special_count_basis_to_search() -> None:
+    plan = asyncio.run(
+        DeterministicPlanner().plan(
+            "OBP Capital LLC가 운용하는 해외 ETF를 공식 관계와 원본 목록으로 교차검증해 1개 보여줘."
+        )
+    )
+
+    assert plan.intent == "search"
+    assert not any(item.startswith("count_basis=") for item in plan.assumptions)
+
+
+def test_ticker_containing_aum_does_not_select_aum_metric() -> None:
+    plan = asyncio.run(
+        DeterministicPlanner().plan("해외 ETF AAUM.K와 AAVM.O를 비교해줘.")
+    )
+
+    assert plan.needs_clarification is True
+    assert plan.missing_slots == ["comparison_metric"]
+
+
+def test_bond_type_public_fund_phrase_is_grounded() -> None:
+    plan = asyncio.run(
+        DeterministicPlanner().plan("채권형 공모펀드 중 공식 조건에 맞는 상품 3개 보여줘.")
+    )
+    conditions = {
+        (condition.field, condition.value)
+        for group in plan.filter_groups
+        for condition in group.conditions
+    }
+
+    assert ("product.asset_type", "채권형") in conditions

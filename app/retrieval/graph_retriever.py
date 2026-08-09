@@ -82,12 +82,12 @@ def products_for_party(
     roles: tuple[str, ...] = ("managedBy", "issuedBy"),
     scope: str | None = None,
 ) -> list[GraphHit]:
-    """1-hop: party → products having a role edge to it."""
+    """Bounded 1–2-hop traversal from a scoped party to official products."""
 
     party_nodes = resolve_party_nodes(connection, party_text, scope=scope)
     if not party_nodes:
         return []
-    reachable = set(traverse(connection, party_nodes, roles, max_depth=1))
+    reachable = set(traverse(connection, party_nodes, roles, max_depth=2))
     placeholders = ", ".join("?" for _ in party_nodes)
     role_placeholders = ", ".join("?" for _ in roles)
     scope_clause = " AND n.scope = ?" if scope else ""
@@ -108,7 +108,10 @@ def products_for_party(
     return [
         GraphHit(
             product_uid=str(row[0]).removeprefix("product:"),
-            path_note=f"{party_text} -[{row[1]}]-> product (row_hash {str(row[2])[:12]}…)",
+            path_note=(
+                f"{party_text} -[{row[1]}]-> product; bounded_depth<=2 "
+                f"(row_hash {str(row[2])[:12]}…)"
+            ),
         )
         for row in rows
         if str(row[0]).removeprefix("product:") in reachable
@@ -152,7 +155,7 @@ def products_for_concept_value(
         params,
     ).fetchall()
     node_ids = [str(row[0]) for row in rows]
-    reachable = set(traverse(connection, node_ids, (edge_type,), max_depth=1))
+    reachable = set(traverse(connection, node_ids, (edge_type,), max_depth=2))
     if not reachable:
         return []
     placeholders = ", ".join("?" for _ in node_ids)
@@ -170,7 +173,10 @@ def products_for_concept_value(
     return [
         GraphHit(
             product_uid=uid,
-            path_note=f"{value} -[{edge_type}]-> product (row_hash {str(row_hash)[:12]}…)",
+            path_note=(
+                f"{value} -[{edge_type}]-> product; bounded_depth<=2 "
+                f"(row_hash {str(row_hash)[:12]}…)"
+            ),
         )
         for node_id, row_hash in edge_rows
         if (uid := str(node_id).removeprefix("product:")) in reachable

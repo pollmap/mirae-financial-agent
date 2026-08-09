@@ -22,6 +22,7 @@ from app.domain.models import (
     Answerability,
     CalculationEvidence,
     Condition,
+    ConditionLedgerEntry,
     CoverageEvidence,
     EvidenceBundle,
     FieldEvidence,
@@ -348,6 +349,91 @@ class DuckDBEngine:
                 "국내 ETN의 제공 AUM 409건이 모두 0이므로 크기 순위를 만들지 않습니다.",
             )
         return decision
+
+    def _apply_verified_currency_default(
+        self, plan: QueryPlan
+    ) -> tuple[QueryPlan, list[ConditionLedgerEntry], list[str]]:
+        """Apply a currency only when the eligible official metric rows prove one value.
+
+        The check runs over the already requested catalog filters and valid
+        source metric rows.  A dominant-but-not-unique currency is never used;
+        mixed or missing contexts remain subject to the normal clarification /
+        policy gate.
+        """
+
+        if len(plan.scopes) != 1 or plan.intent not in {"rank", "aggregate"}:
+            return plan, [], []
+        scope = plan.scopes[0]
+        additions: list[Condition] = []
+        ledger: list[ConditionLedgerEntry] = []
+        notes: list[str] = []
+        explicit_fields = {
+            condition.field
+            for group in plan.filter_groups
+            for condition in group.conditions
+            if condition.field in {"product.currency", "product.trading_currency"}
+        }
+        payload = plan.model_dump(mode="json")
+        for metric_id in plan.metrics:
+            policy = self.registry.get(metric_id)
+            if policy is None or not policy.requires_currency_partition:
+                continue
+            currency_field = (
+                "product.trading_currency"
+                if "TRADING_CURRENCY" in policy.unit_status or scope == "overseas_etp"
+                else "product.currency"
+            )
+            if currency_field in explicit_fields:
+                continue
+            column = CATALOG_FIELD_MAP[currency_field]
+            filters_sql, filter_params = self._compile_filters(plan, include_metric=False)
+            states = sorted(VALID_VALUE_STATES)
+            placeholders = ",".join("?" for _ in states)
+            with self._connect() as connection:
+                rows = connection.execute(
+                    f"""
+                    SELECT c.{column}, COUNT(DISTINCT c.product_uid)
+                    FROM product_catalog c
+                    JOIN product_metrics m ON m.product_uid=c.product_uid
+                      AND m.metric_id=? AND m.value_num IS NOT NULL
+                      AND m.quality_status IN ({placeholders})
+                    WHERE c.scope=?{filters_sql}
+                    GROUP BY 1 ORDER BY 2 DESC
+                    """,
+                    [metric_id, *states, scope, *filter_params],
+                ).fetchall()
+            if len(rows) != 1 or rows[0][0] in (None, "", "000", "CURR_CD_000"):
+                continue
+            value = str(rows[0][0])
+            additions.append(Condition(field=currency_field, op="eq", value=value))
+            explicit_fields.add(currency_field)
+            ledger.append(
+                ConditionLedgerEntry(
+                    condition_id=f"verified_currency_{len(ledger)}",
+                    kind="currency",
+                    requested_text=value,
+                    status="grounded",
+                    grounded_fields=[currency_field],
+                    note=(
+                        f"{metric_id}의 요청 조건 내 유효 원본 행이 단일 통화임을 SQL로 검증해 적용"
+                    ),
+                )
+            )
+            notes.append(
+                f"{metric_id}: 요청 조건의 유효 원본 행이 모두 {value} 단일 통화여서 "
+                "해당 통화를 자동 적용했습니다."
+            )
+        if not additions:
+            return plan, ledger, notes
+        if payload["filter_groups"]:
+            payload["filter_groups"][0]["conditions"].extend(
+                condition.model_dump(mode="json") for condition in additions
+            )
+        else:
+            payload["filter_groups"] = [
+                {"join": "AND", "conditions": [item.model_dump(mode="json") for item in additions]}
+            ]
+        return QueryPlan.model_validate(payload), ledger, notes
 
     def readiness_error(self) -> str | None:
         """Return a stable reason code when the serving DB cannot satisfy this code version."""
@@ -678,6 +764,7 @@ class DuckDBEngine:
             for group in plan.filter_groups
             for condition in group.conditions
         ]
+        replaced_relation_fields: set[str] = set()
         if plan.groups_join == "AND" and self.graph_enabled:
             for condition in conditions:
                 relation = relation_fields.get(condition.field)
@@ -713,6 +800,25 @@ class DuckDBEngine:
                             "graph",
                             "validated",
                             f"{condition.field} relation matched SQL candidate set",
+                            scope,
+                            started,
+                            candidates=len(graph_uids),
+                            evidence_refs=[hit.path_note for hit in graph_hits],
+                        )
+                    )
+                elif relation[0] == "party" and graph_uids and not sql_uids:
+                    # Exact/NORMALIZED KG party aliases can be more precise
+                    # than a literal catalog equality (e.g. an abbreviated
+                    # official manager name).  The graph UIDs are still
+                    # scope-isolated and re-joined to product_catalog; only
+                    # the alias text condition is replaced.
+                    retrieval.intersect(graph_uids)
+                    replaced_relation_fields.add(condition.field)
+                    retrieval.trace.append(
+                        self._trace(
+                            "graph",
+                            "validated",
+                            f"{condition.field} exact KG alias replaced zero-row SQL literal",
                             scope,
                             started,
                             candidates=len(graph_uids),
@@ -757,6 +863,11 @@ class DuckDBEngine:
                     data_hash=OFFICIAL_DATA_ZIP_SHA256,
                     fallback_reason="SQL preserves boolean semantics",
                 )
+            )
+
+        if replaced_relation_fields:
+            retrieval.execution_plan = without_theme_filters(
+                retrieval.execution_plan, replaced_relation_fields
             )
 
         replaced_theme_fields: set[str] = set()
@@ -2075,6 +2186,7 @@ class DuckDBEngine:
         return aggregates, sql, params, list(dict.fromkeys(date_notes))
 
     def execute(self, plan: QueryPlan) -> EvidenceBundle:
+        plan, currency_ledger, currency_notes = self._apply_verified_currency_default(plan)
         decision = self.policy_decision(plan)
         if not decision.allowed:
             bundle = self.empty_bundle(
@@ -2273,7 +2385,7 @@ class DuckDBEngine:
                             )
 
         answerability = Answerability.FULL
-        limitations: list[str] = execution_notes
+        limitations: list[str] = [*currency_notes, *execution_notes]
         reason_code: str | None = None
         if result_count == 0 or (
             aggregates
@@ -2451,5 +2563,6 @@ class DuckDBEngine:
             aggregates=aggregates,
             items=items,
             retrieval_trace=retrieval.trace,
+            condition_ledger=currency_ledger,
             limitations=limitations,
         )

@@ -301,12 +301,17 @@ def test_party_lookup_and_bounded_traversal_are_live(tmp_path: Path) -> None:
         connection, "Manager A", roles=("managedBy",), scope="domestic_etp"
     )
     assert [hit.product_uid for hit in hits] == ["E1", "E2"]
-    assert all("managedBy" in hit.path_note and "row_hash" in hit.path_note for hit in hits)
+    assert all(
+        "managedBy" in hit.path_note
+        and "row_hash" in hit.path_note
+        and "bounded_depth<=2" in hit.path_note
+        for hit in hits
+    )
     assert traverse(
         connection,
         ["party:domestic_etp:manager a"],
         ("managedBy",),
-        max_depth=1,
+        max_depth=2,
     ) == ["E1", "E2"]
 
 

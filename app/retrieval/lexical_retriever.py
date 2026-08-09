@@ -30,6 +30,19 @@ ENGLISH_STOPWORDS = frozenset(
 _WORD_RUN = re.compile(r"[0-9a-z]+")
 _TOKEN_RUN = re.compile(r"[0-9a-z]+|[가-힣ㄱ-ㆎ]+")
 
+_STRATEGY_QUERY_EXPANSIONS = {
+    "배당": "dividend income",
+    "인컴": "income",
+    "커버드콜": "covered call option income",
+    "퀄리티": "quality factor",
+    "모멘텀": "momentum factor",
+    "저변동": "low volatility",
+    "가치": "value",
+    "성장": "growth",
+    "반도체": "semiconductor",
+    "인공지능": "artificial intelligence ai",
+}
+
 
 @dataclass(frozen=True, slots=True)
 class LexicalHit:
@@ -38,9 +51,14 @@ class LexicalHit:
 
 
 def field_uses_korean_ngrams(field: str) -> bool:
-    """``strategy`` is English free text; every other field mixes Korean/latin."""
+    """Use the mixed Korean/Latin tokenizer for every official text field.
 
-    return field != "strategy"
+    The official strategy column is not English-only: domestic ETP rows
+    contain Korean values such as ``실물복제``. Word tokens are preserved for
+    Latin text, so this closes that gap without losing English retrieval.
+    """
+
+    return field in {"name", "benchmark", "strategy"}
 
 
 def _hangul_ngrams(run: str) -> list[str]:
@@ -70,7 +88,8 @@ def tokenize(text: str | None, *, korean_ngrams: bool) -> list[str]:
     for match in _TOKEN_RUN.finditer(lowered):
         run = match.group(0)
         if _WORD_RUN.fullmatch(run):
-            tokens.append(run)
+            if run not in ENGLISH_STOPWORDS:
+                tokens.append(run)
         else:
             tokens.extend(_hangul_ngrams(run))
     return tokens
@@ -96,7 +115,16 @@ def search(
 
     if not _lexical_available(connection):
         return []
-    tokens = tokenize(query_text, korean_ngrams=field_uses_korean_ngrams(field))
+    expanded_query = query_text
+    if field == "strategy":
+        additions = [
+            expansion
+            for korean, expansion in _STRATEGY_QUERY_EXPANSIONS.items()
+            if korean in query_text
+        ]
+        if additions:
+            expanded_query = " ".join([query_text, *additions])
+    tokens = tokenize(expanded_query, korean_ngrams=field_uses_korean_ngrams(field))
     terms = list(dict.fromkeys(tokens))
     if not terms:
         return []

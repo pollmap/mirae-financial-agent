@@ -61,17 +61,16 @@ def _infer_scopes(question: str) -> list[str]:
         scopes.append("domestic_etp")
     if "overseas_etp" in q:
         scopes.append("overseas_etp")
-    if re.search(r"(?:^|\W)bond(?:$|\W)", q, flags=re.IGNORECASE):
+    if re.fullmatch(r"\s*bond\s*", q, flags=re.IGNORECASE):
         scopes.append("bond")
-    if re.search(r"(?:^|\W)fund(?:$|\W)", q, flags=re.IGNORECASE):
+    if re.fullmatch(r"\s*fund\s*", q, flags=re.IGNORECASE):
         scopes.append("fund")
-    if "채권" in q and (
-        "펀드" not in q
-        or any(
-            token in q
-            for token in ("국내채권", "채권 표면금리", "채권 신용등급", "채권과", "채권·")
-        )
-    ):
+    explicit_bond = any(
+        token in q
+        for token in ("국내채권", "채권 표면금리", "채권 신용등급", "채권과", "채권·")
+    )
+    has_etp_text = any(k in q for k in ("ETF", "ETN", "ETP", "상장지수"))
+    if "채권" in q and (explicit_bond or ("펀드" not in q and not has_etp_text)):
         scopes.append("bond")
     if any(k in q for k in ("펀드", "공모", "사모")):
         scopes.append("fund")
@@ -129,16 +128,20 @@ def _requested_metrics(question: str, scopes: list[str]) -> list[str]:
             metrics.append("product.benchmark")
     if "운용전략" in q or q.endswith("전략"):
         metrics.append("product.strategy")
-    if "AUM" in question.upper() and scope in {"domestic_etp", "overseas_etp"}:
+    has_aum = bool(re.search(r"(?<![A-Z0-9])AUM(?![A-Z0-9])", question.upper()))
+    has_nav = bool(re.search(r"(?<![A-Z0-9])NAV(?![A-Z0-9])", question.upper()))
+    if has_aum and scope in {"domestic_etp", "overseas_etp"}:
         metrics.append(f"{scope}.aum_last")
-    elif "AUM" in question.upper() and len(scopes) > 1:
+    elif has_aum and len(scopes) > 1:
         metrics.append("cross.aum_last")
-    if "NAV" in question.upper() and scope in {"domestic_etp", "overseas_etp"}:
+    if has_nav and scope in {"domestic_etp", "overseas_etp"}:
         metrics.append(f"{scope}.nav_last")
     if "순자산" in q and scope in {"domestic_etp", "fund"}:
         metrics.append(
             "domestic_etp.net_assets" if scope == "domestic_etp" else "fund.net_assets"
         )
+    elif "순자산" in q and len(scopes) > 1:
+        metrics.append("cross.net_assets")
     if "종가" in q and scope in {"domestic_etp", "overseas_etp"}:
         metrics.append(f"{scope}.close_price")
     if "거래량" in q and scope in {"domestic_etp", "overseas_etp"}:
@@ -186,7 +189,10 @@ def _multiple_rank_metrics(question: str, scopes: list[str]) -> list[tuple[str, 
     candidates: list[tuple[str, str, str]] = []
     if "보수" in question and scope in {"domestic_etp", "overseas_etp", "fund"}:
         candidates.append((f"{scope}.expense_ratio", "asc", "보수"))
-    if "AUM" in question.upper() and scope in {"domestic_etp", "overseas_etp"}:
+    if re.search(r"(?<![A-Z0-9])AUM(?![A-Z0-9])", question.upper()) and scope in {
+        "domestic_etp",
+        "overseas_etp",
+    }:
         candidates.append((f"{scope}.aum_last", "desc", "AUM"))
     if "순자산" in question and scope in {"domestic_etp", "fund"}:
         metric = "domestic_etp.net_assets" if scope == "domestic_etp" else "fund.net_assets"
@@ -441,7 +447,21 @@ class DeterministicPlanner:
             if explicit_priority:
                 multi_metrics.sort(key=lambda item: item[2] != explicit_priority)
 
-        code_matches = list(_CODES.finditer(question))
+        party_spans = [
+            match.span("party")
+            for match in re.finditer(
+                r"(?P<party>[^\n]{2,80}?)(?:이|가)?\s*(?:운용하는|발행하는)",
+                question,
+            )
+        ]
+        code_matches = [
+            match
+            for match in _CODES.finditer(question)
+            if not any(
+                match.start() < party_end and party_start < match.end()
+                for party_start, party_end in party_spans
+            )
+        ]
         codes = [match.group(0) for match in code_matches]
         if scopes == ["overseas_etp"]:
             reserved = {
@@ -467,6 +487,8 @@ class DeterministicPlanner:
                 # inside a dot-ticker like "AAAA.K" already matched above).
                 start, end = match.span()
                 if any(start < c_end and c_start < end for c_start, c_end in claimed_spans):
+                    continue
+                if any(start < p_end and p_start < end for p_start, p_end in party_spans):
                     continue
                 supplemental_codes.append(token)
             codes.extend(supplemental_codes[: 10 - len(codes)])
@@ -568,9 +590,13 @@ class DeterministicPlanner:
                 assumptions=[f"policy_reason={catalog_resolution.reason_code}"],
             )
 
+        semantic_search = any(token in question for token in ("비슷한", "유사한")) and any(
+            token in question for token in ("전략", "벤치마크", "기초지수")
+        )
         if entities or (
             not catalog_resolution.conditions
             and any(k in question for k in ("상세", "조회", "찾아줘", "찾아 줘"))
+            and not semantic_search
         ):
             if not entities:
                 name = _lookup_name(question)
@@ -631,13 +657,14 @@ class DeterministicPlanner:
 
         filter_groups = [FilterGroup(conditions=filters)] if filters else []
         assumptions: list[str] = []
-        if "원본" in question and not (metric and "제공" in question):
+        if count_request and "원본" in question and not (metric and "제공" in question):
             assumptions.append("count_basis=raw")
-        if any(k in question for k in ("격리", "placeholder")) or (
-            "손상행" in question and "제외" not in question
+        if count_request and (
+            any(k in question for k in ("격리", "placeholder"))
+            or ("손상행" in question and "제외" not in question)
         ):
             assumptions.append("count_basis=quarantine")
-        if "속성행" in question:
+        if count_request and "속성행" in question:
             assumptions.append("count_basis=fund_attribute")
         if (
             count_request

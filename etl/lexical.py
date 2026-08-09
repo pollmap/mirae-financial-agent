@@ -8,7 +8,7 @@ runtime image is offline and cannot install them.
 Tokenization happens in Python and is imported from
 ``app.retrieval.lexical_retriever`` (etl may import app; never the reverse)
 so index-time and query-time tokens can never drift. Documents cover product
-names (all scopes), overseas ETP strategy paragraphs, and benchmark strings
+names (all scopes), every non-null official strategy value, and benchmark strings
 minus the two Lipper sentinel non-values, with deterministic document ids
 (``field + ':' + product_uid``). Each field is fetched and tokenized
 separately to keep memory bounded.
@@ -34,7 +34,7 @@ _FIELD_QUERIES: dict[str, str] = {
     "strategy": """
         SELECT product_uid, scope, strategy AS text
         FROM serving.product_catalog
-        WHERE scope = 'overseas_etp' AND strategy IS NOT NULL
+        WHERE strategy IS NOT NULL
         ORDER BY product_uid
         """,
     "benchmark": f"""

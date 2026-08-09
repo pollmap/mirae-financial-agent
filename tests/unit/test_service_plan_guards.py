@@ -93,6 +93,72 @@ def _stateful_sequence_service(*plans: QueryPlan) -> AgentService:
     )
 
 
+def test_material_party_region_asset_and_currency_conditions_are_never_dropped() -> None:
+    service = _deterministic_service()
+    try:
+        response = asyncio.run(
+            service.answer(
+                question_id="condition-ledger-party",
+                question="미래에셋이 운용하는 미국 주식형 국내 ETF 중 AUM 상위 3개",
+            )
+        )
+        context = json.loads(response.retrieved_context)
+        assert context["answerability"] == "PARTIAL_WITH_COVERAGE"
+        assert context["result_count"] == 3
+        assert {entry["kind"] for entry in context["condition_ledger"]} >= {
+            "scope",
+            "intent",
+            "party",
+            "region",
+            "asset_type",
+            "product_type",
+            "metric",
+            "currency",
+        }
+        assert all(
+            entry["status"] == "grounded" for entry in context["condition_ledger"]
+        )
+        graph_reasons = {
+            trace["reason"]
+            for trace in context["retrieval_trace"]
+            if trace["channel"] == "graph"
+        }
+        assert any("product.manager" in reason for reason in graph_reasons)
+        assert any("product.region" in reason for reason in graph_reasons)
+        assert "CURR_CD_KRW" in response.answer
+    finally:
+        asyncio.run(service.aclose())
+
+
+def test_strategy_similarity_uses_bm25_instead_of_returning_first_catalog_rows() -> None:
+    service = _deterministic_service()
+    try:
+        response = asyncio.run(
+            service.answer(
+                question_id="condition-ledger-strategy",
+                question="배당 인컴 전략과 비슷한 해외 ETF 5개",
+            )
+        )
+        context = json.loads(response.retrieved_context)
+        assert context["answerability"] in {"FULL", "PARTIAL_WITH_COVERAGE"}
+        assert context["result_count"] == 5
+        assert any(
+            entry["kind"] == "strategy"
+            and entry["status"] == "grounded"
+            and entry["grounded_fields"] == ["product.strategy"]
+            for entry in context["condition_ledger"]
+        )
+        assert any(
+            trace["channel"] == "lexical"
+            and trace["status"] == "used"
+            and trace["candidate_count"] > 0
+            for trace in context["retrieval_trace"]
+        )
+        assert "Alternative Access First Priority" not in response.answer
+    finally:
+        asyncio.run(service.aclose())
+
+
 def _preservation_fixture() -> tuple[str, QueryPlan, QueryPlan]:
     question = "KR101501DA16의 확인된 조건으로 조회해줘"
     unresolved = QueryPlan(
@@ -437,6 +503,22 @@ def test_returned_metric_option_values_reach_rank_and_compare_results_verbatim()
         assert compare_final_context["answerability"] == "PARTIAL_WITH_COVERAGE"
         assert compare_final_context["result_count"] == 2
         assert compare_final_context["clarification"] is None
+
+    asyncio.run(scenario())
+
+
+def test_source_strategy_forecast_words_do_not_trigger_generated_advice_guard() -> None:
+    async def scenario() -> None:
+        service = _deterministic_service()
+        response = await service.answer(
+            question_id="SOURCE-TEXT-POLICY-1",
+            question="해외 ETF 티커 ABEQ.K의 공식 원본 상세 정보를 확인해줘.",
+        )
+        context = json.loads(response.retrieved_context)
+
+        assert context["answerability"] == "FULL"
+        assert context["result_count"] == 1
+        assert "will yield positive absolute returns" in response.answer
 
     asyncio.run(scenario())
 

@@ -39,11 +39,12 @@ def _connection_with_corpus() -> duckdb.DuckDBPyConnection:
                 "strategy",
                 "Tracks broad market equity exposure with a dividend focus",
             ),
+            ("strategy:ETP5", "ETP5", "domestic_etp", "strategy", "실물복제"),
             ("benchmark:ETP2", "ETP2", "domestic_etp", "benchmark", "KOSPI 200"),
             ("benchmark:ETP3", "ETP3", "overseas_etp", "benchmark", "S&P 500"),
         ],
     )
-    assert inserted == 8
+    assert inserted == 9
     return connection
 
 
@@ -81,6 +82,21 @@ def test_strategy_field_english_search_ranks_right_doc() -> None:
     # Stopwords are never indexed for the strategy field, so a stopword-only
     # query has no terms left and returns nothing.
     assert search(connection, "the of and", field="strategy") == []
+
+
+def test_korean_strategy_query_expands_to_official_english_text() -> None:
+    connection = _connection_with_corpus()
+
+    hits = search(connection, "배당 인컴 전략", field="strategy")
+    assert [hit.product_uid for hit in hits] == ["ETP4"]
+    assert hits[0].score > 0
+
+
+def test_korean_strategy_value_is_indexed_without_assuming_english_only() -> None:
+    connection = _connection_with_corpus()
+
+    hits = search(connection, "실물복제", field="strategy", scope="domestic_etp")
+    assert [hit.product_uid for hit in hits] == ["ETP5"]
 
 
 def test_scope_filter_restricts_results() -> None:
