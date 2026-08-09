@@ -1,0 +1,77 @@
+{
+  "status": "FAILED",
+  "generated_at_utc": "2026-08-09T06:04:05.901229+00:00",
+  "frozen_after": "condition-ledger-and-retrieval-fixes-before-release-document-consolidation",
+  "holdout_sha256": "1b13a5de6a8dd15b46ec8f0a60ecef2eec880e062d121938da95f453d94ae0fd",
+  "case_count": 200,
+  "passed": 75,
+  "accuracy": 0.375,
+  "evidence_or_policy_linked": 156,
+  "contract_valid": 200,
+  "by_kind": {
+    "aggregate_rank": {
+      "total": 30,
+      "passed": 30
+    },
+    "ambiguity": {
+      "total": 5,
+      "passed": 4
+    },
+    "complex_filter": {
+      "total": 40
+    },
+    "cross_scope": {
+      "total": 20,
+      "passed": 20
+    },
+    "exact_alias": {
+      "total": 40
+    },
+    "graph_relation": {
+      "total": 30,
+      "passed": 3
+    },
+    "safety": {
+      "total": 5,
+      "passed": 5
+    },
+    "semantic_retrieval": {
+      "total": 30,
+      "passed": 13
+    }
+  },
+  "failure_ids": [
+    "V4-EXACT_ALIAS-000",
+    "V4-EXACT_ALIAS-001",
+    "V4-EXACT_ALIAS-002",
+    "V4-EXACT_ALIAS-003",
+    "V4-EXACT_ALIAS-004",
+    "V4-EXACT_ALIAS-005",
+    "V4-EXACT_ALIAS-006",
+    "V4-EXACT_ALIAS-007",
+    "V4-EXACT_ALIAS-008",
+    "V4-EXACT_ALIAS-009",
+    "V4-EXACT_ALIAS-010",
+    "V4-EXACT_ALIAS-011",
+    "V4-EXACT_ALIAS-012",
+    "V4-EXACT_ALIAS-013",
+    "V4-EXACT_ALIAS-014",
+    "V4-EXACT_ALIAS-015",
+    "V4-EXACT_ALIAS-016",
+    "V4-EXACT_ALIAS-017",
+    "V4-EXACT_ALIAS-018",
+    "V4-EXACT_ALIAS-019",
+    "V4-EXACT_ALIAS-020",
+    "V4-EXACT_ALIAS-021",
+    "V4-EXACT_ALIAS-022",
+    "V4-EXACT_ALIAS-023",
+    "V4-EXACT_ALIAS-024",
+    "V4-EXACT_ALIAS-025",
+    "V4-EXACT_ALIAS-026",
+    "V4-EXACT_ALIAS-027",
+    "V4-EXACT_ALIAS-028",
+    "V4-EXACT_ALIAS-029"
+  ],
+  "questions_retained": false,
+  "live_provider_calls": 0
+}

@@ -2,9 +2,9 @@
 """Run the credential-gated, extensive HyperCLOVA X release gate.
 
 The 100-case gate is a fast operational smoke test.  This gate is deliberately
-larger: it makes 1,000 direct semantic requests which must each use the actual
-HCX two-stage planner, then exercises 100 two-follow-up and 100
-three-follow-up clarification conversations through the public ``/answer``
+larger: it makes 1,200 semantically distinct direct requests which must each
+use the actual HCX two-stage planner, then exercises 100 two-turn, 100
+three-turn, and 100 four-turn clarification conversations through ``/answer``
 contract.  The direct cases are judged against the independent SQL oracle;
 conversation finals are compared with the deterministic planner plus their
 source-row evidence signature.  Its retained report contains only totals and
@@ -34,122 +34,258 @@ if str(ROOT) not in sys.path:
 from app.config import Settings  # noqa: E402
 from app.main import create_app  # noqa: E402
 from eval.oracle import Oracle  # noqa: E402
+from eval.release_corpus import (  # noqa: E402
+    DIRECT_CASE_COUNT,
+    DIRECT_CATEGORY_COUNTS,
+    build_live_direct_cases,
+)
 from eval.run_eval import fill_runtime_slots, score_response  # noqa: E402
-from eval.templates import generate  # noqa: E402
 
 DATABASE = ROOT / "data" / "serving" / "mirae_agent.duckdb"
 OFFICIAL_BASE_URL = "https://clovastudio.stream.ntruss.com"
 APPROVED_MODEL_ID = "HCX-007"
-DIRECT_KINDS = ("rank_single", "filter_search", "count_aggregate", "cross_scope")
-DIRECT_SURFACES = ("base", "official_evidence")
-DIRECT_CASE_COUNT = 1_000
-TWO_FOLLOW_UP_FLOW_COUNT = 100
-THREE_FOLLOW_UP_FLOW_COUNT = 100
-FLOW_COUNT = TWO_FOLLOW_UP_FLOW_COUNT + THREE_FOLLOW_UP_FLOW_COUNT
-FLOW_API_REQUEST_COUNT = TWO_FOLLOW_UP_FLOW_COUNT * 3 + THREE_FOLLOW_UP_FLOW_COUNT * 4
+TWO_TURN_FLOW_COUNT = 100
+THREE_TURN_FLOW_COUNT = 100
+FOUR_TURN_FLOW_COUNT = 100
+FLOW_COUNT = TWO_TURN_FLOW_COUNT + THREE_TURN_FLOW_COUNT + FOUR_TURN_FLOW_COUNT
+FLOW_API_REQUEST_COUNT = (
+    TWO_TURN_FLOW_COUNT * 2 + THREE_TURN_FLOW_COUNT * 3 + FOUR_TURN_FLOW_COUNT * 4
+)
 LIVE_API_REQUEST_COUNT = DIRECT_CASE_COUNT + FLOW_API_REQUEST_COUNT
 MINIMUM_ACCURACY = 0.98
 RESPONSE_KEYS = {"question_id", "question", "retrieved_context", "think_trace", "answer"}
 
 
-# These forms preserve the same objective request while varying sentence
-# structure, imperative, and evidence instruction.  They intentionally never
-# name a market or return period: the point is to make the signed clarification
-# state carry those decisions across realistic later turns.
-_TWO_FOLLOW_UP_FORMS = (
-    "수익률이 높은 ETF {limit}개 알려줘.",
-    "수익률 높은 ETF {limit}개 보여줘.",
-    "수익률 기준 상위 ETF {limit}개 정리해줘.",
-    "수익률이 좋은 ETF {limit}개를 확인해줘.",
-    "수익률이 높은 ETF {limit}개 목록을 보여줘.",
-    "수익률이 높은 ETF {limit}개를 정리해줘.",
-    "수익률이 높은 ETF 상품 {limit}개 알려줘.",
-    "수익률 기준으로 ETF {limit}개 보여줘.",
-    "ETF 중 수익률이 높은 상품 {limit}개 정리해줘.",
-    "수익률이 높은 순서로 ETF {limit}개 알려줘.",
-)
-_THREE_FOLLOW_UP_FORMS = (
-    "수익률이 높고 보수가 낮은 ETF {limit}개 알려줘.",
-    "수익률 높고 보수 낮은 ETF {limit}개 보여줘.",
-    "수익률이 높은 ETF 중 보수가 낮은 상품 {limit}개 정리해줘.",
-    "수익률이 높고 보수가 낮은 ETF {limit}개 목록을 알려줘.",
-    "수익률이 높고 보수가 낮은 ETF {limit}개 결과를 보여줘.",
-    "수익률이 높고 보수가 낮은 ETF {limit}개를 자세히 알려줘.",
-    "수익률이 높고 보수가 낮은 ETF {limit}개 결과를 알려줘.",
-    "수익률이 높고 보수가 낮은 ETF {limit}개를 같이 알려줘.",
-    "수익률이 높고 보수가 낮은 ETF {limit}개 순위를 정리해줘.",
-    "수익률이 높고 보수가 낮은 ETF {limit}개를 근거와 함께 보여줘.",
-)
+def build_direct_cases(_questions: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """Return 1,200 independent semantic specifications from official data."""
+
+    return build_live_direct_cases(DATABASE)
 
 
-def _evidence_surface(question: str) -> str:
-    """Add a source/evidence instruction without changing query semantics."""
-
-    return f"공식 제공 데이터만 기준으로, 근거를 함께 확인해 주세요. {question}"
-
-
-def build_direct_cases(questions: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Expand the 500 HCX-eligible semantic specifications to 1,000 inputs."""
-
-    eligible = [case for case in questions if str(case["kind"]) in DIRECT_KINDS]
-    if len(eligible) != DIRECT_CASE_COUNT // len(DIRECT_SURFACES):
-        raise RuntimeError("extensive gate requires exactly 500 HCX-eligible base cases")
-
-    expanded: list[dict[str, Any]] = []
-    for surface in DIRECT_SURFACES:
-        for case in eligible:
-            question = str(case["question"])
-            expanded.append(
-                {
-                    "id": f"EXT-{case['id']}-{surface}",
-                    "question": question if surface == "base" else _evidence_surface(question),
-                    "kind": str(case["kind"]),
-                    "surface": surface,
-                    "spec": dict(case["spec"]),
-                }
-            )
-    if len(expanded) != DIRECT_CASE_COUNT:
-        raise AssertionError("unexpected direct extensive gate case count")
-    return expanded
+def _flow_codes() -> dict[str, list[str]]:
+    with Oracle(DATABASE) as oracle:
+        metric_by_scope = {
+            "bond": "bond.coupon_rate",
+            "domestic_etp": "domestic_etp.return_1y",
+            "overseas_etp": "overseas_etp.aum_last",
+            "fund": "fund.return_1y",
+        }
+        codes: dict[str, list[str]] = {}
+        for scope, metric_id in metric_by_scope.items():
+            currency_clause = ""
+            if scope == "overseas_etp":
+                currency_clause = (
+                    "AND c.trading_currency = ("
+                    "SELECT trading_currency FROM product_catalog "
+                    "WHERE scope = 'overseas_etp' AND trading_currency IS NOT NULL "
+                    "GROUP BY trading_currency ORDER BY COUNT(*) DESC, trading_currency LIMIT 1) "
+                )
+            rows = oracle.connection.execute(
+                "SELECT CAST(c.product_id AS VARCHAR) "
+                "FROM product_catalog c JOIN product_metrics m USING(product_uid) "
+                "WHERE c.scope = ? AND m.metric_id = ? AND m.value_num IS NOT NULL "
+                "AND m.quality_status IN ('PARTIAL','SUSPECT_OUTLIER','VALID','ZERO_VALID') "
+                + currency_clause
+                + "GROUP BY c.product_uid, c.product_id ORDER BY c.product_uid LIMIT 50",
+                [scope, metric_id],
+            ).fetchall()
+            values = [str(row[0]) for row in rows if row[0] not in (None, "")]
+            if len(values) < 40:
+                raise RuntimeError(f"insufficient metric-valid flow codes for {scope}: {len(values)}")
+            codes[scope] = values
+        return codes
 
 
 def build_clarification_flows() -> list[dict[str, Any]]:
-    """Return 100 two-follow-up and 100 three-follow-up stateful scenarios."""
+    """Return 300 flows: 60 per scope family and 100 per turn length."""
 
+    codes = _flow_codes()
     flows: list[dict[str, Any]] = []
-    for index, template in enumerate(_TWO_FOLLOW_UP_FORMS):
-        for limit in range(3, 13):
-            flows.append(
-                {
-                    "id": f"FLOW-2-{index:02d}-{limit:02d}",
-                    "type": "two_follow_up",
-                    "question": template.format(limit=limit),
-                    "steps": [
-                        {"slot": "market", "value": "domestic_etp"},
-                        {"slot": "return_period", "value": "1y"},
-                    ],
-                }
-            )
-    for index, template in enumerate(_THREE_FOLLOW_UP_FORMS):
-        for limit in range(3, 13):
-            flows.append(
-                {
-                    "id": f"FLOW-3-{index:02d}-{limit:02d}",
-                    "type": "three_follow_up",
-                    "question": template.format(limit=limit),
-                    "steps": [
-                        {"slot": "market", "value": "domestic_etp"},
-                        {"slot": "return_period", "value": "1y"},
-                        {"slot": "ranking_priority", "value": "domestic_etp.return_1y"},
-                    ],
-                }
-            )
-    counts = Counter(str(flow["type"]) for flow in flows)
-    if counts != {
-        "two_follow_up": TWO_FOLLOW_UP_FLOW_COUNT,
-        "three_follow_up": THREE_FOLLOW_UP_FLOW_COUNT,
+
+    def pair(scope: str, index: int) -> str:
+        values = codes[scope]
+        return f"{values[(2 * index) % len(values)]}와 {values[(2 * index + 1) % len(values)]}"
+
+    def add(
+        family: str,
+        turns: int,
+        index: int,
+        question: str,
+        steps: list[dict[str, Any]],
+    ) -> None:
+        flows.append(
+            {
+                "id": f"FLOW-{family.upper()}-{turns}-{index:02d}",
+                "type": f"{turns}_turn",
+                "scope_family": family,
+                "question": question,
+                "steps": steps,
+            }
+        )
+
+    for index in range(20):
+        limit = index + 1
+        bond_pair = pair("bond", index)
+        overseas_pair = pair("overseas_etp", index)
+        fund_pair = pair("fund", index)
+
+        add(
+            "bond",
+            2,
+            index,
+            f"국내채권 {bond_pair}를 비교해줘.",
+            [{"slot": "comparison_metric", "value": "bond.coupon_rate"}],
+        )
+        add(
+            "bond",
+            3,
+            index,
+            "국내채권 상품을 두 개 비교해줘.",
+            [
+                {"slot": "comparison_targets", "value": bond_pair, "free_text": True},
+                {"slot": "comparison_metric", "value": "bond.coupon_rate"},
+            ],
+        )
+        add(
+            "bond",
+            4,
+            index,
+            "금융상품 두 개를 비교해줘.",
+            [
+                {"slot": "scope", "value": "bond"},
+                {"slot": "comparison_targets", "value": bond_pair, "free_text": True},
+                {"slot": "comparison_metric", "value": "bond.coupon_rate"},
+            ],
+        )
+
+        add(
+            "domestic_etp",
+            2,
+            index,
+            f"국내 ETF 수익률이 높은 {limit}개 보여줘.",
+            [{"slot": "return_period", "value": "1y"}],
+        )
+        add(
+            "domestic_etp",
+            3,
+            index,
+            f"수익률이 높은 ETF {limit}개 보여줘.",
+            [
+                {"slot": "market", "value": "domestic_etp"},
+                {"slot": "return_period", "value": "1y"},
+            ],
+        )
+        add(
+            "domestic_etp",
+            4,
+            index,
+            f"수익률이 높고 보수가 낮은 ETF {limit}개 보여줘.",
+            [
+                {"slot": "market", "value": "domestic_etp"},
+                {"slot": "return_period", "value": "1y"},
+                {"slot": "ranking_priority", "value": "domestic_etp.return_1y"},
+            ],
+        )
+
+        add(
+            "overseas_etp",
+            2,
+            index,
+            f"좋은 해외 ETF {limit}개 보여줘.",
+            [{"slot": "selection_criteria", "value": "보수 낮은 순"}],
+        )
+        add(
+            "overseas_etp",
+            3,
+            index,
+            "해외 ETF 상품을 두 개 비교해줘.",
+            [
+                {"slot": "comparison_targets", "value": overseas_pair, "free_text": True},
+                {"slot": "comparison_metric", "value": "overseas_etp.aum_last"},
+            ],
+        )
+        add(
+            "overseas_etp",
+            4,
+            index,
+            "ETF 상품을 두 개 비교해줘.",
+            [
+                {"slot": "market", "value": "overseas_etp"},
+                {"slot": "comparison_targets", "value": overseas_pair, "free_text": True},
+                {"slot": "comparison_metric", "value": "overseas_etp.aum_last"},
+            ],
+        )
+
+        add(
+            "fund",
+            2,
+            index,
+            f"공모펀드 수익률이 높은 {limit}개 보여줘.",
+            [{"slot": "return_period", "value": "1y"}],
+        )
+        add(
+            "fund",
+            3,
+            index,
+            "공모펀드 상품을 두 개 비교해줘.",
+            [
+                {"slot": "comparison_targets", "value": fund_pair, "free_text": True},
+                {"slot": "comparison_metric", "value": "fund.return_1y"},
+            ],
+        )
+        add(
+            "fund",
+            4,
+            index,
+            "금융상품 두 개를 비교해줘.",
+            [
+                {"slot": "scope", "value": "fund"},
+                {"slot": "comparison_targets", "value": fund_pair, "free_text": True},
+                {"slot": "comparison_metric", "value": "fund.return_1y"},
+            ],
+        )
+
+        add(
+            "cross_scope",
+            2,
+            index,
+            f"국내 ETF와 공모펀드에서 수익률이 높은 {limit}개 보여줘.",
+            [{"slot": "return_period", "value": "1y"}],
+        )
+        add(
+            "cross_scope",
+            3,
+            index,
+            f"국내 ETF와 공모펀드에서 수익률이 높고 순자산이 큰 {limit}개 보여줘.",
+            [
+                {"slot": "return_period", "value": "1y"},
+                {"slot": "ranking_priority", "value_contains": "return_1y"},
+            ],
+        )
+        add(
+            "cross_scope",
+            4,
+            index,
+            f"ETF와 공모펀드에서 수익률이 높고 순자산이 큰 {limit}개 보여줘.",
+            [
+                {"slot": "market", "value": "domestic_etp"},
+                {"slot": "return_period", "value": "1y"},
+                {"slot": "ranking_priority", "value_contains": "return_1y"},
+            ],
+        )
+
+    type_counts = Counter(str(flow["type"]) for flow in flows)
+    family_counts = Counter(str(flow["scope_family"]) for flow in flows)
+    if type_counts != {"2_turn": 100, "3_turn": 100, "4_turn": 100}:
+        raise AssertionError("unexpected clarification turn count")
+    if family_counts != {
+        "bond": 60,
+        "domestic_etp": 60,
+        "overseas_etp": 60,
+        "fund": 60,
+        "cross_scope": 60,
     }:
-        raise AssertionError("unexpected clarification flow category count")
+        raise AssertionError("unexpected clarification scope-family count")
     return flows
 
 
@@ -207,6 +343,72 @@ def _items_have_evidence(context: dict[str, Any]) -> bool:
         )
         for item in items
     )
+
+
+def _score_direct_case(
+    oracle: Oracle,
+    case: dict[str, Any],
+    response: httpx.Response,
+    context: dict[str, Any],
+) -> tuple[bool, bool]:
+    """Score one direct case and return (passed, evidence-or-policy-linked)."""
+
+    spec = dict(case["spec"])
+    kind = str(case["kind"])
+    if spec.get("expect_kind") == "semantic_retrieval":
+        channels = {
+            str(item.get("channel"))
+            for item in context.get("retrieval_trace") or []
+            if isinstance(item, dict) and item.get("status") in {"used", "validated"}
+        }
+        ledger = context.get("condition_ledger") or []
+        grounded = bool(context.get("items")) and _items_have_evidence(context)
+        passed = (
+            context.get("answerability") in {"FULL", "PARTIAL_WITH_COVERAGE"}
+            and "lexical" in channels
+            and grounded
+            and any(
+                isinstance(item, dict)
+                and item.get("kind") == "strategy"
+                and item.get("status") == "grounded"
+                for item in ledger
+            )
+        )
+        return passed, grounded
+
+    expected = oracle.expected(spec)
+    scored = score_response(
+        spec,
+        expected,
+        response.json()["answer"] + " " + response.json()["retrieved_context"],
+        context,
+    )
+    passed = bool(scored["passed"])
+    if spec.get("required_channel") == "graph":
+        passed = passed and any(
+            isinstance(item, dict)
+            and item.get("channel") == "graph"
+            and item.get("status") in {"validated", "fallback"}
+            for item in context.get("retrieval_trace") or []
+        )
+    policy_linked = (
+        context.get("answerability")
+        in {
+            "NEEDS_CLARIFICATION",
+            "UNAVAILABLE",
+            "INCOMPARABLE",
+            "SAFETY_LIMITED",
+            "DATA_QUALITY_BLOCKED",
+        }
+        and bool(context.get("reason_code"))
+    )
+    if kind in {"ambiguity", "safety"} or policy_linked:
+        linked = bool(context.get("reason_code") or context.get("clarification"))
+    else:
+        linked = bool(context.get("items") or context.get("aggregates")) and _items_have_evidence(
+            context
+        )
+    return passed, linked
 
 
 def _evidence_signature(context: dict[str, Any]) -> str:
@@ -292,7 +494,25 @@ async def _run_flow(
                 option.get("value") for option in options if isinstance(option, dict)
             }
             token = clarification.get("clarification_token")
-            if step["value"] not in option_values or not isinstance(token, str) or not token:
+            selected_value = step.get("value")
+            contains = step.get("value_contains")
+            if contains:
+                selected_value = next(
+                    (
+                        value
+                        for value in option_values
+                        if isinstance(value, str) and str(contains) in value
+                    ),
+                    None,
+                )
+            free_text = bool(step.get("free_text"))
+            if (
+                not isinstance(selected_value, str)
+                or not selected_value
+                or (not free_text and selected_value not in option_values)
+                or not isinstance(token, str)
+                or not token
+            ):
                 return {
                     "passed": False,
                     "request_count": request_count,
@@ -308,7 +528,7 @@ async def _run_flow(
                     "question_id": f"{question_id_prefix}-{index}",
                     "question": question,
                     "clarification_token": token,
-                    "clarification_response": step["value"],
+                    "clarification_response": selected_value,
                 },
             )
             request_count += 1
@@ -388,9 +608,7 @@ async def _run_local_verify() -> dict[str, object]:
 
     if not DATABASE.is_file():
         raise SystemExit("serving database is missing; rebuild official data before local verification")
-    direct_cases = build_direct_cases(generate())
     flows = build_clarification_flows()
-    suite_hash = _suite_hash(direct_cases, flows)
     app = create_app(_deterministic_settings())
     direct_passed = 0
     direct_evidence_linked = 0
@@ -405,11 +623,11 @@ async def _run_local_verify() -> dict[str, object]:
             transport=httpx.ASGITransport(app=app), base_url="http://local"
         ) as client:
             with Oracle(DATABASE) as oracle:
-                all_cases = fill_runtime_slots(generate(), oracle.sample_codes(per_scope=16))
-                cases_by_id = {str(case["id"]): case for case in all_cases}
+                direct_cases = fill_runtime_slots(
+                    build_direct_cases(), oracle.sample_codes(per_scope=64)
+                )
+                suite_hash = _suite_hash(direct_cases, flows)
                 for case in direct_cases:
-                    base_id = str(case["id"]).removeprefix("EXT-").rsplit("-", 1)[0]
-                    source_case = cases_by_id.get(base_id)
                     kind = str(case["kind"])
                     direct_by_kind[kind]["total"] += 1
                     response = await client.get(
@@ -419,16 +637,9 @@ async def _run_local_verify() -> dict[str, object]:
                     context, contract_valid = _response_context(response)
                     direct_contract_valid += int(contract_valid)
                     passed = False
-                    if context is not None and source_case is not None:
-                        expected = oracle.expected(dict(source_case["spec"]))
-                        scored = score_response(
-                            dict(source_case["spec"]),
-                            expected,
-                            response.json()["answer"] + " " + response.json()["retrieved_context"],
-                            context,
-                        )
-                        passed = bool(scored["passed"])
-                        direct_evidence_linked += int(_items_have_evidence(context))
+                    if context is not None:
+                        passed, linked = _score_direct_case(oracle, case, response, context)
+                        direct_evidence_linked += int(linked)
                     if passed:
                         direct_passed += 1
                         direct_by_kind[kind]["passed"] += 1
@@ -449,16 +660,18 @@ async def _run_local_verify() -> dict[str, object]:
         direct_passed == DIRECT_CASE_COUNT
         and direct_evidence_linked == DIRECT_CASE_COUNT
         and direct_contract_valid == DIRECT_CASE_COUNT
-        and flow_passed["two_follow_up"] == TWO_FOLLOW_UP_FLOW_COUNT
-        and flow_passed["three_follow_up"] == THREE_FOLLOW_UP_FLOW_COUNT
-        and flow_evidence_final["two_follow_up"] == TWO_FOLLOW_UP_FLOW_COUNT
-        and flow_evidence_final["three_follow_up"] == THREE_FOLLOW_UP_FLOW_COUNT
+        and flow_passed["2_turn"] == TWO_TURN_FLOW_COUNT
+        and flow_passed["3_turn"] == THREE_TURN_FLOW_COUNT
+        and flow_passed["4_turn"] == FOUR_TURN_FLOW_COUNT
+        and flow_evidence_final["2_turn"] == TWO_TURN_FLOW_COUNT
+        and flow_evidence_final["3_turn"] == THREE_TURN_FLOW_COUNT
+        and flow_evidence_final["4_turn"] == FOUR_TURN_FLOW_COUNT
         and flow_contract_valid == FLOW_API_REQUEST_COUNT
         and flow_api_requests == FLOW_API_REQUEST_COUNT
     ) else "FAIL"
     return {
         "status": status,
-        "gate": "LOCAL_EXTENSIVE_1000_DIRECT_PLUS_MULTITURN",
+        "gate": "LOCAL_EXTENSIVE_1200_DISTINCT_PLUS_300_MULTITURN",
         "planner_mode": "deterministic",
         "question_suite_sha256": suite_hash,
         "direct_case_count": DIRECT_CASE_COUNT,
@@ -469,12 +682,15 @@ async def _run_local_verify() -> dict[str, object]:
             kind: {"total": values["total"], "passed": values["passed"]}
             for kind, values in sorted(direct_by_kind.items())
         },
-        "two_follow_up_flow_count": TWO_FOLLOW_UP_FLOW_COUNT,
-        "three_follow_up_flow_count": THREE_FOLLOW_UP_FLOW_COUNT,
-        "two_follow_up_flow_passed_count": flow_passed["two_follow_up"],
-        "three_follow_up_flow_passed_count": flow_passed["three_follow_up"],
-        "two_follow_up_final_evidence_count": flow_evidence_final["two_follow_up"],
-        "three_follow_up_final_evidence_count": flow_evidence_final["three_follow_up"],
+        "two_turn_flow_count": TWO_TURN_FLOW_COUNT,
+        "three_turn_flow_count": THREE_TURN_FLOW_COUNT,
+        "four_turn_flow_count": FOUR_TURN_FLOW_COUNT,
+        "two_turn_flow_passed_count": flow_passed["2_turn"],
+        "three_turn_flow_passed_count": flow_passed["3_turn"],
+        "four_turn_flow_passed_count": flow_passed["4_turn"],
+        "two_turn_final_evidence_count": flow_evidence_final["2_turn"],
+        "three_turn_final_evidence_count": flow_evidence_final["3_turn"],
+        "four_turn_final_evidence_count": flow_evidence_final["4_turn"],
         "flow_contract_valid_response_count": flow_contract_valid,
         "flow_api_request_count": flow_api_requests,
         "questions_recorded": False,
@@ -495,8 +711,11 @@ async def _run(report_path: Path) -> dict[str, object]:
     if not DATABASE.is_file():
         raise SystemExit("serving database is missing; rebuild official data before live gate")
 
-    direct_cases = build_direct_cases(generate())
     flows = build_clarification_flows()
+    with Oracle(DATABASE) as corpus_oracle:
+        direct_cases = fill_runtime_slots(
+            build_direct_cases(), corpus_oracle.sample_codes(per_scope=64)
+        )
     suite_hash = _suite_hash(direct_cases, flows)
     live_app = create_app(_live_settings(key, model_id, base_url))
     baseline_app = create_app(_deterministic_settings())
@@ -535,11 +754,7 @@ async def _run(report_path: Path) -> dict[str, object]:
                 transport=httpx.ASGITransport(app=live_app), base_url="http://live"
             ) as live_client:
                 with Oracle(DATABASE) as oracle:
-                    all_cases = fill_runtime_slots(generate(), oracle.sample_codes(per_scope=16))
-                    cases_by_id = {str(case["id"]): case for case in all_cases}
                     for case in direct_cases:
-                        base_id = str(case["id"]).removeprefix("EXT-").rsplit("-", 1)[0]
-                        source_case = cases_by_id.get(base_id)
                         kind = str(case["kind"])
                         direct_by_kind[kind]["total"] += 1
                         try:
@@ -549,27 +764,21 @@ async def _run(report_path: Path) -> dict[str, object]:
                             )
                             context, contract_valid = _response_context(response)
                             direct_contract_valid += int(contract_valid)
-                            if context is None or source_case is None:
+                            if context is None:
                                 passed = False
                             else:
-                                expected = oracle.expected(dict(source_case["spec"]))
-                                scored = score_response(
-                                    dict(source_case["spec"]),
-                                    expected,
-                                    response.json()["answer"]
-                                    + " "
-                                    + response.json()["retrieved_context"],
-                                    context,
+                                passed, linked = _score_direct_case(
+                                    oracle, case, response, context
                                 )
                                 hcx_used = "planner=HCX-007" in response.json()["think_trace"]
                                 direct_hcx_planned += int(hcx_used)
-                                direct_evidence_linked += int(_items_have_evidence(context))
+                                direct_evidence_linked += int(linked)
                                 if (
                                     kind == "cross_scope"
                                     and str(context.get("answerability")) == "INCOMPARABLE"
                                 ):
                                     cross_scope_refusals += 1
-                                passed = bool(scored["passed"]) and hcx_used
+                                passed = passed and hcx_used
                         except (httpx.HTTPError, TypeError, ValueError, json.JSONDecodeError):
                             passed = False
                         if passed:
@@ -607,12 +816,15 @@ async def _run(report_path: Path) -> dict[str, object]:
     direct_accuracy = direct_passed / DIRECT_CASE_COUNT
     total_live_api_requests = DIRECT_CASE_COUNT + flow_api_requests
     all_flow_types_passed = (
-        flow_passed["two_follow_up"] == TWO_FOLLOW_UP_FLOW_COUNT
-        and flow_passed["three_follow_up"] == THREE_FOLLOW_UP_FLOW_COUNT
-        and flow_hcx_final["two_follow_up"] == TWO_FOLLOW_UP_FLOW_COUNT
-        and flow_hcx_final["three_follow_up"] == THREE_FOLLOW_UP_FLOW_COUNT
-        and flow_evidence_final["two_follow_up"] == TWO_FOLLOW_UP_FLOW_COUNT
-        and flow_evidence_final["three_follow_up"] == THREE_FOLLOW_UP_FLOW_COUNT
+        flow_passed["2_turn"] == TWO_TURN_FLOW_COUNT
+        and flow_passed["3_turn"] == THREE_TURN_FLOW_COUNT
+        and flow_passed["4_turn"] == FOUR_TURN_FLOW_COUNT
+        and flow_hcx_final["2_turn"] == TWO_TURN_FLOW_COUNT
+        and flow_hcx_final["3_turn"] == THREE_TURN_FLOW_COUNT
+        and flow_hcx_final["4_turn"] == FOUR_TURN_FLOW_COUNT
+        and flow_evidence_final["2_turn"] == TWO_TURN_FLOW_COUNT
+        and flow_evidence_final["3_turn"] == THREE_TURN_FLOW_COUNT
+        and flow_evidence_final["4_turn"] == FOUR_TURN_FLOW_COUNT
     )
     status = "PASS" if (
         direct_accuracy >= MINIMUM_ACCURACY
@@ -627,14 +839,14 @@ async def _run(report_path: Path) -> dict[str, object]:
     ) else "FAIL"
     report: dict[str, object] = {
         "status": status,
-        "gate": "HCX_EXTENSIVE_1000_DIRECT_PLUS_MULTITURN_E2E",
+        "gate": "HCX_EXTENSIVE_1200_DISTINCT_PLUS_300_MULTITURN_E2E",
         "model_id": model_id,
         "approved_planner_stage": "two",
         "completed_at_utc": datetime.now(UTC).isoformat(),
         "question_suite_sha256": suite_hash,
         "direct_case_count": DIRECT_CASE_COUNT,
-        "direct_semantic_spec_count": DIRECT_CASE_COUNT // len(DIRECT_SURFACES),
-        "direct_surface_count_per_spec": len(DIRECT_SURFACES),
+        "direct_semantic_spec_count": DIRECT_CASE_COUNT,
+        "direct_surface_count_per_spec": 1,
         "minimum_accuracy": MINIMUM_ACCURACY,
         "direct_passed_count": direct_passed,
         "direct_accuracy": round(direct_accuracy, 4),
@@ -646,17 +858,22 @@ async def _run(report_path: Path) -> dict[str, object]:
             kind: {"total": values["total"], "passed": values["passed"]}
             for kind, values in sorted(direct_by_kind.items())
         },
-        "two_follow_up_flow_count": TWO_FOLLOW_UP_FLOW_COUNT,
-        "three_follow_up_flow_count": THREE_FOLLOW_UP_FLOW_COUNT,
+        "two_turn_flow_count": TWO_TURN_FLOW_COUNT,
+        "three_turn_flow_count": THREE_TURN_FLOW_COUNT,
+        "four_turn_flow_count": FOUR_TURN_FLOW_COUNT,
         "baseline_flow_passed_count": baseline_flow_passed,
-        "two_follow_up_flow_passed_count": flow_passed["two_follow_up"],
-        "three_follow_up_flow_passed_count": flow_passed["three_follow_up"],
-        "two_follow_up_final_hcx_count": flow_hcx_final["two_follow_up"],
-        "three_follow_up_final_hcx_count": flow_hcx_final["three_follow_up"],
-        "two_follow_up_final_evidence_count": flow_evidence_final["two_follow_up"],
-        "three_follow_up_final_evidence_count": flow_evidence_final["three_follow_up"],
-        "two_follow_up_signature_match_count": flow_signature_match["two_follow_up"],
-        "three_follow_up_signature_match_count": flow_signature_match["three_follow_up"],
+        "two_turn_flow_passed_count": flow_passed["2_turn"],
+        "three_turn_flow_passed_count": flow_passed["3_turn"],
+        "four_turn_flow_passed_count": flow_passed["4_turn"],
+        "two_turn_final_hcx_count": flow_hcx_final["2_turn"],
+        "three_turn_final_hcx_count": flow_hcx_final["3_turn"],
+        "four_turn_final_hcx_count": flow_hcx_final["4_turn"],
+        "two_turn_final_evidence_count": flow_evidence_final["2_turn"],
+        "three_turn_final_evidence_count": flow_evidence_final["3_turn"],
+        "four_turn_final_evidence_count": flow_evidence_final["4_turn"],
+        "two_turn_signature_match_count": flow_signature_match["2_turn"],
+        "three_turn_signature_match_count": flow_signature_match["3_turn"],
+        "four_turn_signature_match_count": flow_signature_match["4_turn"],
         "flow_contract_valid_response_count": flow_contract_valid,
         "flow_live_api_request_count": flow_api_requests,
         "flow_hcx_planned_response_count": flow_hcx_responses,
@@ -679,7 +896,7 @@ async def _run(report_path: Path) -> dict[str, object]:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
-            "Make 1,000 confirmed direct live HCX requests plus 200 multi-turn API flows; "
+            "Make 1,200 distinct direct HCX requests plus 300 multi-turn API flows; "
             "this can consume quota."
         )
     )
@@ -703,7 +920,7 @@ def main() -> None:
     parser.add_argument(
         "--local-verify",
         action="store_true",
-        help="run all 1,000 direct and 200 multi-turn cases with the deterministic planner; no key/HCX",
+        help="run all 1,200 direct and 300 multi-turn cases with the deterministic planner; no key/HCX",
     )
     parser.add_argument(
         "--output",
@@ -713,18 +930,23 @@ def main() -> None:
     args = parser.parse_args()
     if args.dry_run and args.local_verify:
         raise SystemExit("choose only one of --dry-run or --local-verify")
-    direct_cases = build_direct_cases(generate())
+    with Oracle(DATABASE) as oracle:
+        direct_cases = fill_runtime_slots(
+            build_direct_cases(), oracle.sample_codes(per_scope=64)
+        )
     flows = build_clarification_flows()
     if args.dry_run:
         print(
             json.dumps(
                 {
                     "status": "DRY_RUN",
-                    "gate": "HCX_EXTENSIVE_1000_DIRECT_PLUS_MULTITURN_E2E",
+                    "gate": "HCX_EXTENSIVE_1200_DISTINCT_PLUS_300_MULTITURN_E2E",
                     "direct_case_count": len(direct_cases),
-                    "direct_semantic_spec_count": DIRECT_CASE_COUNT // len(DIRECT_SURFACES),
-                    "two_follow_up_flow_count": TWO_FOLLOW_UP_FLOW_COUNT,
-                    "three_follow_up_flow_count": THREE_FOLLOW_UP_FLOW_COUNT,
+                    "direct_semantic_spec_count": DIRECT_CASE_COUNT,
+                    "direct_category_counts": DIRECT_CATEGORY_COUNTS,
+                    "two_turn_flow_count": TWO_TURN_FLOW_COUNT,
+                    "three_turn_flow_count": THREE_TURN_FLOW_COUNT,
+                    "four_turn_flow_count": FOUR_TURN_FLOW_COUNT,
                     "live_api_request_count": LIVE_API_REQUEST_COUNT,
                     "question_suite_sha256": _suite_hash(direct_cases, flows),
                     "questions_recorded": False,

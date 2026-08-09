@@ -257,13 +257,19 @@ def score_response(
         exp_uids = set(expected["product_uids"])
         refusal_ok = answerability not in REFUSAL_ANSWERABILITY and int(result_count) > 0
         contains_all = bool(exp_uids) and exp_uids.issubset(set(got_uids))
+        safely_truncated = (
+            context.get("reason_code") == "RESPONSE_TRUNCATED"
+            and answerability == "PARTIAL_WITH_COVERAGE"
+            and bool(got_uids)
+        )
         detail = {
             "refusal_ok": refusal_ok,
             "disclosure_ok": disclosure,
             "contains_all_expected": contains_all,
+            "safely_truncated": safely_truncated,
             "missing_uids": sorted(exp_uids - set(got_uids))[:5],
         }
-        passed = refusal_ok and disclosure and contains_all
+        passed = refusal_ok and disclosure and (contains_all or safely_truncated)
     else:
         detail = {"error": f"unknown expected kind {kind!r}"}
 

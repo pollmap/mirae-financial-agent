@@ -25,7 +25,7 @@ APPROVED_HCX_MODEL_ID = "HCX-007"
 EXPECTED_SNAPSHOT_DATE = "2026-07-11"
 EXPECTED_LIVE_HCX_GATE = "HCX_20_QUESTION_ONE_VS_TWO_STAGE"
 EXPECTED_LIVE_HCX_E2E_GATE = "HCX_100_QUESTION_TWO_STAGE_E2E"
-EXPECTED_LIVE_HCX_EXTENSIVE_GATE = "HCX_EXTENSIVE_1000_DIRECT_PLUS_MULTITURN_E2E"
+EXPECTED_LIVE_HCX_EXTENSIVE_GATE = "HCX_EXTENSIVE_1200_DISTINCT_PLUS_300_MULTITURN_E2E"
 IMAGE_PATTERN = re.compile(r"^[^\s@]+@sha256:[a-f0-9]{64}$")
 PLACEHOLDER_SECRET_MARKERS = (
     "at-least-",
@@ -293,28 +293,33 @@ def _validate_live_hcx_extensive_gate(report_path: Path, errors: list[str]) -> N
         "gate": EXPECTED_LIVE_HCX_EXTENSIVE_GATE,
         "model_id": APPROVED_HCX_MODEL_ID,
         "approved_planner_stage": "two",
-        "direct_case_count": 1_000,
-        "direct_semantic_spec_count": 500,
-        "direct_surface_count_per_spec": 2,
+        "direct_case_count": 1_200,
+        "direct_semantic_spec_count": 1_200,
+        "direct_surface_count_per_spec": 1,
         "minimum_accuracy": 0.98,
-        "direct_hcx_planned_case_count": 1_000,
-        "direct_evidence_linked_case_count": 1_000,
-        "direct_contract_valid_response_count": 1_000,
+        "direct_hcx_planned_case_count": 1_200,
+        "direct_evidence_linked_case_count": 1_200,
+        "direct_contract_valid_response_count": 1_200,
         "cross_scope_refusal_count": 0,
-        "two_follow_up_flow_count": 100,
-        "three_follow_up_flow_count": 100,
-        "baseline_flow_passed_count": 200,
-        "two_follow_up_flow_passed_count": 100,
-        "three_follow_up_flow_passed_count": 100,
-        "two_follow_up_final_hcx_count": 100,
-        "three_follow_up_final_hcx_count": 100,
-        "two_follow_up_final_evidence_count": 100,
-        "three_follow_up_final_evidence_count": 100,
-        "two_follow_up_signature_match_count": 100,
-        "three_follow_up_signature_match_count": 100,
-        "flow_contract_valid_response_count": 700,
-        "flow_live_api_request_count": 700,
-        "live_api_request_count": 1_700,
+        "two_turn_flow_count": 100,
+        "three_turn_flow_count": 100,
+        "four_turn_flow_count": 100,
+        "baseline_flow_passed_count": 300,
+        "two_turn_flow_passed_count": 100,
+        "three_turn_flow_passed_count": 100,
+        "four_turn_flow_passed_count": 100,
+        "two_turn_final_hcx_count": 100,
+        "three_turn_final_hcx_count": 100,
+        "four_turn_final_hcx_count": 100,
+        "two_turn_final_evidence_count": 100,
+        "three_turn_final_evidence_count": 100,
+        "four_turn_final_evidence_count": 100,
+        "two_turn_signature_match_count": 100,
+        "three_turn_signature_match_count": 100,
+        "four_turn_signature_match_count": 100,
+        "flow_contract_valid_response_count": 900,
+        "flow_live_api_request_count": 900,
+        "live_api_request_count": 2_100,
         "secret_values_recorded": False,
         "questions_recorded": False,
         "prompts_recorded": False,
@@ -326,13 +331,13 @@ def _validate_live_hcx_extensive_gate(report_path: Path, errors: list[str]) -> N
     if any(payload.get(key) != value for key, value in required_matches.items()):
         errors.append(
             "LIVE_HCX_EXTENSIVE_GATE_REPORT did not pass the required "
-            "1,000-direct plus multi-turn HCX gate"
+            "1,200-distinct plus 300 multi-turn HCX gate"
         )
     passed_count = payload.get("direct_passed_count")
     accuracy = payload.get("direct_accuracy")
     if (
         not isinstance(passed_count, int)
-        or passed_count < 980
+        or passed_count < 1_176
         or not isinstance(accuracy, int | float)
         or float(accuracy) < 0.98
     ):
@@ -344,10 +349,14 @@ def _validate_live_hcx_extensive_gate(report_path: Path, errors: list[str]) -> N
     if not isinstance(completed_at, str) or not completed_at.endswith(("Z", "+00:00")):
         errors.append("LIVE_HCX_EXTENSIVE_GATE_REPORT is missing its UTC completion time")
     expected_mix = {
-        "rank_single": 468,
-        "filter_search": 228,
-        "count_aggregate": 166,
-        "cross_scope": 138,
+        "exact_alias": 200,
+        "complex_filter": 200,
+        "aggregate_rank": 150,
+        "graph_relation": 150,
+        "semantic_retrieval": 150,
+        "cross_scope": 200,
+        "ambiguity": 100,
+        "safety": 50,
     }
     by_kind = payload.get("direct_by_kind")
     if not isinstance(by_kind, dict) or any(

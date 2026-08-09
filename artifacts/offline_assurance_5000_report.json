@@ -1,0 +1,65 @@
+{
+  "status": "VERIFIED_FIXTURE",
+  "generated_at_utc": "2026-08-09T05:29:43.073562+00:00",
+  "seed": 20260809,
+  "database": "mirae_agent.duckdb",
+  "corpus_hash": "291189c46bb923062021ef515cb8e61393f2208ada6ccfeab197294ffc54528b",
+  "case_count": 5000,
+  "passed": 5000,
+  "failed": 0,
+  "family_results": {
+    "exact_alias_fuzzy_missing": {
+      "total": 500,
+      "passed": 500,
+      "failed": 0
+    },
+    "range_negation_multi_unit_date": {
+      "total": 500,
+      "passed": 500,
+      "failed": 0
+    },
+    "aggregate_group_sort_tie": {
+      "total": 500,
+      "passed": 500,
+      "failed": 0
+    },
+    "kg_hops_roles_alias": {
+      "total": 500,
+      "passed": 500,
+      "failed": 0
+    },
+    "semantic_bm25_vector_rrf": {
+      "total": 500,
+      "passed": 500,
+      "failed": 0
+    },
+    "cross_scope_currency_comparability": {
+      "total": 500,
+      "passed": 500,
+      "failed": 0
+    },
+    "ambiguity_followup_correction": {
+      "total": 500,
+      "passed": 500,
+      "failed": 0
+    },
+    "safety_injection_grounding": {
+      "total": 500,
+      "passed": 500,
+      "failed": 0
+    },
+    "unicode_typo_mixed_oversize": {
+      "total": 500,
+      "passed": 500,
+      "failed": 0
+    },
+    "faults_readonly_timeouts": {
+      "total": 500,
+      "passed": 500,
+      "failed": 0
+    }
+  },
+  "failure_ids": [],
+  "questions_retained": false,
+  "live_provider_calls": 0
+}

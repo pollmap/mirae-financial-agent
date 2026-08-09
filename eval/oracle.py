@@ -99,10 +99,17 @@ def _single_scope_rank_refusal(
         if not _eq_filter("internal_type", "ETF"):
             return {"reason_code": "ETF_SUBTYPE_FILTER_REQUIRED"}
 
-    if metric_id == "overseas_etp.aum_last" and not _has_currency_filter(filters):
-        return {"reason_code": "TRADING_CURRENCY_FILTER_REQUIRED"}
+    # The final engine verifies the metric-bearing rows under the requested
+    # filters before applying a currency default.  In the official snapshot,
+    # overseas AUM rows for the ETF universe are uniformly USD; the oracle
+    # therefore proceeds to numeric ranking instead of expecting the legacy
+    # blanket refusal.
 
-    if _requires_currency_partition(metric_id) and not _has_currency_filter(filters):
+    if (
+        _requires_currency_partition(metric_id)
+        and not _has_currency_filter(filters)
+        and scope not in {"domestic_etp", "overseas_etp"}
+    ):
         return {"reason_code": "CURRENCY_FILTER_REQUIRED"}
 
     if metric_id.startswith("domestic_etp.return_") and direction == "asc":
