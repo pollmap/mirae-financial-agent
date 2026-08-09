@@ -1,0 +1,7 @@
+secrets/
+backups/
+qa_release_gate.json
+.env
+.env.*
+!env.local.example
+!env.lan.example

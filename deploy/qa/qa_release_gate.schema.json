@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mirae.local/schemas/qa-release-gate-v1.json",
+  "title": "Mirae Human QA Release Gate v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_utc",
+    "engine_git_sha",
+    "engine_image_digest",
+    "data_hash",
+    "hcx_model_id",
+    "hcx_base_url",
+    "planner_stage",
+    "gates",
+    "sanitization",
+    "artifact_sha256"
+  ],
+  "properties": {
+    "schema_version": { "const": "mirae.qa.release-gate.v1" },
+    "generated_at_utc": { "type": "string", "format": "date-time" },
+    "engine_git_sha": {
+      "type": "string",
+      "pattern": "^(?!0{40}$)[a-f0-9]{40}$"
+    },
+    "engine_image_digest": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[a-f0-9]{64}$"
+    },
+    "data_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[a-f0-9]{64}$"
+    },
+    "hcx_model_id": {
+      "type": "string",
+      "pattern": "^HCX-[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "hcx_base_url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://[^?#]+[^/?#]$"
+    },
+    "planner_stage": { "const": "two" },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["smoke_20", "canary_100"],
+      "properties": {
+        "smoke_20": { "$ref": "#/$defs/smokeGate" },
+        "canary_100": { "$ref": "#/$defs/canaryGate" }
+      }
+    },
+    "sanitization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contains_questions",
+        "contains_prompts",
+        "contains_answers",
+        "contains_tokens",
+        "contains_credentials"
+      ],
+      "properties": {
+        "contains_questions": { "const": false },
+        "contains_prompts": { "const": false },
+        "contains_answers": { "const": false },
+        "contains_tokens": { "const": false },
+        "contains_credentials": { "const": false }
+      }
+    },
+    "artifact_sha256": {
+      "type": "string",
+      "pattern": "^(?!0{64}$)[a-f0-9]{64}$"
+    }
+  },
+  "$defs": {
+    "gateBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "total",
+        "passed",
+        "failed",
+        "suite_sha256",
+        "report_sha256",
+        "verified_at_utc"
+      ],
+      "properties": {
+        "status": { "const": "PASS" },
+        "total": { "type": "integer" },
+        "passed": { "type": "integer" },
+        "failed": { "type": "integer", "minimum": 0 },
+        "suite_sha256": {
+          "type": "string",
+          "pattern": "^(?!0{64}$)[a-f0-9]{64}$"
+        },
+        "report_sha256": {
+          "type": "string",
+          "pattern": "^(?!0{64}$)[a-f0-9]{64}$"
+        },
+        "verified_at_utc": { "type": "string", "format": "date-time" }
+      }
+    },
+    "smokeGate": {
+      "allOf": [
+        { "$ref": "#/$defs/gateBase" },
+        {
+          "properties": {
+            "total": { "const": 20 },
+            "passed": { "const": 20 },
+            "failed": { "const": 0 }
+          }
+        }
+      ]
+    },
+    "canaryGate": {
+      "allOf": [
+        { "$ref": "#/$defs/gateBase" },
+        {
+          "properties": {
+            "total": { "const": 100 },
+            "passed": { "type": "integer", "minimum": 98, "maximum": 100 },
+            "failed": { "type": "integer", "minimum": 0, "maximum": 2 }
+          }
+        }
+      ]
+    }
+  }
+}

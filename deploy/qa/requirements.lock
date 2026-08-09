@@ -1,0 +1,4 @@
+# QA-only runtime closure. Keep separate from the contest engine lock.
+cryptography==45.0.6
+cffi==1.17.1
+pycparser==2.22

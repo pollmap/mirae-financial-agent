@@ -1,0 +1,53 @@
+# syntax=docker/dockerfile:1.7
+
+FROM node:22-bookworm-slim AS qa-web-builder
+
+ENV NODE_ENV=development \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false
+
+WORKDIR /build/qa_web
+
+COPY qa_web/package.json qa_web/package-lock.json ./
+RUN npm ci --ignore-scripts
+
+COPY qa_web/ ./
+RUN npm run build
+
+
+FROM python:3.12.11-slim-bookworm AS qa-runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    QA_DATABASE_PATH=/var/lib/mirae-qa/qa.sqlite3 \
+    QA_ENGINE_BASE_URL=http://engine:8080 \
+    QA_TRANSCRIPT_KEY_FILE=/run/secrets/qa_transcript_key \
+    QA_AUTH_SECRET_FILE=/run/secrets/qa_auth_secret
+
+WORKDIR /app
+
+RUN groupadd --system --gid 10001 qa \
+    && useradd --system --uid 10001 --gid qa --home-dir /nonexistent --shell /usr/sbin/nologin qa \
+    && install --directory --owner=qa --group=qa --mode=0700 /var/lib/mirae-qa
+
+COPY requirements-runtime.lock ./
+COPY deploy/qa/requirements.lock ./requirements-qa.lock
+RUN python -m pip install --disable-pip-version-check \
+        --requirement requirements-runtime.lock \
+        --requirement requirements-qa.lock \
+    && python -m pip check
+
+COPY --chown=qa:qa qa_chat ./qa_chat
+COPY --from=qa-web-builder --chown=qa:qa /build/qa_web/dist ./qa_web/dist
+COPY --chown=root:root deploy/qa/entrypoint-gateway.sh /usr/local/bin/qa-gateway
+RUN chmod 0555 /usr/local/bin/qa-gateway
+
+USER qa
+EXPOSE 8090
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/qa/api/v1/status', timeout=2)" || exit 1
+
+ENTRYPOINT ["/usr/local/bin/qa-gateway"]

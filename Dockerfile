@@ -1,3 +1,5 @@
+ARG ENGINE_GIT_SHA=unknown
+
 FROM python:3.12.11-slim-bookworm AS data-builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -20,12 +22,16 @@ RUN python scripts/verify_sources.py \
 
 FROM python:3.12.11-slim-bookworm AS runtime
 
+ARG ENGINE_GIT_SHA
+LABEL org.opencontainers.image.revision=$ENGINE_GIT_SHA
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     APP_ENV=production \
     PLANNER_MODE=hcx \
     HCX_MODEL_ID=HCX-007 \
+    ENGINE_GIT_SHA=$ENGINE_GIT_SHA \
     MIRAE_DATABASE_PATH=/app/data/serving/mirae_agent.duckdb
 
 WORKDIR /app

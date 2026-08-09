@@ -1,0 +1,258 @@
+name: mirae-human-qa-chatbot
+
+x-runtime-hardening: &runtime-hardening
+  init: true
+  restart: unless-stopped
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  pids_limit: 256
+  stop_grace_period: 30s
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+x-edge-hardening: &edge-hardening
+  init: true
+  restart: unless-stopped
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  # The official Caddy binary carries cap_net_bind_service=ep and Linux refuses
+  # to exec it when that capability is absent from the bounding set.
+  cap_add:
+    - NET_BIND_SERVICE
+  pids_limit: 128
+  mem_limit: 256m
+  logging:
+    driver: json-file
+    options:
+      max-size: 5m
+      max-file: "2"
+
+services:
+  engine:
+    <<: *runtime-hardening
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        ENGINE_GIT_SHA: ${ENGINE_GIT_SHA:?set the exact engine Git SHA}
+    image: ${QA_ENGINE_IMAGE:-mirae-financial-agent:qa-local}
+    pull_policy: never
+    command:
+      - /bin/sh
+      - /run/qa/entrypoint-engine.sh
+    environment:
+      APP_ENV: production
+      PLANNER_MODE: hcx
+      PLANNER_STAGE: two
+      VECTOR_ENABLED: ${VECTOR_ENABLED:-false}
+      MIRAE_DATABASE_PATH: /app/data/serving/mirae_agent.duckdb
+      HCX_MODEL_ID: ${APPROVED_HCX_MODEL_ID:?set the human-approved HCX model id}
+      APPROVED_HCX_MODEL_ID: ${APPROVED_HCX_MODEL_ID:?set the human-approved HCX model id}
+      HCX_BASE_URL: ${APPROVED_HCX_BASE_URL:?set the human-approved CLOVA Studio HTTPS base URL}
+      APPROVED_HCX_BASE_URL: ${APPROVED_HCX_BASE_URL:?set the human-approved CLOVA Studio HTTPS base URL}
+      ENGINE_GIT_SHA: ${ENGINE_GIT_SHA:?set the exact engine Git SHA}
+      ENGINE_IMAGE_DIGEST: ${ENGINE_IMAGE_DIGEST:?set the inspected engine image digest}
+      HCX_TIMEOUT_SECONDS: ${HCX_TIMEOUT_SECONDS:-12}
+      HCX_TOTAL_DEADLINE_SECONDS: ${HCX_TOTAL_DEADLINE_SECONDS:-25}
+      HCX_MAX_RETRIES: ${HCX_MAX_RETRIES:-2}
+      HCX_MAX_CONCURRENCY: ${HCX_MAX_CONCURRENCY:-3}
+      HCX_QPM_LIMIT: ${HCX_QPM_LIMIT:-8}
+      HCX_TPM_BUDGET: ${HCX_TPM_BUDGET:-60000}
+      DB_MAX_CONCURRENCY: ${DB_MAX_CONCURRENCY:-8}
+      ENABLE_CLARIFICATION_STATE: "true"
+      QUESTION_MAX_CHARS: ${QUESTION_MAX_CHARS:-2000}
+      DEFAULT_RESULT_LIMIT: ${DEFAULT_RESULT_LIMIT:-10}
+      MAX_RESULT_LIMIT: ${MAX_RESULT_LIMIT:-50}
+      ACCESS_LOG_ENABLED: "false"
+    secrets:
+      - hcx_api_key
+      - engine_clarification_signing_key
+    volumes:
+      - type: bind
+        source: ./deploy/qa/entrypoint-engine.sh
+        target: /run/qa/entrypoint-engine.sh
+        read_only: true
+    expose:
+      - "8080"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8080/health/ready', timeout=2)
+      interval: 30s
+      timeout: 3s
+      start_period: 30s
+      retries: 3
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    networks:
+      - qa_backplane
+      - hcx_egress
+    cpus: "2.0"
+    mem_limit: 3g
+
+  qa-gateway:
+    <<: *runtime-hardening
+    build:
+      context: .
+      dockerfile: Dockerfile.qa
+      target: qa-runtime
+    image: ${QA_GATEWAY_IMAGE:-mirae-human-qa-chatbot:local}
+    pull_policy: never
+    depends_on:
+      engine:
+        # History/export/delete/logout must remain available when the engine is
+        # unhealthy. The gateway probes readiness and blocks only new turns.
+        condition: service_started
+    environment:
+      QA_DATABASE_PATH: /var/lib/mirae-qa/qa.sqlite3
+      QA_ENGINE_BASE_URL: http://engine:8080
+      QA_TRANSCRIPT_KEY_FILE: /run/secrets/qa_transcript_key
+      QA_AUTH_SECRET_FILE: /run/secrets/qa_auth_secret
+      QA_ALLOWED_ORIGINS: ${QA_ALLOWED_ORIGINS:-http://127.0.0.1:8090}
+      QA_COOKIE_SECURE: ${QA_COOKIE_SECURE:-false}
+      QA_REQUIRE_ORIGIN: "true"
+      QA_RETENTION_DAYS: "14"
+      QA_QUESTION_MAX_CHARS: ${QUESTION_MAX_CHARS:-2000}
+      QA_ENGINE_TIMEOUT_SECONDS: ${HCX_TOTAL_DEADLINE_SECONDS:-25}
+      QA_ENGINE_CONCURRENCY: ${QA_ENGINE_CONCURRENCY:-3}
+      QA_TESTER_PER_MINUTE: ${QA_TESTER_PER_MINUTE:-5}
+      QA_TESTER_PER_DAY: ${QA_TESTER_PER_DAY:-30}
+      QA_GLOBAL_PER_MINUTE: ${QA_GLOBAL_PER_MINUTE:-8}
+      QA_GLOBAL_PER_DAY: ${QA_GLOBAL_PER_DAY:-200}
+      QA_PILOT_TOTAL_LIMIT: ${QA_PILOT_TOTAL_LIMIT:-1000}
+      QA_MAX_SESSIONS_PER_TESTER: ${QA_MAX_SESSIONS_PER_TESTER:-50}
+      QA_MAX_MESSAGES_PER_SESSION: ${QA_MAX_MESSAGES_PER_SESSION:-1000}
+      QA_MAX_CIPHERTEXT_BYTES_PER_TESTER: ${QA_MAX_CIPHERTEXT_BYTES_PER_TESTER:-67108864}
+      QA_MAX_CIPHERTEXT_BYTES_TOTAL: ${QA_MAX_CIPHERTEXT_BYTES_TOTAL:-536870912}
+      QA_CIRCUIT_FAILURE_THRESHOLD: ${QA_CIRCUIT_FAILURE_THRESHOLD:-5}
+      QA_CIRCUIT_WINDOW_SECONDS: ${QA_CIRCUIT_WINDOW_SECONDS:-120}
+      QA_CIRCUIT_OPEN_SECONDS: ${QA_CIRCUIT_OPEN_SECONDS:-60}
+      PILOT_CHAT_ENABLED: ${PILOT_CHAT_ENABLED:-false}
+      QA_RELEASE_GATE_FILE: /run/qa-release/qa_release_gate.json
+      HCX_MODEL_ID: ${APPROVED_HCX_MODEL_ID:?set the human-approved HCX model id}
+      APPROVED_HCX_MODEL_ID: ${APPROVED_HCX_MODEL_ID:?set the human-approved HCX model id}
+      HCX_BASE_URL: ${APPROVED_HCX_BASE_URL:?set the human-approved CLOVA Studio HTTPS base URL}
+      APPROVED_HCX_BASE_URL: ${APPROVED_HCX_BASE_URL:?set the human-approved CLOVA Studio HTTPS base URL}
+      ENGINE_GIT_SHA: ${ENGINE_GIT_SHA:?set the exact engine Git SHA}
+      ENGINE_IMAGE_DIGEST: ${ENGINE_IMAGE_DIGEST:?set the inspected engine image digest}
+      DATA_HASH: ${DATA_HASH:?set the verified serving-data SHA-256}
+      PLANNER_STAGE: two_stage
+      VECTOR_STATUS: ${VECTOR_STATUS:-DISABLED_NO_LIVE_CACHE}
+      ACCESS_LOG_ENABLED: "false"
+    secrets:
+      - qa_transcript_key
+      - qa_auth_secret
+    configs:
+      - source: qa_release_gate
+        target: /run/qa-release/qa_release_gate.json
+        mode: 0444
+    volumes:
+      - type: volume
+        source: qa_state
+        target: /var/lib/mirae-qa
+    expose:
+      - "8090"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8090/qa/api/v1/status', timeout=2)
+      interval: 30s
+      timeout: 3s
+      start_period: 20s
+      retries: 3
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    networks:
+      - qa_backplane
+    cpus: "1.5"
+    mem_limit: 768m
+
+  qa-local-edge:
+    <<: *edge-hardening
+    profiles:
+      - local
+    image: ${QA_CADDY_IMAGE:-caddy:2.10.2-alpine}
+    depends_on:
+      qa-gateway:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8090:8090"
+    volumes:
+      - type: bind
+        source: ./deploy/qa/Caddyfile.local
+        target: /etc/caddy/Caddyfile
+        read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+      - /config:size=16m,mode=0700
+      - /data:size=16m,mode=0700
+    networks:
+      - qa_backplane
+      - qa_edge
+
+  qa-lan-edge:
+    <<: *edge-hardening
+    profiles:
+      - lan
+    image: ${QA_CADDY_IMAGE:-caddy:2.10.2-alpine}
+    depends_on:
+      qa-gateway:
+        condition: service_healthy
+    environment:
+      # The loopback default lets the local profile parse without a LAN variable.
+      # Test-QaLanConfig.ps1 must pass before the LAN profile is started.
+      QA_LAN_BIND_IP: ${QA_LAN_BIND_IP:-127.0.0.2}
+    ports:
+      - "${QA_LAN_BIND_IP:-127.0.0.2}:8443:8443"
+    volumes:
+      - type: bind
+        source: ./deploy/qa/Caddyfile.lan
+        target: /etc/caddy/Caddyfile
+        read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+      - /config:size=16m,mode=0700
+      - /data:size=32m,mode=0700
+    networks:
+      - qa_backplane
+      - qa_edge
+
+networks:
+  qa_backplane:
+    internal: true
+  qa_edge:
+  hcx_egress:
+
+volumes:
+  qa_state:
+
+secrets:
+  hcx_api_key:
+    file: ${HCX_API_KEY_FILE:?set the path to the HCX API key file}
+  engine_clarification_signing_key:
+    file: ${ENGINE_CLARIFICATION_SIGNING_KEY_FILE:?set the path to the engine signing-key file}
+  qa_transcript_key:
+    file: ${QA_TRANSCRIPT_KEY_FILE:?set the path to the QA transcript encryption-key file}
+  qa_auth_secret:
+    file: ${QA_AUTH_SECRET_FILE:?set the path to the QA authentication-secret file}
+
+configs:
+  qa_release_gate:
+    file: ${QA_RELEASE_GATE_HOST_FILE:?set the path to the validated QA release gate artifact}

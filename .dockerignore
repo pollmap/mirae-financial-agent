@@ -18,3 +18,8 @@ upload
 *.p12
 *.pfx
 *.crt
+qa_web/node_modules
+qa_web/dist
+deploy/qa/secrets
+deploy/qa/backups
+artifacts/qa_release_gate.json
