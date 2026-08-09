@@ -179,7 +179,7 @@ NVDA, Windows high contrast의 실제 조작, LAN의 다른 승인 기기 접속
 ### 2026-08-09 현재 코드 재실행 증거
 
 - 공식 원본 PDF·ZIP·팀 원문 및 ZIP 내부 XLSX 8개 해시 검증: PASS
-- 전체 Python: pytest **364/364**, Ruff PASS
+- 전체 Python: pytest **365/365**, Ruff PASS
 - runtime compliance: **179 files / 0 findings**; HyperCLOVA X 외 LLM 경로 없음
 - 기존 oracle **640/640**, 교차질의 거부 0; metamorphic **137/137**
 - Federated holdout **100/100**, Graph **120/120**, BM25 **20/20**, v4 **200/200**
@@ -190,11 +190,13 @@ NVDA, Windows high contrast의 실제 조작, LAN의 다른 승인 기기 접속
 - 실제 브라우저: 320px와 1280→640 CSS px reflow, dialog focus/Escape/inert,
   axe violation 0, console/runtime error 0. native 200% zoom·NVDA·Windows 고대비는 사람 검수
 - QA 배포 보강: release/QA **75 tests**, Caddy 2종·local/LAN Compose·Dockerfile
-  정적 검사 PASS. 최종 clean HEAD의 no-cache image build는 로컬 커밋 뒤 다시 수행한다.
+  정적 검사 PASS. 최종 clean HEAD에서 engine·QA image를 no-cache로 다시 빌드하고
+  restart·healthcheck를 통과했다. 로컬 fixture preview는 Gateway `127.0.0.1:8090`만
+  게시하고 engine host port를 닫았으며, 보존 키는 상속을 끊은 사용자 전용 ACL 경로에 둔다.
 
 첫 전체 회귀에서는 새 `verified_count`가 strict evidence JSON Schema에 빠진 계약 오류
 1건을 실제로 발견했다. schema에 optional non-negative integer/null로 추가하고 해당 계약
-9/9 및 전체 364개를 처음부터 재실행해 통과했다.
+9/9 및 최종 전체 365개를 처음부터 재실행해 통과했다.
 
 ## 9.1 남아 있는 기술적 경계
 
