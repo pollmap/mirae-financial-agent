@@ -1,32 +1,8 @@
 # 미래에셋증권 금융상품 Agent
 
-> **2026-08-09 팀 인간검증 챗봇 추가**: 현재 작업 브랜치는
-> `codex/human-qa-chatbot-v1`이며 기준 커밋 `cef29dbe...`에서 분기했다. 기존 대회용
-> `GET /answer`와 다섯 문자열 필드는 변경하지 않고, 초대 기반 QA Gateway와
-> React 채팅·조건 원장·공식 근거·검색 경로 검사 화면을 `127.0.0.1:8090`에 별도로
-> 추가했다. 설계·보안·LAN 실행·사람 파일럿 절차는
-> [`docs/19_HCX_HUMAN_QA_CHATBOT.md`](docs/19_HCX_HUMAN_QA_CHATBOT.md)를 가장 먼저
-> 읽는다. 로컬 fixture 화면은 실제 HCX가 아니며, 실제 HCX 20→100 gate와 팀 파일럿은
-> 계속 `PENDING_EXTERNAL`이다. 이 브랜치는 아직 push·PR·병합하지 않았다.
+> **새 세션/새 에이전트의 첫 문서**: [`docs/20_MAINLINE_HANDOFF_AND_REPOSITORY_MAP.md`](docs/20_MAINLINE_HANDOFF_AND_REPOSITORY_MAP.md)를 먼저 읽으세요. 목적·공식 원본 보존·구조·검증 사실·외부 대기·재현 절차와 읽는 순서를 한 곳에 정리했습니다.
 
-> **2026-08-09 최종 전수감사 기준**: 브랜치는 `codex/federated-completion-v3`,
-> 런타임 소스 커밋은 `c7c07c9`다. 2단계 HCX 플래너가 기본이고 1단계는 수동 롤백
-> 전용이다. Exact/Alias·SQL·Graph 실제 1–2 hop·BM25·선택적 1,024차원 Vector/RRF가
-> 조건별 실행 경로에 연결되며 SQL이 최종 숫자와 근거 행의 권위 원천이다.
->
-> 최신 로컬 증거는 pytest 288/288, Ruff PASS, compliance 102 files/0, 기존 oracle
-> 640/640·교차거부 0, metamorphic 137/137, v4 200/200, 10군×500 offline
-> 5,000/5,000, 독립 direct 1,200/1,200, 2·3·4턴 flow 300/300(900 API 요청), HTTP
-> 15/15, load 100/100·동시10·p95 112.45ms다. fresh Docker no-cache build·read-only
-> health·restart·smoke×2도 통과했다. 실제 HCX·Embedding·NCP 공개배포와
-> 사람의 제출 승인은 `PENDING_EXTERNAL`이다. 공식 평가 문항 수는 공개되지 않았고 위
-> 숫자는 모두 내부 gate다.
-
-> **다른 AI 에이전트/세션이 이어받는 경우**: 가장 먼저
-> [`docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`](docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md)를 먼저 읽고,
-> 이어서 [`docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`](docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md)를 읽으세요.
-> 지금 뭐가 완료됐고, 뭐가 안 됐고, 다음에 뭘 해야 하는지 빠짐없이 정리돼
-> 있습니다. 과거 서술은 설계 변천 기록으로 보존돼 있습니다.
+> **현재 정직한 상태**: 대회 엔진과 팀 내부 인간검증 챗봇은 로컬에서 검증됐지만, 실제 HCX/Embedding 키와 확정 모델·NCP 공개 HTTPS·사람의 제출 freeze는 아직 `PENDING_EXTERNAL`입니다. 로컬 챗봇은 실제 HCX로 표시하지 않습니다. 공식 평가 문항 수는 공개되지 않았으며 내부 20·100·640·1,200·5,000 gate를 공식 수치처럼 표현하지 않습니다.
 
 제10회 2026 미래에셋증권 AI Festival `금융상품 Agent`용 실행 가능한 MVP입니다.
 

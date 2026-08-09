@@ -2,7 +2,9 @@
 
 ## 2026-08-09 v4 최종 전수감사 부록 — 현재 판정은 이 절과 docs/18 우선
 
-현재의 정식 설계·수치·release 경계는
+현재의 main 기준 인수인계·정식 설계·수치·release 경계는
+`docs/20_MAINLINE_HANDOFF_AND_REPOSITORY_MAP.md` →
+`docs/19_HCX_HUMAN_QA_CHATBOT.md` →
 `docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`와
 `artifacts/release_evidence_v4.json`이 담당한다. 이 문서 아래의 158·238·246·262·275,
 28·84·88·93 files, Graph 미연결, 기본 one, 1,000 direct/200 flow, 과거 Docker digest는
@@ -36,8 +38,10 @@ KG는 scope/role 격리된 실제 1–2 hop을 요청 경로에서 호출하고 
 겉보기에 합리적인 "개선"이 실제로는 사용자가 이미 명시적으로 거부한 방향으로
 되돌아가는 실수를 할 수 있다.
 
-**읽는 순서**: `docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`
-(최종 설계·수치·release 경계) → `docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`
+**읽는 순서**: `docs/20_MAINLINE_HANDOFF_AND_REPOSITORY_MAP.md`(main 기준 지도) →
+`docs/19_HCX_HUMAN_QA_CHATBOT.md`(인간 검증 서비스) →
+`docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`
+(대회 엔진의 최종 설계·수치·release 경계) → `docs/17_OFFICIAL_CONFORMANCE_AND_ADVERSARIAL_ASSURANCE.md`
 (공식 기준·적대적 검증) → `HANDOFF_CURRENT_STATUS.md`(현재 상태
 압축본) → 이 문서 → `docs/15_REBASELINE_VALIDATION_REPORT.md`(실측 수치와
 3번의 사후 검증 전체 경위) → `docs/14_BRIEFING_REBASELINE_PLAN.md`(원 설계안+

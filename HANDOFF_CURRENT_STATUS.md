@@ -1,16 +1,17 @@
 # 인계 문서 — 다른 AI 에이전트/세션이 이어받을 때 가장 먼저 읽을 파일
 
-## 2026-08-09 최신 분기: 팀 인간검증 챗봇
+> **main 통합 이후 첫 읽기**: `docs/20_MAINLINE_HANDOFF_AND_REPOSITORY_MAP.md`를 먼저 읽는다. 이 문서는 대회 엔진과 팀 인간검증 챗봇의 현재 구조·공식 원본 보존·재현 명령·외부 경계를 한 번에 연결한다. 아래의 오래된 수치와 서술은 해당 시점의 `HISTORICAL` 기록일 수 있으므로, 현 상태 판단에는 docs/20 → docs/19 → docs/18 순서를 우선한다.
 
-현재 로컬 최신 브랜치는 **`codex/human-qa-chatbot-v1`**이다. 대회 엔진 브랜치의
-`GET /answer`와 다섯 문자열 계약을 그대로 두고, 같은 저장소에 초대 기반 QA Gateway,
-시간순 채팅, 다중대화 상태, 조건·근거·검색경로 검사, 피드백·내보내기·즉시 삭제,
-로컬/LAN 전용 배포 패키지를 추가했다. 가장 먼저
-`docs/19_HCX_HUMAN_QA_CHATBOT.md`를 읽고, 대회 엔진의 전체 배경은 아래 기존 읽기
-순서를 따른다. 현재 변경은 로컬 커밋까지만 허용되며 push·PR·병합은 하지 않는다.
-실제 HCX 20→100 gate, 실제 Embedding, 다른 LAN 기기/NVDA/Windows 고대비 검수와
-5~10명 파일럿은 `PENDING_EXTERNAL`이다. 로컬 fixture preview를 live HCX 완료로
-간주하지 않는다.
+## 2026-08-09 main 통합 기준: 팀 인간검증 챗봇 포함
+
+`codex/human-qa-chatbot-v1`의 대회 엔진·QA 챗봇 변경을 검증한 뒤 `main`에 통합한다.
+대회 엔진의 `GET /answer`와 다섯 문자열 계약은 그대로 두고, 같은 저장소에 초대 기반
+QA Gateway, 시간순 채팅, 다중대화 상태, 조건·근거·검색경로 검사, 피드백·내보내기·즉시
+삭제, 로컬/LAN 전용 배포 패키지를 추가했다. 이 상태를 이해하려면
+`docs/20_MAINLINE_HANDOFF_AND_REPOSITORY_MAP.md` → `docs/19_HCX_HUMAN_QA_CHATBOT.md` →
+`docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md` 순서로 읽는다. 실제 HCX 20→100
+gate, 실제 Embedding, 다른 LAN 기기/NVDA/Windows 고대비 검수와 5~10명 파일럿은 계속
+`PENDING_EXTERNAL`이다. 로컬 fixture preview를 live HCX 완료로 간주하지 않는다.
 
 기준: 2026-08-08, branch **`codex/federated-completion-v3`** (기본 브랜치 아님 —
 `main`이나 `briefing-rebaseline-v2`가 아니라 이 브랜치를 체크아웃해야 최신 상태입니다)

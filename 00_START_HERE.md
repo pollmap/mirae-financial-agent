@@ -1,10 +1,10 @@
 # 미래에셋증권 금융상품 Agent - 실행 MVP·Codex 인계 패키지
 
 > **현재 진입점(2026-08-09)**: 이 파일 아래 내용은 2026-08-03 prebrief의 역사적
-> 기준이다. 최신 대회 엔진은 `docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`,
-> 최신 팀 인간검증 챗봇은 `docs/19_HCX_HUMAN_QA_CHATBOT.md`를 먼저 읽는다. QA 챗봇은
-> `codex/human-qa-chatbot-v1`에만 있으며 대회 API를 변경하지 않는다. 실제 HCX와 사람
-> 파일럿은 아직 `PENDING_EXTERNAL`이고, 로컬 fixture는 live 검증이 아니다.
+> 기준이다. 먼저 `docs/20_MAINLINE_HANDOFF_AND_REPOSITORY_MAP.md`를 읽고, 이어서
+> 최신 대회 엔진 `docs/18_FINAL_MASTER_PLAN_AND_RELEASE_READINESS.md`, 팀 인간검증 챗봇
+> `docs/19_HCX_HUMAN_QA_CHATBOT.md`를 읽는다. QA 챗봇은 대회 API를 변경하지 않으며,
+> 실제 HCX와 사람 파일럿은 아직 `PENDING_EXTERNAL`이고 로컬 fixture는 live 검증이 아니다.
 
 기준일: 2026-08-03  
 현재 단계: 2026-08-06 오프라인 설명회 전 실행 MVP·v1 local DRAFT gate 통과,

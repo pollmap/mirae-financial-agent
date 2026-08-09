@@ -5,7 +5,8 @@
 런타임 소스 기준 커밋: `c7c07c9bf6747affd56263e4eb1972e29e72cc56`
 현재 총판정: **`PENDING_EXTERNAL` — 로컬 완성 후보, 실서비스 완료 아님**
 
-이 문서는 현재 판정의 단일 진입점이다. 수치는
+이 문서는 **대회 엔진** 현재 판정의 단일 진입점이다. main 전체와 팀 인간검증
+챗봇까지 포함한 첫 진입점은 `docs/20_MAINLINE_HANDOFF_AND_REPOSITORY_MAP.md`다. 수치는
 `artifacts/release_evidence_v4.json`에서 가져온다. 오래된 문서의 158·238·246·262·
 275 테스트, 28·84·88·93 compliance, 1,000 direct/200 flow, 과거 Docker digest는
 각 당시 커밋의 `HISTORICAL` 기록이며 현재 합격 근거가 아니다.
