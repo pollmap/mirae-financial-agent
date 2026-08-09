@@ -348,6 +348,8 @@ def test_scope_clarification_preserves_product_family_count_intent() -> None:
         assert len(final_context["aggregates"]) == 1
         assert int(final_context["aggregates"][0]["value"]) == 11115
         assert "intent=aggregate" in final.think_trace
+        assert "None 집계" not in final.answer
+        assert "개별 원천 기준일" not in final.answer
         assert any(
             entry["kind"] == "intent"
             and entry["requested_text"] == "aggregate"

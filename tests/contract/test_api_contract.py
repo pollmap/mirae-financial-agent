@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 from pathlib import Path
 
@@ -57,6 +58,19 @@ def test_health_and_provisional_five_field_contract() -> None:
     )
     assert live.status_code == 200
     assert ready.status_code == 200
+    ready_payload = ready.json()
+    with DATABASE.open("rb") as stream:
+        expected_data_hash = f"sha256:{hashlib.file_digest(stream, 'sha256').hexdigest()}"
+    assert ready_payload == {
+        "status": "ready",
+        "data_snapshot_date": "2026-07-11",
+        "engine_git_sha": "unknown",
+        "engine_image_digest": "unknown",
+        "data_hash": expected_data_hash,
+        "model_id": "HCX-007",
+        "hcx_base_url": "https://clovastudio.stream.ntruss.com",
+        "planner_stage": "two",
+    }
     assert response.status_code == 200
     assert set(response.json()) == RESPONSE_KEYS
     assert all(isinstance(value, str) for value in response.json().values())

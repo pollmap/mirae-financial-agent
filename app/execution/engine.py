@@ -643,6 +643,7 @@ class DuckDBEngine:
         started: float,
         *,
         candidates: int = 0,
+        verified: int | None = None,
         fallback_reason: str | None = None,
         evidence_refs: list[str] | None = None,
     ) -> RetrievalTrace:
@@ -652,6 +653,7 @@ class DuckDBEngine:
             reason=reason,
             scope=scope,
             candidate_count=candidates,
+            verified_count=verified,
             latency_ms=round((time.perf_counter() - started) * 1000, 3),
             data_hash=OFFICIAL_DATA_ZIP_SHA256,
             fallback_reason=fallback_reason,
@@ -712,6 +714,7 @@ class DuckDBEngine:
                             scope,
                             started,
                             candidates=len(exact),
+                            verified=len(exact),
                         )
                     )
                     continue
@@ -803,6 +806,7 @@ class DuckDBEngine:
                             scope,
                             started,
                             candidates=len(graph_uids),
+                            verified=len(graph_uids),
                             evidence_refs=[hit.path_note for hit in graph_hits],
                         )
                     )
@@ -822,6 +826,7 @@ class DuckDBEngine:
                             scope,
                             started,
                             candidates=len(graph_uids),
+                            verified=len(graph_uids),
                             evidence_refs=[hit.path_note for hit in graph_hits],
                         )
                     )
@@ -834,6 +839,7 @@ class DuckDBEngine:
                             scope,
                             started,
                             candidates=len(graph_uids),
+                            verified=len(set(graph_uids) & set(sql_uids)),
                             fallback_reason=(
                                 f"graph/sql candidate mismatch {len(graph_uids)}/{len(sql_uids)}; SQL retained"
                             ),
@@ -954,6 +960,7 @@ class DuckDBEngine:
                 reason="official catalog/metric filters, calculations, ordering, and evidence join",
                 scope=scope,
                 candidate_count=(len(retrieval.candidate_uids) if retrieval.candidate_uids is not None else 0),
+                verified_count=(len(retrieval.candidate_uids) if retrieval.candidate_uids is not None else None),
                 data_hash=OFFICIAL_DATA_ZIP_SHA256,
                 evidence_refs=[f"official_zip_sha256:{OFFICIAL_DATA_ZIP_SHA256[:16]}"],
             )
@@ -2111,7 +2118,13 @@ class DuckDBEngine:
                     group_suffix = (
                         f" ({row['group_key']})" if row.get("group_key") is not None else ""
                     )
-                    if date_count > 1:
+                    # A plain product count has no metric-level observation
+                    # date. Its authority is the dataset snapshot already
+                    # rendered in the response, so a missing ``None`` metric
+                    # date note would be both noisy and false.
+                    if metric_id is None:
+                        pass
+                    elif date_count > 1:
                         date_notes.append(
                             f"{metric_id}{group_suffix} 집계에는 상품별 원천 기준일 "
                             f"{as_of_min}~{as_of_max} 값이 함께 포함되어 "

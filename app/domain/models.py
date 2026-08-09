@@ -276,6 +276,7 @@ class RetrievalTrace(StrictModel):
     reason: str = Field(min_length=1, max_length=300)
     scope: Scope | None = None
     candidate_count: int = Field(default=0, ge=0)
+    verified_count: int | None = Field(default=None, ge=0)
     latency_ms: float = Field(default=0.0, ge=0, le=60_000)
     observed_at_utc: str = Field(
         default_factory=lambda: datetime.now(UTC).isoformat(),

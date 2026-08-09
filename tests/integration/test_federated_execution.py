@@ -54,6 +54,7 @@ def test_graph_party_and_concept_candidates_are_sql_validated() -> None:
         graph = next(item for item in evidence.retrieval_trace if item.channel == "graph")
         assert graph.status == "validated"
         assert graph.candidate_count > 0
+        assert graph.verified_count == graph.candidate_count
         assert evidence.result_count == 3
         assert all(item.fields for item in evidence.items)
 

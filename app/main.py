@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import json
 import logging
 import time
@@ -21,6 +23,14 @@ from app.retrieval.vector_retriever import ClovaQueryEmbedder
 from app.service import AgentService, PlannerUnavailable
 
 REQUEST_LOGGER = logging.getLogger("mirae.request")
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return f"sha256:{digest.hexdigest()}"
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -53,6 +63,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = resolved
     app.state.service = service
+    readiness_data_hash: str | None = None
+    readiness_hash_lock = asyncio.Lock()
     app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
 
     @app.middleware("http")
@@ -146,13 +158,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/health/ready")
     async def ready() -> JSONResponse:
+        nonlocal readiness_data_hash
         readiness_error = engine.readiness_error()
         if readiness_error:
             return JSONResponse(
                 status_code=503,
                 content={"status": "not_ready", "reason": readiness_error},
             )
-        return JSONResponse(content={"status": "ready", "data_snapshot_date": "2026-07-11"})
+        if readiness_data_hash is None:
+            async with readiness_hash_lock:
+                if readiness_data_hash is None:
+                    readiness_data_hash = await asyncio.to_thread(
+                        _sha256_file, resolved.database_path
+                    )
+        return JSONResponse(
+            content={
+                "status": "ready",
+                "data_snapshot_date": "2026-07-11",
+                "engine_git_sha": resolved.engine_git_sha,
+                "engine_image_digest": resolved.engine_image_digest,
+                "data_hash": readiness_data_hash,
+                "model_id": resolved.hcx_model_id,
+                "hcx_base_url": resolved.hcx_base_url,
+                "planner_stage": resolved.planner_stage,
+            }
+        )
 
     @app.get("/answer")
     async def answer(

@@ -56,6 +56,11 @@ class Settings:
     max_limit: int = 50
     enable_clarification_state: bool = True
     clarification_signing_key: str = "development-only-rotate-before-production"
+    # Build/runtime identity is exposed only on the internal readiness endpoint
+    # so the separate human-QA gateway can bind live-gate evidence to the engine
+    # it is actually calling. Public organizer responses remain unchanged.
+    engine_git_sha: str = "unknown"
+    engine_image_digest: str = "unknown"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -92,6 +97,8 @@ class Settings:
             clarification_signing_key=os.getenv(
                 "CLARIFICATION_SIGNING_KEY", "development-only-rotate-before-production"
             ),
+            engine_git_sha=os.getenv("ENGINE_GIT_SHA", "unknown").strip(),
+            engine_image_digest=os.getenv("ENGINE_IMAGE_DIGEST", "unknown").strip(),
         )
         settings.validate()
         return settings
